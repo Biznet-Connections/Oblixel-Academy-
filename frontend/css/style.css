@@ -1,0 +1,959 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: #050816;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* ==================== PASSWORD INPUT FIX - NO BACKWARDS GLITCH ==================== */
+input[type="password"],
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+textarea,
+select {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  text-align: left !important;
+  letter-spacing: normal !important;
+  word-break: normal !important;
+  writing-mode: horizontal-tb !important;
+}
+
+/* Force LTR on all inputs with highest specificity */
+input, 
+textarea, 
+select {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+}
+
+/* Specific fix for password fields - STRONG FORCE */
+input[type="password"] {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  text-align: left !important;
+  letter-spacing: normal !important;
+}
+
+/* Ensure no RTL styles affect any input */
+.relative input,
+.form-input,
+.form-control {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+}
+
+/* Fix for password toggle button positioning */
+.relative {
+  position: relative;
+}
+
+.relative .absolute {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* ==================== VOUCHER INPUT CURSOR FIX ==================== */
+#voucherInput,
+.voucher-input {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: transparent;
+  color: white;
+  width: 100%;
+  transition: all 0.3s ease;
+  direction: ltr !important;
+}
+
+#voucherInput:focus,
+.voucher-input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+}
+
+#voucherInput::placeholder,
+.voucher-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ==================== SEARCH BAR STYLES ==================== */
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  direction: ltr !important;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.search-clear:hover {
+  color: #ef4444;
+}
+
+/* ==================== GLASSMORPHISM ==================== */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-nav {
+  background: rgba(5, 8, 22, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s ease-in-out;
+}
+
+.glass-nav.navbar-hidden {
+  transform: translateY(-100%);
+}
+
+.glow {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ==================== CARD HOVER EFFECTS ==================== */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 25px 40px -12px rgba(139, 92, 246, 0.35);
+}
+
+/* ==================== LOADER ==================== */
+.loader-screen {
+  position: fixed;
+  inset: 0;
+  background: #050816;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  flex-direction: column;
+  transition: opacity 0.5s ease-out;
+}
+
+.animated-o {
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  border-radius: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 58px;
+  font-weight: 900;
+  color: white;
+  animation: morphGlow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes morphGlow {
+  0% { border-radius: 35px; transform: scale(0.98); box-shadow: 0 0 20px rgba(139,92,246,0.5); }
+  100% { border-radius: 65px; transform: scale(1.08); box-shadow: 0 0 55px rgba(139,92,246,0.8); }
+}
+
+.loader-progress {
+  width: 200px;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.loader-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+  border-radius: 10px;
+  transition: width 0.1s linear;
+}
+
+/* ==================== MARQUEE ANIMATION ==================== */
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.marquee-content {
+  display: inline-flex;
+  gap: 60px;
+  animation: move 25s linear infinite;
+}
+
+@keyframes move {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ==================== BACKGROUND BLURS ==================== */
+.bg-blur-1, .bg-blur-2 {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  filter: blur(180px);
+  border-radius: 999px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bg-blur-1 {
+  top: 0;
+  left: 0;
+  background: #8b5cf6;
+  opacity: 0.15;
+}
+
+.bg-blur-2 {
+  bottom: 0;
+  right: 0;
+  background: #06b6d4;
+  opacity: 0.15;
+}
+
+/* ==================== TOAST NOTIFICATIONS ==================== */
+.toast-msg {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 9999;
+  background: #1e293b;
+  border-left: 4px solid #8b5cf6;
+  padding: 12px 24px;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  font-weight: 500;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+  animation: slideIn 0.3s ease-out;
+  font-size: 14px;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ==================== CUSTOM SCROLLBAR ==================== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8b5cf6;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 1.5s infinite;
+}
+
+/* ==================== EXAM TIMER ==================== */
+.exam-timer {
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: rgba(239,68,68,0.2);
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(239,68,68,0.5);
+  color: #f87171;
+}
+
+/* ==================== THINKING DOTS ==================== */
+.thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.thinking-dots span {
+  width: 6px;
+  height: 6px;
+  background-color: #06b6d4;
+  border-radius: 50%;
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.thinking-dots span:nth-child(1) { animation-delay: 0s; }
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 60%, 100% { transform: scale(0.6); opacity: 0.4; }
+  30% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ==================== MODULE LOCKED STATE ==================== */
+.module-locked {
+  opacity: 0.6;
+  filter: blur(1px);
+  pointer-events: none;
+  position: relative;
+}
+
+.module-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+/* ==================== AI CHAT PILL ==================== */
+.ai-chat-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  padding: 10px 18px;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+.ai-chat-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+}
+
+.ai-chat-pill span {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+/* ==================== YOUTUBE CARD ==================== */
+.youtube-card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.youtube-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.youtube-card img {
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+/* ==================== HIDE SCROLLBAR ==================== */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==================== AI CHAT MODAL EXPANDED ==================== */
+#aiChatModal.expanded {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+}
+
+#aiChatModal.expanded .ai-chat-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+}
+
+#aiChatModal.expanded #chatMessages {
+  height: calc(100vh - 140px) !important;
+}
+
+/* ==================== HAMBURGER MENU - FIXED POSITION ==================== */
+#mobileMenu {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: rgba(5, 8, 22, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 24px 24px;
+  transition: all 0.3s ease;
+  transform: translateY(0);
+  display: none;
+}
+
+#mobileMenu:not(.hidden) {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  #mobileMenu {
+    top: 56px;
+    max-height: calc(100vh - 56px);
+  }
+}
+
+#mobileMenu a, 
+#mobileMenu button {
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  display: block;
+  text-align: left;
+  width: 100%;
+}
+
+#mobileMenu a:hover,
+#mobileMenu button:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+/* ==================== COPY VOUCHER BUTTON ==================== */
+.copy-voucher-btn {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.copy-voucher-btn:hover {
+  color: #06b6d4;
+  transform: scale(1.1);
+}
+
+/* ==================== DELETE CONFIRMATION MODAL ==================== */
+.delete-confirm-input {
+  font-family: monospace;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+/* ==================== WHATSAPP LINK STYLES ==================== */
+.whatsapp-link {
+  color: #25D366;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.whatsapp-link:hover {
+  text-decoration: underline;
+  color: #20b859;
+}
+
+/* ==================== PROFILE & LOGOUT SAME LINE ==================== */
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-controls .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.user-controls .logout-btn {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.user-controls .logout-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* ==================== NAVBAR LAYOUT FIXES ==================== */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.navbar-logo.hidden {
+  display: none !important;
+}
+
+.hamburger-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  display: none;
+}
+
+.hamburger-btn.show {
+  display: block;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.auth-buttons .login-btn {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.auth-buttons .login-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.auth-buttons .register-btn {
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.auth-buttons .register-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+}
+
+/* Desktop navigation links */
+.nav-link {
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #06b6d4;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Mobile Styles (0 - 768px) */
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: block;
+  }
+  
+  .desktop-nav-links {
+    display: none !important;
+  }
+  
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+  
+  .course-dashboard-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  .course-dashboard-grid > div:first-child {
+    order: 1 !important;
+  }
+  
+  .course-dashboard-grid > div:last-child {
+    order: 2 !important;
+  }
+  
+  .checkout-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  .checkout-container > div {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  .checkout-container input,
+  .checkout-container select,
+  .checkout-container button {
+    width: 100% !important;
+    font-size: 14px !important;
+  }
+  
+  .checkout-container .name-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  button, 
+  a,
+  .cursor-pointer,
+  input[type="checkbox"],
+  input[type="radio"],
+  label {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .admin-table thead {
+    display: none !important;
+  }
+  
+  .admin-table tbody tr {
+    display: block !important;
+    margin-bottom: 1rem !important;
+    border-radius: 1rem !important;
+    background: rgba(255,255,255,0.05) !important;
+    padding: 1rem !important;
+  }
+  
+  .admin-table tbody td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.5rem 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+  }
+  
+  .admin-table tbody td:before {
+    content: attr(data-label) !important;
+    font-weight: 600 !important;
+    color: #8b5cf6 !important;
+  }
+  
+  #aiChatModal {
+    padding: 0 !important;
+  }
+  
+  #aiChatModal .glass {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+  
+  .glass-nav {
+    padding: 10px 12px !important;
+  }
+  
+  h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  
+  .toast-msg {
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
+    text-align: center;
+    font-size: 12px;
+  }
+  
+  .courses-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  button, .btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  body, main, .container {
+    overflow-x: hidden !important;
+  }
+  
+  img, video, iframe {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .continue-learning-card {
+    padding: 1rem !important;
+  }
+  
+  .search-container {
+    max-width: 100%;
+  }
+  
+  .user-controls {
+    gap: 8px;
+  }
+  
+  .user-controls .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .user-controls .logout-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .auth-buttons {
+    gap: 8px;
+  }
+  
+  .auth-buttons .login-btn,
+  .auth-buttons .register-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .navbar-logo {
+    gap: 4px;
+  }
+  
+  .navbar-logo .w-8 {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .navbar-logo h1 {
+    font-size: 14px !important;
+  }
+}
+
+/* Tablet Styles (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+  
+  .checkout-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+  
+  .checkout-container > div {
+    width: 100% !important;
+  }
+}
+
+/* Desktop Styles (1025px+) */
+@media (min-width: 1025px) {
+  .glass-nav {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+  
+  main, section {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 1.5rem !important;
+  }
+  
+  .checkout-container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 2rem !important;
+  }
+  
+  .checkout-container > div {
+    flex: 1 !important;
+  }
+  
+  .course-dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr !important;
+    gap: 1.5rem !important;
+  }
+}
+
+/* Navbar auto-hide transition */
+.glass-nav {
+  transition: transform 0.3s ease-in-out;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+}
+
+.glass-nav.navbar-hidden {
+  transform: translateY(-100%);
+}
+
+/* Course card animation for search */
+.course-card {
+  transition: all 0.2s ease;
+}
+
+.course-card.hidden-course {
+  display: none;
+}
+
+/* Landing page navbar specific */
+.landing-navbar .hamburger-btn {
+  display: none !important;
+}
+
+.landing-navbar .navbar-logo {
+  display: flex !important;
+}
+
+/* Dashboard navbar specific */
+.dashboard-navbar .hamburger-btn {
+  display: block !important;
+}
+
+.dashboard-navbar .navbar-logo {
+  display: none !important;
+}
+
+/* Fix for password input on mobile */
+@media (max-width: 640px) {
+  input[type="password"] {
+    font-size: 16px !important;
+    letter-spacing: normal !important;
+  }
+}
+
+/* Voucher applied state */
+.voucher-applied {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Disabled button state */
+button:disabled,
+button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

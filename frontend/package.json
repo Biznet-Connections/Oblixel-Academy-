@@ -1,0 +1,11 @@
+{
+  "name": "oblixel-frontend",
+  "version": "1.0.0",
+  "description": "OBliXel Academy Frontend",
+  "scripts": {
+    "start": "npx live-server --port=5500 --no-browser --entry-file=index.html"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

@@ -1,0 +1,61 @@
+.
+├── README.md
+├── backend
+│   ├── config
+│   │   ├── constants.js
+│   │   └── database.js
+│   ├── data
+│   │   ├── courses.json
+│   │   ├── enrollments.json
+│   │   ├── exams.json
+│   │   ├── payments.json
+│   │   ├── user.json
+│   │   ├── users.json
+│   │   └── vouchers.json
+│   ├── middleware
+│   │   ├── admin.js
+│   │   ├── auth.js
+│   │   ├── rateLimit.js
+│   │   └── validation.js
+│   ├── models
+│   │   ├── Certificate.js
+│   │   ├── Course.js
+│   │   ├── Enrollment.js
+│   │   ├── User.js
+│   │   └── Voucher.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── admin.js
+│   │   ├── ai.js
+│   │   ├── auth.js
+│   │   ├── certificates.js
+│   │   ├── community.js
+│   │   ├── courses.js
+│   │   ├── exams.js
+│   │   ├── payments.js
+│   │   ├── tutor.js
+│   │   └── user.js
+│   ├── services
+│   │   ├── aiService.js
+│   │   ├── emailService.js
+│   │   ├── paymentService.js
+│   │   └── pdfService.js
+│   └── utils
+│       ├── constants.js
+│       ├── helpers.js
+│       └── jsonDB.js
+├── frontend
+│   ├── css
+│   │   └── style.css
+│   ├── index.html
+│   ├── js
+│   │   ├── api.js
+│   │   └── app.js
+│   └── package.json
+├── package-lock.json
+├── package.json
+├── render.yaml
+└── structure_with_colors.txt
+
+12 directories, 47 files
