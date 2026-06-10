@@ -1,5 +1,6 @@
 // ==================== obliXel Academy v9.0 - COMPLETE APP.JS PART 1 ====================
-// PASSWORD STRENGTH CHECKER REMOVED - Only checks if password length > 4 characters
+// DEPLOYMENT READY: Single server (backend serves frontend)
+// Auto-detects API URL (localhost vs Render)
 console.log('🚀 obliXel Academy v9.0 - Loading Complete App Part 1');
 
 // ==================== GLOBAL VARIABLES ====================
@@ -19,10 +20,13 @@ let aiChatHistory = [
   { role: "assistant", content: "Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! 🎓" }
 ];
 
-// Auto-detect if running locally or on Render
+// Auto-detect API URL - works on localhost AND Render!
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5001/api'
-  : 'https://oblixel-academy-backend.onrender.com/api';
+  : '/api';
+
+console.log('[APP] Using API_BASE_URL:', API_BASE_URL);
+
 // ==================== HELPER FUNCTIONS ====================
 function showToast(message, type = "info") {
   console.log(`[TOAST] ${type}: ${message}`);
@@ -139,6 +143,26 @@ function applyAllPasswordFixes() {
   }, 50);
 }
 
+// ==================== API REQUEST FUNCTION ====================
+async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  
+  debugLog(`API ${options.method || 'GET'} ${endpoint}`);
+  
+  try {
+    const response = await fetch(url, { ...options, headers });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || data.message || 'Request failed');
+    return data;
+  } catch (error) {
+    debugLog(`API Error: ${error.message}`);
+    throw error;
+  }
+}
+
 // ==================== NAVBAR STYLE BASED ON LOGIN STATE ====================
 function updateNavbarStyle() {
   const navbar = document.getElementById('mainNavbar');
@@ -197,26 +221,6 @@ function initNavbarAutoHide() {
   });
 }
 
-// ==================== API REQUEST FUNCTION ====================
-async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const token = getAuthToken();
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  
-  debugLog(`API ${options.method || 'GET'} ${endpoint}`);
-  
-  try {
-    const response = await fetch(url, { ...options, headers });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || data.message || 'Request failed');
-    return data;
-  } catch (error) {
-    debugLog(`API Error: ${error.message}`);
-    throw error;
-  }
-}
-
 // ==================== AUTH API CALLS ====================
 async function register(name, email, password) {
   return apiRequest('/auth/register', { 
@@ -250,18 +254,10 @@ async function forgotPassword(email) {
   });
 }
 
-async function resetPassword(token, newPassword) {
-  return apiRequest('/auth/reset-password', { 
-    method: 'POST', 
-    body: JSON.stringify({ token, newPassword }) 
-  });
-}
-
 function logout() {
   localStorage.removeItem('auth_token');
   localStorage.removeItem('remember_me');
   currentUser = null;
-  // Reset AI chat history
   aiChatHistory = [
     { role: "assistant", content: "Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! 🎓" }
   ];
@@ -353,25 +349,22 @@ async function validateVoucher(code, courseId) {
   }
 }
 
-// ==================== AI API CALLS (WITH CONVERSATION MEMORY) ====================
+// ==================== AI API CALLS ====================
 async function sendAIMessage(message) {
   try {
-    // Add user message to history
     aiChatHistory.push({ role: "user", content: message });
     
-    // Send full conversation context to API
     const response = await fetch(`${API_BASE_URL}/ai/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         message: message,
-        history: aiChatHistory.slice(-10) // Send last 10 messages for context
+        history: aiChatHistory.slice(-10)
       })
     });
     const data = await response.json();
     const aiResponse = data.response || data.message || "I'm here to help!";
     
-    // Format WhatsApp number as clickable link
     let formattedResponse = aiResponse;
     const whatsappNumber = "+263714587259";
     if (aiResponse.includes(whatsappNumber)) {
@@ -381,7 +374,6 @@ async function sendAIMessage(message) {
       );
     }
     
-    // Add AI response to history
     aiChatHistory.push({ role: "assistant", content: aiResponse });
     
     return { response: formattedResponse };
@@ -586,7 +578,7 @@ function renderYouTubeCard(metadata) {
   `;
 }
 
-// ==================== CHECK AUTH STATUS (REFRESH PERSISTENCE) ====================
+// ==================== CHECK AUTH STATUS ====================
 async function checkAuth() {
   const token = localStorage.getItem('auth_token');
   if (!token) return false;
@@ -602,7 +594,7 @@ async function checkAuth() {
   }
 }
 
-// ==================== UPDATE NAVIGATION BASED ON LOGIN STATUS ====================
+// ==================== UPDATE NAVIGATION UI ====================
 function updateAuthUI() {
   const authDiv = document.getElementById('auth-buttons');
   const userControls = document.getElementById('user-controls');
@@ -617,7 +609,6 @@ function updateAuthUI() {
   const hamburgerBtn = document.getElementById('mobileMenuBtn');
   
   if (currentUser) {
-    // Logged in state
     if (authDiv) authDiv.classList.add('hidden');
     if (userControls) userControls.classList.remove('hidden');
     if (avatar) avatar.innerText = currentUser.avatar || currentUser.name?.charAt(0) || 'U';
@@ -626,7 +617,6 @@ function updateAuthUI() {
     if (aiBtn) aiBtn.classList.remove('hidden');
     if (hamburgerBtn) hamburgerBtn.style.display = 'block';
     
-    // Hide logo when logged in
     const navbarLogo = document.getElementById('navbarLogo');
     if (navbarLogo) navbarLogo.style.display = 'none';
     
@@ -644,11 +634,9 @@ function updateAuthUI() {
       }
     });
     
-    // Close mobile menu if open
     if (mobileMenu) mobileMenu.classList.add('hidden');
     
   } else {
-    // Not logged in state
     if (authDiv) authDiv.classList.remove('hidden');
     if (userControls) userControls.classList.add('hidden');
     if (logoutBtn) logoutBtn.classList.add('hidden');
@@ -656,7 +644,6 @@ function updateAuthUI() {
     if (aiBtn) aiBtn.classList.remove('hidden');
     if (hamburgerBtn) hamburgerBtn.style.display = 'none';
     
-    // Show logo when not logged in
     const navbarLogo = document.getElementById('navbarLogo');
     if (navbarLogo) navbarLogo.style.display = 'flex';
     
@@ -689,7 +676,6 @@ async function loadCourses() {
 
 // ==================== PAGE RENDERING DISPATCHER ====================
 function renderPage(page) {
-  // Prevent logged in users from accessing landing page
   if (currentUser && page === 'landing') {
     page = 'dashboard';
   }
@@ -718,7 +704,7 @@ console.log('✅ Part 1 (Core & Auth) loaded - continuing to Part 2...');
 // ==================== PART 2: USER FEATURES & PAGES ====================
 console.log('🚀 Loading Part 2 (User Features & Pages)');
 
-// ==================== LANDING PAGE (NO HAMBURGER, LOGO ON LEFT) ====================
+// ==================== LANDING PAGE ====================
 function renderLandingPage() {
   console.log('🏠 Rendering landing page with', coursesData.length, 'courses');
   const root = document.getElementById('app-root');
@@ -874,7 +860,6 @@ function renderRegister() {
   passwordInput.style.direction = 'ltr';
   passwordInput.style.unicodeBidi = 'normal';
   
-  // Force LTR on every keystroke to prevent glitch
   passwordInput.addEventListener('keydown', function(e) {
     this.style.direction = 'ltr';
     this.style.unicodeBidi = 'normal';
@@ -883,7 +868,6 @@ function renderRegister() {
   passwordInput.addEventListener('input', function(e) {
     this.style.direction = 'ltr';
     this.style.unicodeBidi = 'normal';
-    // Fix cursor position
     const pos = this.selectionStart;
     setTimeout(() => {
       this.setSelectionRange(pos, pos);
@@ -901,7 +885,7 @@ function renderRegister() {
     }
     
     // Simple password validation - only check length > 4
-    if (!isPasswordValid(password)) {
+    if (password.length < 5) {
       showToast('Password must be at least 5 characters', 'error');
       return;
     }
@@ -921,12 +905,10 @@ function renderRegister() {
   document.getElementById('toggleRegPass').addEventListener('click', () => {
     vis = !vis;
     passwordInput.type = vis ? 'text' : 'password';
-    // Re-apply LTR after type change
     passwordInput.style.direction = 'ltr';
     passwordInput.style.unicodeBidi = 'normal';
   });
   
-  // Apply password fixes
   applyAllPasswordFixes();
 }
 
@@ -963,7 +945,6 @@ function renderLogin() {
   
   const loginPass = document.getElementById('loginPass');
   
-  // Apply STRONG password fix for login
   loginPass.setAttribute('dir', 'ltr');
   loginPass.style.direction = 'ltr';
   loginPass.style.unicodeBidi = 'normal';
@@ -1127,7 +1108,7 @@ async function renderDashboard() {
   }
 }
 
-// ==================== COURSES PAGE (WITH SEARCH BAR) ====================
+// ==================== COURSES PAGE ====================
 async function renderCourses() {
   const root = document.getElementById('app-root');
   if (coursesData.length === 0) {
@@ -1803,11 +1784,11 @@ async function renderAdmin() {
         
         <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add New Course</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Course</th><th class="text-left">Exam Price</th><th class="text-left">Path Price</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody>${courses.map(c => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Course" class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ${c.icon || 'fa-certificate'} text-purple-400"></i><span class="font-medium">${escapeHtml(c.name)}</span></div></td><td data-label="Exam Price">$${c.examPrice}</td><td data-label="Path Price">$${c.pathPrice || c.examPrice * 1.5}</td><td data-label="Students">${c.enrolledCount || 0}</td><td data-label="Actions" class="space-x-2"><button onclick="window.editCourseItem('${c.id}')" class="text-cyan-400 hover:text-cyan-300 transition"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal('${c.id}', '${escapeHtml(c.name)}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button><button onclick="window.manageCourseVideos('${c.id}')" class="text-yellow-400 hover:text-yellow-300 transition"><i class="fa-solid fa-video"></i></button></td></tr>`).join('')}</tbody></table></div></div>
         
-        <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Voucher Management</h2><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm transition">+ Create Voucher</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm transition">📦 Batch Create</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used / Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Code" class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 copy-voucher-btn text-gray-400 hover:text-cyan-400" title="Copy code"><i class="fa-regular fa-copy"></i></button></td><td data-label="Discount">${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td data-label="Course">${v.courseId === 'all' ? 'All Courses' : courses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td data-label="Used">${v.usedCount}/${v.maxUses || 1}</td><td data-label="Expires">${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td data-label="Actions"><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers created yet. Click "Create Voucher" to get started.</td>'}</tbody></table></div></div>
+        <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Voucher Management</h2><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm transition">+ Create Voucher</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm transition">📦 Batch Create</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used / Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Code" class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 copy-voucher-btn text-gray-400 hover:text-cyan-400" title="Copy code"><i class="fa-regular fa-copy"></i></button></td><td data-label="Discount">${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td data-label="Course">${v.courseId === 'all' ? 'All Courses' : courses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td data-label="Used">${v.usedCount}/${v.maxUses || 1}</td><td data-label="Expires">${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td data-label="Actions"><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers created yet. Click "Create Voucher" to get started.<table>'}</tbody></table></div></div>
         
         <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (${pending.length})</h2><div class="space-y-3">${pending.length > 0 ? pending.map(p => `<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div class="flex-1"><p class="font-medium">${escapeHtml(p.userName || p.userEmail)}</p><p class="text-sm text-gray-400">${escapeHtml(p.courseName)} • Score: ${p.score}% • Submitted: ${new Date(p.submittedAt || p.createdAt).toLocaleString()}</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem('${p.id}')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm transition">✅ Approve</button><button onclick="window.rejectCertificateItem('${p.id}')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm transition">❌ Reject</button></div></div>`).join('') : '<div class="glass rounded-xl p-8 text-center text-gray-400"><i class="fa-regular fa-circle-check text-green-400 text-2xl mb-2 block"></i> No pending certificates to approve</div>'}</div></div>
         
-        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Joined</th><th class="text-left">Actions</th><tr></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="User" class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td data-label="Role"><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}">${u.role}</span></td><td data-label="Courses">${u.enrolledCourses || 0}</td><td data-label="Spent">$${u.totalSpent || 0}</td><td data-label="Joined">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td><td data-label="Actions" class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300 transition" title="Make Admin"><i class="fa-solid fa-crown"></i></button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name)}')" class="text-red-400 hover:text-red-300 transition" title="Delete User"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
+        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Joined</th><th class="text-left">Actions</th></tr></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="User" class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td data-label="Role"><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}">${u.role}</span></td><td data-label="Courses">${u.enrolledCourses || 0}</td><td data-label="Spent">$${u.totalSpent || 0}</td><td data-label="Joined">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td><td data-label="Actions" class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300 transition" title="Make Admin"><i class="fa-solid fa-crown"></i></button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name)}')" class="text-red-400 hover:text-red-300 transition" title="Delete User"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
         
         <div class="glass rounded-3xl p-6"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-chart-line text-green-400 mr-2"></i> Finance Summary</h2><div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">This Month</p><p class="text-2xl font-bold text-green-400">$${(financeData.thisMonth || 0).toLocaleString()}</p></div><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">Last Month</p><p class="text-2xl font-bold text-cyan-400">$${(financeData.lastMonth || 0).toLocaleString()}</p></div><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">Total Revenue</p><p class="text-2xl font-bold text-yellow-400">$${(financeData.total || 0).toLocaleString()}</p></div></div><div class="text-center text-gray-500 text-sm"><i class="fa-regular fa-chart-bar mr-1"></i> Discount impact: $${(financeData.discountImpact || 0).toLocaleString()} | Net: $${(financeData.netRevenue || 0).toLocaleString()}</div></div>
       </div>
@@ -1842,7 +1823,7 @@ async function renderAdmin() {
   }
 }
 
-// ==================== MODAL FUNCTIONS FOR ADMIN (SHORTENED FOR LENGTH - SAME AS BEFORE) ====================
+// ==================== MODAL FUNCTIONS FOR ADMIN (SIMPLIFIED) ====================
 function showAddCourseModal() {
   const modalHtml = `<div id="addCourseModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-plus-circle mr-2"></i> Add New Course</h2><button onclick="closeModal('addCourseModal')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="space-y-4"><div><label class="block text-sm font-medium mb-1">Course Name *</label><input type="text" id="courseName" placeholder="e.g., DevOps Master" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" autocomplete="off"></div><div><label class="block text-sm font-medium mb-1">Description</label><textarea id="courseDesc" rows="3" placeholder="Course description..." class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></textarea></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Exam Price *</label><input type="number" id="examPrice" placeholder="99" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div><label class="block text-sm font-medium mb-1">Path Price</label><input type="number" id="pathPrice" placeholder="149" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Icon (FontAwesome)</label><input type="text" id="courseIcon" placeholder="fa-shield-haltered" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" autocomplete="off"><p class="text-xs text-gray-400 mt-1">fa-shield-haltered, fa-cloud, fa-robot, etc.</p></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="courseCategory" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option>Cybersecurity</option><option>Cloud Computing</option><option>Artificial Intelligence</option><option>Networking</option><option>DevOps</option><option>Data Science</option></select></div></div><div><label class="block text-sm font-medium mb-1">Color</label><select id="courseColor" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option value="purple">Purple</option><option value="cyan">Cyan</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="red">Red</option></select></div><div class="pt-4 flex gap-3"><button onclick="createNewCourse()" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold">➕ Create Course</button><button onclick="closeModal('addCourseModal')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div></div>`;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
@@ -2043,7 +2024,7 @@ window.deleteVoucherItem = async (voucherId) => {
 
 function closeModal(modalId) { const modal = document.getElementById(modalId); if (modal) modal.remove(); }
 
-// ==================== AI CHAT MODAL (WITH CONVERSATION MEMORY) ====================
+// ==================== AI CHAT MODAL FUNCTIONS ====================
 let currentAIChatCourseId = null;
 
 function openAIChatModal(courseId = null) { 
@@ -2214,14 +2195,13 @@ function expandAIChat() {
   } 
 }
 
-// ==================== CHECKOUT PAGE WITH FULL COUNTRIES LIST AND AUTO-ENROLL AFTER VOUCHER ====================
+// ==================== CHECKOUT PAGE WITH AUTO-ENROLL AFTER VOUCHER ====================
 window.openCheckout = async (courseId) => {
   if (!currentUser) { renderPage('login'); return; }
   const course = coursesData.find(c => c.id === courseId);
   if (!course) { showToast('Course not found', 'error'); return; }
   const root = document.getElementById('app-root');
   
-  // Full countries list (195+ countries - shortened for display)
   const countriesList = `
     <option value="">Select Country</option>
     <option value="United States">United States</option>
@@ -2239,28 +2219,6 @@ window.openCheckout = async (courseId) => {
     <option value="Japan">Japan</option>
     <option value="Brazil">Brazil</option>
     <option value="Mexico">Mexico</option>
-    <option value="Spain">Spain</option>
-    <option value="Italy">Italy</option>
-    <option value="Netherlands">Netherlands</option>
-    <option value="Sweden">Sweden</option>
-    <option value="Norway">Norway</option>
-    <option value="Denmark">Denmark</option>
-    <option value="Finland">Finland</option>
-    <option value="Poland">Poland</option>
-    <option value="Russia">Russia</option>
-    <option value="Turkey">Turkey</option>
-    <option value="Egypt">Egypt</option>
-    <option value="Morocco">Morocco</option>
-    <option value="Ghana">Ghana</option>
-    <option value="Uganda">Uganda</option>
-    <option value="Tanzania">Tanzania</option>
-    <option value="Zambia">Zambia</option>
-    <option value="Botswana">Botswana</option>
-    <option value="Namibia">Namibia</option>
-    <option value="Mozambique">Mozambique</option>
-    <option value="Angola">Angola</option>
-    <option value="Ethiopia">Ethiopia</option>
-    <option value="Rwanda">Rwanda</option>
   `;
   
   root.innerHTML = `
@@ -2285,9 +2243,7 @@ window.openCheckout = async (courseId) => {
               <div class="name-row flex flex-col sm:flex-row gap-3"><input id="firstName" placeholder="First name" class="flex-1 bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm" autocomplete="off"><input id="lastName" placeholder="Last name" class="flex-1 bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm" autocomplete="off"></div>
               <input id="email" placeholder="Email" value="${currentUser.email}" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm" autocomplete="off">
               <input id="phone" placeholder="Phone" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm" autocomplete="off">
-              <select id="country" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm">
-                ${countriesList}
-              </select>
+              <select id="country" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm">${countriesList}</select>
               <div><p class="text-sm text-gray-400 mb-2">Payment Method</p><div class="space-y-2"><label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer"><input type="radio" name="paymentMethod" value="credit_card" checked><span>💳 Credit Card</span></label><label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer"><input type="radio" name="paymentMethod" value="paypal"><span>🅿️ PayPal</span></label><label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer"><input type="radio" name="paymentMethod" value="ecocash"><span>📱 EcoCash</span></label></div></div>
               <label class="flex items-center gap-3 mt-4"><input type="checkbox" id="agreeTerms"><span class="text-sm">I agree to Terms & Conditions</span></label>
               <button id="submitOrderBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold mt-4 glow">Submit Order</button>
@@ -2300,7 +2256,6 @@ window.openCheckout = async (courseId) => {
   
   let currentPrice = course.examPrice, currentDiscount = 0, appliedVoucher = null, selectedType = 'exam_only';
   
-  // Handle plan type change
   document.querySelectorAll('input[name="enrollType"]').forEach(radio => { 
     radio.addEventListener('change', (e) => { 
       selectedType = e.target.value; 
@@ -2311,7 +2266,6 @@ window.openCheckout = async (courseId) => {
     }); 
   });
   
-  // Handle voucher application - WITH AUTO-ENROLLMENT AFTER APPLY
   document.getElementById('applyVoucherBtn')?.addEventListener('click', async () => { 
     const code = document.getElementById('voucherInput').value; 
     if (!code) {
@@ -2321,8 +2275,6 @@ window.openCheckout = async (courseId) => {
     
     try { 
       const result = await validateVoucher(code, courseId); 
-      console.log('[VOUCHER] Validation result:', result);
-      
       if (result.valid === true) { 
         appliedVoucher = result.voucher;
         const basePrice = selectedType === 'exam_only' ? course.examPrice : course.pathPrice;
@@ -2330,63 +2282,46 @@ window.openCheckout = async (courseId) => {
         
         if (result.voucher.discountType === 'free') { 
           discountAmount = basePrice;
-          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">🎉 FREE! 100% discount applied! Auto-enrolling...</span>`;
+          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">🎉 FREE! Auto-enrolling...</span>`;
         } else if (result.voucher.discountType === 'percentage') { 
           discountAmount = basePrice * (result.voucher.discountValue / 100);
-          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">✅ ${result.voucher.discountValue}% discount applied! Auto-enrolling...</span>`;
-        } else if (result.voucher.discountType === 'fixed') { 
+          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">✅ ${result.voucher.discountValue}% discount! Auto-enrolling...</span>`;
+        } else { 
           discountAmount = result.voucher.discountValue;
-          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">✅ $${result.voucher.discountValue} discount applied! Auto-enrolling...</span>`;
+          document.getElementById('voucherMessage').innerHTML = `<span class="text-green-400">✅ $${result.voucher.discountValue} discount! Auto-enrolling...</span>`;
         }
         
         currentDiscount = discountAmount;
         currentPrice = Math.max(0, basePrice - discountAmount);
-        
         document.getElementById('discountAmount').innerText = `-$${currentDiscount.toFixed(2)}`;
         document.getElementById('totalAmount').innerHTML = `<strong>$${currentPrice.toFixed(2)}</strong>`;
         document.getElementById('voucherInput').disabled = true;
         document.getElementById('applyVoucherBtn').disabled = true;
         document.getElementById('applyVoucherBtn').classList.add('opacity-50');
         
-        // AUTO-ENROLL AFTER VOUCHER APPLIED - Same as payment flow!
         showToast('Processing enrollment with voucher...', 'info');
         
-        // Get billing info from form
         const firstName = document.getElementById('firstName').value || currentUser.name.split(' ')[0] || 'Student';
         const lastName = document.getElementById('lastName').value || currentUser.name.split(' ')[1] || '';
         const email = document.getElementById('email').value || currentUser.email;
         const phone = document.getElementById('phone').value || '';
         const country = document.getElementById('country').value || 'Zimbabwe';
-        
         const billingInfo = { firstName, lastName, email, phone, country };
         
-        // Create checkout session (free/ discounted)
         const checkout = await createCheckout(courseId, selectedType, appliedVoucher.code, billingInfo);
-        console.log('[VOUCHER CHECKOUT] Created:', checkout);
-        
-        // Confirm payment (0 amount or discounted amount)
-        const paymentResult = await confirmPayment(checkout.sessionId, 'voucher', billingInfo);
-        console.log('[VOUCHER PAYMENT] Result:', paymentResult);
-        
+        await confirmPayment(checkout.sessionId, 'voucher', billingInfo);
         showToast(`🎉 Enrolled successfully with ${result.voucher.discountValue}% discount!`, 'success');
-        
-        // Reload courses and go to course dashboard
         await loadCourses();
         renderCourseDashboard(courseId);
-        
       } else { 
-        const errorMsg = result.message || result.error || 'Invalid or expired voucher code';
-        document.getElementById('voucherMessage').innerHTML = `<span class="text-red-400">❌ ${errorMsg}</span>`;
+        document.getElementById('voucherMessage').innerHTML = `<span class="text-red-400">❌ ${result.message || 'Invalid voucher code'}</span>`;
       } 
     } catch (error) { 
-      console.error('[VOUCHER] Error:', error);
       document.getElementById('voucherMessage').innerHTML = `<span class="text-red-400">❌ ${error.message || 'Invalid voucher code'}</span>`;
     } 
   });
   
-  // Handle submit order for non-voucher payments
   document.getElementById('submitOrderBtn')?.addEventListener('click', async () => { 
-    // If voucher already applied and auto-enrolled, prevent duplicate
     if (appliedVoucher) {
       showToast('Voucher already applied and enrollment completed!', 'info');
       return;
@@ -2403,39 +2338,21 @@ window.openCheckout = async (courseId) => {
       return; 
     } 
     
-    const billingInfo = { 
-      firstName, 
-      lastName, 
-      email, 
-      phone: document.getElementById('phone').value, 
-      country: document.getElementById('country').value 
-    }; 
-    
+    const billingInfo = { firstName, lastName, email, phone: document.getElementById('phone').value, country: document.getElementById('country').value }; 
     try { 
       showToast('Processing payment...', 'info'); 
-      
-      // Create checkout session
       const checkout = await createCheckout(courseId, selectedType, null, billingInfo); 
-      console.log('[CHECKOUT] Created:', checkout);
-      
-      // Confirm payment
-      const paymentResult = await confirmPayment(checkout.sessionId, paymentMethod, billingInfo); 
-      console.log('[PAYMENT] Result:', paymentResult);
-      
+      await confirmPayment(checkout.sessionId, paymentMethod, billingInfo); 
       showToast('Payment successful! You are now enrolled.', 'success'); 
-      
-      // Reload courses and go to course dashboard
       await loadCourses(); 
       renderCourseDashboard(courseId); 
-      
     } catch (error) { 
-      console.error('[CHECKOUT] Error:', error);
       showToast(error.message || 'Payment failed', 'error'); 
     } 
   });
 };
 
-// ==================== INITIALIZATION WITH 6-SECOND LOADER DELAY ====================
+// ==================== INITIALIZATION WITH 6-SECOND LOADER ====================
 window.renderPage = renderPage;
 window.renderCourseDashboard = renderCourseDashboard;
 window.renderModulePage = renderModulePage;
@@ -2458,7 +2375,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     mobileMenu.classList.toggle('hidden'); 
   });
   
-  // Close mobile menu when clicking outside
   document.addEventListener('click', (e) => {
     if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
       if (!mobileMenu.contains(e.target) && e.target !== mobileMenuBtn && !mobileMenuBtn?.contains(e.target)) {
@@ -2467,7 +2383,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
-  // Close mobile menu when scrolling
   window.addEventListener('scroll', () => {
     if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
       mobileMenu.classList.add('hidden');
@@ -2485,7 +2400,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('logout-btn')?.addEventListener('click', () => { logout(); });
   document.getElementById('mobileLogoutBtn')?.addEventListener('click', () => { logout(); mobileMenu.classList.add('hidden'); });
   
-  // Logo click - redirect to dashboard if logged in, landing if not
   const logo = document.getElementById('navbarLogo');
   if (logo) {
     logo.addEventListener('click', () => {
@@ -2525,12 +2439,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loader = document.getElementById('loader'); 
   const progressBar = document.getElementById('loaderProgress'); 
   
-  // 6-SECOND LOADER DELAY - Users see the beautiful O animation
   if (progressBar) { 
     let width = 0; 
-    const totalDuration = 6000; // 6 seconds
-    const incrementInterval = 50; // Update every 50ms
-    const incrementStep = (100 / (totalDuration / incrementInterval)); // ~0.83% per 50ms
+    const totalDuration = 6000;
+    const incrementInterval = 50;
+    const incrementStep = (100 / (totalDuration / incrementInterval));
     
     const interval = setInterval(() => { 
       width += incrementStep; 
@@ -2544,14 +2457,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, incrementInterval); 
   }
   
-  // Load courses and check auth AFTER 6-second loader delay
   setTimeout(async () => {
     await loadCourses(); 
     await checkAuth(); 
     updateAuthUI(); 
     updateNavbarStyle();
     
-    // Fade out loader smoothly
     if (loader) {
       loader.style.transition = 'opacity 0.5s ease-out';
       loader.style.opacity = '0';
@@ -2567,9 +2478,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     console.log('✅ App fully initialized after 6-second loader');
-  }, 6000); // 6 second delay - users see the obliXel animation!
+  }, 6000);
   
   console.log('✅ App initialization started - loader will show for 6 seconds');
 });
 
-console.log('🎉 obliXel Academy v9.0 - COMPLETE WITH SIMPLIFIED REGISTER (NO PASSWORD STRENGTH CHECKER)');
+console.log('🎉 obliXel Academy v9.0 - COMPLETE - READY FOR RENDER DEPLOYMENT');

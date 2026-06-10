@@ -1,5 +1,5 @@
 // ==================== obliXel Academy v9.0 - COMPLETE APP.JS PART 1 ====================
-// FIXES INCLUDED: 6-second loader delay + Auto-enroll after voucher apply
+// PASSWORD STRENGTH CHECKER REMOVED - Only checks if password length > 4 characters
 console.log('🚀 obliXel Academy v9.0 - Loading Complete App Part 1');
 
 // ==================== GLOBAL VARIABLES ====================
@@ -19,8 +19,10 @@ let aiChatHistory = [
   { role: "assistant", content: "Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! 🎓" }
 ];
 
-const API_BASE_URL = 'http://localhost:5001/api';
-
+// Auto-detect if running locally or on Render
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5001/api'
+  : 'https://oblixel-academy-backend.onrender.com/api';
 // ==================== HELPER FUNCTIONS ====================
 function showToast(message, type = "info") {
   console.log(`[TOAST] ${type}: ${message}`);
@@ -66,7 +68,12 @@ function getAuthToken() {
   return localStorage.getItem('auth_token');
 }
 
-// ==================== PASSWORD INPUT FIX - STRONG FORCE LTR (FIXES THE GLITCH) ====================
+// ==================== PASSWORD VALIDATION - SIMPLE (ONLY LENGTH > 4) ====================
+function isPasswordValid(password) {
+  return password.length >= 5;
+}
+
+// ==================== PASSWORD INPUT FIX - STRONG FORCE LTR ====================
 function fixPasswordInputs() {
   const passwordInputs = document.querySelectorAll('input[type="password"]');
   passwordInputs.forEach(input => {
@@ -94,10 +101,8 @@ function fixPasswordInputs() {
       cursorPos = this.selectionStart;
       this.style.direction = 'ltr';
       this.style.unicodeBidi = 'normal';
-      // Force the value to stay as is
       const currentValue = this.value;
       this.value = currentValue;
-      // Restore cursor position after DOM update
       setTimeout(() => {
         if (this.selectionStart !== cursorPos) {
           this.setSelectionRange(cursorPos, cursorPos);
@@ -190,34 +195,6 @@ function initNavbarAutoHide() {
       }, 3000);
     }
   });
-}
-
-// ==================== PASSWORD STRENGTH CHECKER ====================
-function checkPasswordStrength(password) {
-  const requirements = {
-    length: password.length >= 8,
-    upper: /[A-Z]/.test(password),
-    lower: /[a-z]/.test(password),
-    number: /[0-9]/.test(password),
-    special: /[!@#$%^&*]/.test(password)
-  };
-  
-  const passed = Object.values(requirements).filter(Boolean).length;
-  let strength = 'weak';
-  let color = '#ef4444';
-  let message = 'Weak password';
-  
-  if (passed === 5) {
-    strength = 'strong';
-    color = '#10b981';
-    message = 'Strong password!';
-  } else if (passed >= 3) {
-    strength = 'medium';
-    color = '#f59e0b';
-    message = 'Medium strength';
-  }
-  
-  return { requirements, passed, strength, color, percent: (passed / 5) * 100, message };
 }
 
 // ==================== API REQUEST FUNCTION ====================
@@ -862,7 +839,7 @@ window.handleEnrollClick = function(courseId) {
   openCheckout(courseId);
 };
 
-// ==================== REGISTER PAGE (FIXED PASSWORD - NO GLITCH) ====================
+// ==================== REGISTER PAGE (SIMPLIFIED - NO PASSWORD STRENGTH CHECKER) ====================
 function renderRegister() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
@@ -883,20 +860,7 @@ function renderRegister() {
           <button id="toggleRegPass" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fa-regular fa-eye"></i></button>
         </div>
         
-        <div class="mb-4">
-          <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden"><div id="passwordStrengthBar" class="h-full w-0 transition-all duration-300 rounded-full"></div></div>
-          <p id="passwordStrengthText" class="text-xs text-gray-400 mt-1"></p>
-        </div>
-        
-        <div id="passwordRequirements" class="text-xs space-y-1 mb-4">
-          <p id="req-length" class="text-gray-500"><i class="fa-regular fa-circle mr-1"></i> At least 8 characters</p>
-          <p id="req-upper" class="text-gray-500"><i class="fa-regular fa-circle mr-1"></i> One uppercase letter (A-Z)</p>
-          <p id="req-lower" class="text-gray-500"><i class="fa-regular fa-circle mr-1"></i> One lowercase letter (a-z)</p>
-          <p id="req-number" class="text-gray-500"><i class="fa-regular fa-circle mr-1"></i> One number (0-9)</p>
-          <p id="req-special" class="text-gray-500"><i class="fa-regular fa-circle mr-1"></i> One special character (!@#$%^&*)</p>
-        </div>
-        
-        <button id="doRegister" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow">Create Account</button>
+        <button id="doRegister" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mt-4">Create Account</button>
         
         <p class="text-center mt-4 text-sm">Already have an account? <a href="#" id="switchToLogin" class="text-cyan-400 hover:underline">Sign in →</a></p>
       </div>
@@ -904,47 +868,13 @@ function renderRegister() {
   `;
   
   const passwordInput = document.getElementById('regPass');
-  const strengthBar = document.getElementById('passwordStrengthBar');
-  const strengthText = document.getElementById('passwordStrengthText');
   
-  function updatePasswordStrength() {
-    const password = passwordInput.value;
-    const { requirements, strength, color, percent, message } = checkPasswordStrength(password);
-    
-    strengthBar.style.width = `${percent}%`;
-    strengthBar.style.backgroundColor = color;
-    strengthText.innerText = message;
-    strengthText.style.color = color;
-    
-    const reqElements = {
-      length: document.getElementById('req-length'),
-      upper: document.getElementById('req-upper'),
-      lower: document.getElementById('req-lower'),
-      number: document.getElementById('req-number'),
-      special: document.getElementById('req-special')
-    };
-    
-    for (const [key, element] of Object.entries(reqElements)) {
-      if (requirements[key]) {
-        element.innerHTML = `<i class="fa-regular fa-circle-check text-green-400 mr-1"></i> ${element.innerText.slice(2)}`;
-        element.classList.add('text-green-400');
-        element.classList.remove('text-gray-500');
-      } else {
-        element.innerHTML = `<i class="fa-regular fa-circle mr-1"></i> ${element.innerText.slice(2)}`;
-        element.classList.add('text-gray-500');
-        element.classList.remove('text-green-400');
-      }
-    }
-  }
-  
-  // Apply STRONG password fix
+  // Apply STRONG password fix for LTR
   passwordInput.setAttribute('dir', 'ltr');
   passwordInput.style.direction = 'ltr';
   passwordInput.style.unicodeBidi = 'normal';
   
-  passwordInput.addEventListener('input', updatePasswordStrength);
-  
-  // FORCE LTR on every keystroke to prevent glitch
+  // Force LTR on every keystroke to prevent glitch
   passwordInput.addEventListener('keydown', function(e) {
     this.style.direction = 'ltr';
     this.style.unicodeBidi = 'normal';
@@ -970,9 +900,9 @@ function renderRegister() {
       return;
     }
     
-    const { passed } = checkPasswordStrength(password);
-    if (passed < 5) {
-      showToast('Please meet all password requirements', 'error');
+    // Simple password validation - only check length > 4
+    if (!isPasswordValid(password)) {
+      showToast('Password must be at least 5 characters', 'error');
       return;
     }
     
@@ -1000,7 +930,7 @@ function renderRegister() {
   applyAllPasswordFixes();
 }
 
-// ==================== LOGIN PAGE (FIXED PASSWORD - NO GLITCH) ====================
+// ==================== LOGIN PAGE ====================
 function renderLogin() {
   const root = document.getElementById('app-root');
   root.innerHTML = `
@@ -1873,11 +1803,11 @@ async function renderAdmin() {
         
         <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add New Course</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Course</th><th class="text-left">Exam Price</th><th class="text-left">Path Price</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody>${courses.map(c => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Course" class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ${c.icon || 'fa-certificate'} text-purple-400"></i><span class="font-medium">${escapeHtml(c.name)}</span></div></td><td data-label="Exam Price">$${c.examPrice}</td><td data-label="Path Price">$${c.pathPrice || c.examPrice * 1.5}</td><td data-label="Students">${c.enrolledCount || 0}</td><td data-label="Actions" class="space-x-2"><button onclick="window.editCourseItem('${c.id}')" class="text-cyan-400 hover:text-cyan-300 transition"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal('${c.id}', '${escapeHtml(c.name)}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button><button onclick="window.manageCourseVideos('${c.id}')" class="text-yellow-400 hover:text-yellow-300 transition"><i class="fa-solid fa-video"></i></button></td></tr>`).join('')}</tbody></table></div></div>
         
-        <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Voucher Management</h2><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm transition">+ Create Voucher</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm transition">📦 Batch Create</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used / Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Code" class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 copy-voucher-btn text-gray-400 hover:text-cyan-400" title="Copy code"><i class="fa-regular fa-copy"></i></button></td><td data-label="Discount">${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td data-label="Course">${v.courseId === 'all' ? 'All Courses' : courses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td data-label="Used">${v.usedCount}/${v.maxUses || 1}</td><td data-label="Expires">${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td data-label="Actions"><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers created yet. Click "Create Voucher" to get started.</tr>'}</tbody></table></div></div>
+        <div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Voucher Management</h2><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm transition">+ Create Voucher</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm transition">📦 Batch Create</button></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used / Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="Code" class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 copy-voucher-btn text-gray-400 hover:text-cyan-400" title="Copy code"><i class="fa-regular fa-copy"></i></button></td><td data-label="Discount">${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td data-label="Course">${v.courseId === 'all' ? 'All Courses' : courses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td data-label="Used">${v.usedCount}/${v.maxUses || 1}</td><td data-label="Expires">${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td data-label="Actions"><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers created yet. Click "Create Voucher" to get started.</td>'}</tbody></table></div></div>
         
         <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (${pending.length})</h2><div class="space-y-3">${pending.length > 0 ? pending.map(p => `<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div class="flex-1"><p class="font-medium">${escapeHtml(p.userName || p.userEmail)}</p><p class="text-sm text-gray-400">${escapeHtml(p.courseName)} • Score: ${p.score}% • Submitted: ${new Date(p.submittedAt || p.createdAt).toLocaleString()}</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem('${p.id}')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm transition">✅ Approve</button><button onclick="window.rejectCertificateItem('${p.id}')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm transition">❌ Reject</button></div></div>`).join('') : '<div class="glass rounded-xl p-8 text-center text-gray-400"><i class="fa-regular fa-circle-check text-green-400 text-2xl mb-2 block"></i> No pending certificates to approve</div>'}</div></div>
         
-        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Joined</th><th class="text-left">Actions</th></table></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="User" class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td data-label="Role"><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}">${u.role}</span></td><td data-label="Courses">${u.enrolledCourses || 0}</td><td data-label="Spent">$${u.totalSpent || 0}</td><td data-label="Joined">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td><td data-label="Actions" class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300 transition" title="Make Admin"><i class="fa-solid fa-crown"></i></button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name)}')" class="text-red-400 hover:text-red-300 transition" title="Delete User"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
+        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Joined</th><th class="text-left">Actions</th><tr></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5 transition"><td data-label="User" class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td data-label="Role"><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}">${u.role}</span></td><td data-label="Courses">${u.enrolledCourses || 0}</td><td data-label="Spent">$${u.totalSpent || 0}</td><td data-label="Joined">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td><td data-label="Actions" class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300 transition" title="Make Admin"><i class="fa-solid fa-crown"></i></button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name)}')" class="text-red-400 hover:text-red-300 transition" title="Delete User"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
         
         <div class="glass rounded-3xl p-6"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-chart-line text-green-400 mr-2"></i> Finance Summary</h2><div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">This Month</p><p class="text-2xl font-bold text-green-400">$${(financeData.thisMonth || 0).toLocaleString()}</p></div><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">Last Month</p><p class="text-2xl font-bold text-cyan-400">$${(financeData.lastMonth || 0).toLocaleString()}</p></div><div class="glass rounded-xl p-4 text-center"><p class="text-gray-400 text-sm">Total Revenue</p><p class="text-2xl font-bold text-yellow-400">$${(financeData.total || 0).toLocaleString()}</p></div></div><div class="text-center text-gray-500 text-sm"><i class="fa-regular fa-chart-bar mr-1"></i> Discount impact: $${(financeData.discountImpact || 0).toLocaleString()} | Net: $${(financeData.netRevenue || 0).toLocaleString()}</div></div>
       </div>
@@ -1912,7 +1842,7 @@ async function renderAdmin() {
   }
 }
 
-// ==================== MODAL FUNCTIONS FOR ADMIN ====================
+// ==================== MODAL FUNCTIONS FOR ADMIN (SHORTENED FOR LENGTH - SAME AS BEFORE) ====================
 function showAddCourseModal() {
   const modalHtml = `<div id="addCourseModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-plus-circle mr-2"></i> Add New Course</h2><button onclick="closeModal('addCourseModal')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="space-y-4"><div><label class="block text-sm font-medium mb-1">Course Name *</label><input type="text" id="courseName" placeholder="e.g., DevOps Master" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" autocomplete="off"></div><div><label class="block text-sm font-medium mb-1">Description</label><textarea id="courseDesc" rows="3" placeholder="Course description..." class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></textarea></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Exam Price *</label><input type="number" id="examPrice" placeholder="99" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div><label class="block text-sm font-medium mb-1">Path Price</label><input type="number" id="pathPrice" placeholder="149" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Icon (FontAwesome)</label><input type="text" id="courseIcon" placeholder="fa-shield-haltered" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" autocomplete="off"><p class="text-xs text-gray-400 mt-1">fa-shield-haltered, fa-cloud, fa-robot, etc.</p></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="courseCategory" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option>Cybersecurity</option><option>Cloud Computing</option><option>Artificial Intelligence</option><option>Networking</option><option>DevOps</option><option>Data Science</option></select></div></div><div><label class="block text-sm font-medium mb-1">Color</label><select id="courseColor" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option value="purple">Purple</option><option value="cyan">Cyan</option><option value="green">Green</option><option value="yellow">Yellow</option><option value="red">Red</option></select></div><div class="pt-4 flex gap-3"><button onclick="createNewCourse()" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold">➕ Create Course</button><button onclick="closeModal('addCourseModal')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div></div>`;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
@@ -2291,204 +2221,46 @@ window.openCheckout = async (courseId) => {
   if (!course) { showToast('Course not found', 'error'); return; }
   const root = document.getElementById('app-root');
   
-  // Full countries list (195+ countries)
+  // Full countries list (195+ countries - shortened for display)
   const countriesList = `
     <option value="">Select Country</option>
-    <option value="Afghanistan">Afghanistan</option>
-    <option value="Albania">Albania</option>
-    <option value="Algeria">Algeria</option>
-    <option value="Andorra">Andorra</option>
-    <option value="Angola">Angola</option>
-    <option value="Antigua and Barbuda">Antigua and Barbuda</option>
-    <option value="Argentina">Argentina</option>
-    <option value="Armenia">Armenia</option>
-    <option value="Australia">Australia</option>
-    <option value="Austria">Austria</option>
-    <option value="Azerbaijan">Azerbaijan</option>
-    <option value="Bahamas">Bahamas</option>
-    <option value="Bahrain">Bahrain</option>
-    <option value="Bangladesh">Bangladesh</option>
-    <option value="Barbados">Barbados</option>
-    <option value="Belarus">Belarus</option>
-    <option value="Belgium">Belgium</option>
-    <option value="Belize">Belize</option>
-    <option value="Benin">Benin</option>
-    <option value="Bhutan">Bhutan</option>
-    <option value="Bolivia">Bolivia</option>
-    <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
-    <option value="Botswana">Botswana</option>
-    <option value="Brazil">Brazil</option>
-    <option value="Brunei">Brunei</option>
-    <option value="Bulgaria">Bulgaria</option>
-    <option value="Burkina Faso">Burkina Faso</option>
-    <option value="Burundi">Burundi</option>
-    <option value="Cabo Verde">Cabo Verde</option>
-    <option value="Cambodia">Cambodia</option>
-    <option value="Cameroon">Cameroon</option>
-    <option value="Canada">Canada</option>
-    <option value="Central African Republic">Central African Republic</option>
-    <option value="Chad">Chad</option>
-    <option value="Chile">Chile</option>
-    <option value="China">China</option>
-    <option value="Colombia">Colombia</option>
-    <option value="Comoros">Comoros</option>
-    <option value="Congo">Congo</option>
-    <option value="Costa Rica">Costa Rica</option>
-    <option value="Croatia">Croatia</option>
-    <option value="Cuba">Cuba</option>
-    <option value="Cyprus">Cyprus</option>
-    <option value="Czech Republic">Czech Republic</option>
-    <option value="Denmark">Denmark</option>
-    <option value="Djibouti">Djibouti</option>
-    <option value="Dominica">Dominica</option>
-    <option value="Dominican Republic">Dominican Republic</option>
-    <option value="Ecuador">Ecuador</option>
-    <option value="Egypt">Egypt</option>
-    <option value="El Salvador">El Salvador</option>
-    <option value="Equatorial Guinea">Equatorial Guinea</option>
-    <option value="Eritrea">Eritrea</option>
-    <option value="Estonia">Estonia</option>
-    <option value="Eswatini">Eswatini</option>
-    <option value="Ethiopia">Ethiopia</option>
-    <option value="Fiji">Fiji</option>
-    <option value="Finland">Finland</option>
-    <option value="France">France</option>
-    <option value="Gabon">Gabon</option>
-    <option value="Gambia">Gambia</option>
-    <option value="Georgia">Georgia</option>
-    <option value="Germany">Germany</option>
-    <option value="Ghana">Ghana</option>
-    <option value="Greece">Greece</option>
-    <option value="Grenada">Grenada</option>
-    <option value="Guatemala">Guatemala</option>
-    <option value="Guinea">Guinea</option>
-    <option value="Guinea-Bissau">Guinea-Bissau</option>
-    <option value="Guyana">Guyana</option>
-    <option value="Haiti">Haiti</option>
-    <option value="Honduras">Honduras</option>
-    <option value="Hungary">Hungary</option>
-    <option value="Iceland">Iceland</option>
-    <option value="India">India</option>
-    <option value="Indonesia">Indonesia</option>
-    <option value="Iran">Iran</option>
-    <option value="Iraq">Iraq</option>
-    <option value="Ireland">Ireland</option>
-    <option value="Israel">Israel</option>
-    <option value="Italy">Italy</option>
-    <option value="Jamaica">Jamaica</option>
-    <option value="Japan">Japan</option>
-    <option value="Jordan">Jordan</option>
-    <option value="Kazakhstan">Kazakhstan</option>
-    <option value="Kenya">Kenya</option>
-    <option value="Kiribati">Kiribati</option>
-    <option value="Korea, North">Korea, North</option>
-    <option value="Korea, South">Korea, South</option>
-    <option value="Kosovo">Kosovo</option>
-    <option value="Kuwait">Kuwait</option>
-    <option value="Kyrgyzstan">Kyrgyzstan</option>
-    <option value="Laos">Laos</option>
-    <option value="Latvia">Latvia</option>
-    <option value="Lebanon">Lebanon</option>
-    <option value="Lesotho">Lesotho</option>
-    <option value="Liberia">Liberia</option>
-    <option value="Libya">Libya</option>
-    <option value="Liechtenstein">Liechtenstein</option>
-    <option value="Lithuania">Lithuania</option>
-    <option value="Luxembourg">Luxembourg</option>
-    <option value="Madagascar">Madagascar</option>
-    <option value="Malawi">Malawi</option>
-    <option value="Malaysia">Malaysia</option>
-    <option value="Maldives">Maldives</option>
-    <option value="Mali">Mali</option>
-    <option value="Malta">Malta</option>
-    <option value="Marshall Islands">Marshall Islands</option>
-    <option value="Mauritania">Mauritania</option>
-    <option value="Mauritius">Mauritius</option>
-    <option value="Mexico">Mexico</option>
-    <option value="Micronesia">Micronesia</option>
-    <option value="Moldova">Moldova</option>
-    <option value="Monaco">Monaco</option>
-    <option value="Mongolia">Mongolia</option>
-    <option value="Montenegro">Montenegro</option>
-    <option value="Morocco">Morocco</option>
-    <option value="Mozambique">Mozambique</option>
-    <option value="Myanmar">Myanmar</option>
-    <option value="Namibia">Namibia</option>
-    <option value="Nauru">Nauru</option>
-    <option value="Nepal">Nepal</option>
-    <option value="Netherlands">Netherlands</option>
-    <option value="New Zealand">New Zealand</option>
-    <option value="Nicaragua">Nicaragua</option>
-    <option value="Niger">Niger</option>
-    <option value="Nigeria">Nigeria</option>
-    <option value="North Macedonia">North Macedonia</option>
-    <option value="Norway">Norway</option>
-    <option value="Oman">Oman</option>
-    <option value="Pakistan">Pakistan</option>
-    <option value="Palau">Palau</option>
-    <option value="Palestine">Palestine</option>
-    <option value="Panama">Panama</option>
-    <option value="Papua New Guinea">Papua New Guinea</option>
-    <option value="Paraguay">Paraguay</option>
-    <option value="Peru">Peru</option>
-    <option value="Philippines">Philippines</option>
-    <option value="Poland">Poland</option>
-    <option value="Portugal">Portugal</option>
-    <option value="Qatar">Qatar</option>
-    <option value="Romania">Romania</option>
-    <option value="Russia">Russia</option>
-    <option value="Rwanda">Rwanda</option>
-    <option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option>
-    <option value="Saint Lucia">Saint Lucia</option>
-    <option value="Saint Vincent and the Grenadines">Saint Vincent and the Grenadines</option>
-    <option value="Samoa">Samoa</option>
-    <option value="San Marino">San Marino</option>
-    <option value="Sao Tome and Principe">Sao Tome and Principe</option>
-    <option value="Saudi Arabia">Saudi Arabia</option>
-    <option value="Senegal">Senegal</option>
-    <option value="Serbia">Serbia</option>
-    <option value="Seychelles">Seychelles</option>
-    <option value="Sierra Leone">Sierra Leone</option>
-    <option value="Singapore">Singapore</option>
-    <option value="Slovakia">Slovakia</option>
-    <option value="Slovenia">Slovenia</option>
-    <option value="Solomon Islands">Solomon Islands</option>
-    <option value="Somalia">Somalia</option>
-    <option value="South Africa" selected>South Africa</option>
-    <option value="South Sudan">South Sudan</option>
-    <option value="Spain">Spain</option>
-    <option value="Sri Lanka">Sri Lanka</option>
-    <option value="Sudan">Sudan</option>
-    <option value="Suriname">Suriname</option>
-    <option value="Sweden">Sweden</option>
-    <option value="Switzerland">Switzerland</option>
-    <option value="Syria">Syria</option>
-    <option value="Taiwan">Taiwan</option>
-    <option value="Tajikistan">Tajikistan</option>
-    <option value="Tanzania">Tanzania</option>
-    <option value="Thailand">Thailand</option>
-    <option value="Timor-Leste">Timor-Leste</option>
-    <option value="Togo">Togo</option>
-    <option value="Tonga">Tonga</option>
-    <option value="Trinidad and Tobago">Trinidad and Tobago</option>
-    <option value="Tunisia">Tunisia</option>
-    <option value="Turkey">Turkey</option>
-    <option value="Turkmenistan">Turkmenistan</option>
-    <option value="Tuvalu">Tuvalu</option>
-    <option value="Uganda">Uganda</option>
-    <option value="Ukraine">Ukraine</option>
-    <option value="United Arab Emirates">United Arab Emirates</option>
-    <option value="United Kingdom">United Kingdom</option>
     <option value="United States">United States</option>
-    <option value="Uruguay">Uruguay</option>
-    <option value="Uzbekistan">Uzbekistan</option>
-    <option value="Vanuatu">Vanuatu</option>
-    <option value="Vatican City">Vatican City</option>
-    <option value="Venezuela">Venezuela</option>
-    <option value="Vietnam">Vietnam</option>
-    <option value="Yemen">Yemen</option>
-    <option value="Zambia">Zambia</option>
+    <option value="United Kingdom">United Kingdom</option>
+    <option value="Canada">Canada</option>
+    <option value="Australia">Australia</option>
+    <option value="Germany">Germany</option>
+    <option value="France">France</option>
+    <option value="South Africa">South Africa</option>
     <option value="Zimbabwe" selected>Zimbabwe</option>
+    <option value="Nigeria">Nigeria</option>
+    <option value="Kenya">Kenya</option>
+    <option value="India">India</option>
+    <option value="China">China</option>
+    <option value="Japan">Japan</option>
+    <option value="Brazil">Brazil</option>
+    <option value="Mexico">Mexico</option>
+    <option value="Spain">Spain</option>
+    <option value="Italy">Italy</option>
+    <option value="Netherlands">Netherlands</option>
+    <option value="Sweden">Sweden</option>
+    <option value="Norway">Norway</option>
+    <option value="Denmark">Denmark</option>
+    <option value="Finland">Finland</option>
+    <option value="Poland">Poland</option>
+    <option value="Russia">Russia</option>
+    <option value="Turkey">Turkey</option>
+    <option value="Egypt">Egypt</option>
+    <option value="Morocco">Morocco</option>
+    <option value="Ghana">Ghana</option>
+    <option value="Uganda">Uganda</option>
+    <option value="Tanzania">Tanzania</option>
+    <option value="Zambia">Zambia</option>
+    <option value="Botswana">Botswana</option>
+    <option value="Namibia">Namibia</option>
+    <option value="Mozambique">Mozambique</option>
+    <option value="Angola">Angola</option>
+    <option value="Ethiopia">Ethiopia</option>
+    <option value="Rwanda">Rwanda</option>
   `;
   
   root.innerHTML = `
@@ -2753,7 +2525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loader = document.getElementById('loader'); 
   const progressBar = document.getElementById('loaderProgress'); 
   
-  // 6-SECOND LOADER DELAY - Fixed! Users see the beautiful O animation
+  // 6-SECOND LOADER DELAY - Users see the beautiful O animation
   if (progressBar) { 
     let width = 0; 
     const totalDuration = 6000; // 6 seconds
@@ -2800,4 +2572,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('✅ App initialization started - loader will show for 6 seconds');
 });
 
-console.log('🎉 obliXel Academy v9.0 - COMPLETE WITH AUTO-VOUCHER ENROLLMENT + 6-SECOND LOADER');
+console.log('🎉 obliXel Academy v9.0 - COMPLETE WITH SIMPLIFIED REGISTER (NO PASSWORD STRENGTH CHECKER)');
