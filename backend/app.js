@@ -24,6 +24,21 @@ if (!fs.existsSync(dataDir)) {
 // Initialize data files if they don't exist
 const dataFiles = ['users.json', 'courses.json', 'enrollments.json', 'exams.json', 'payments.json', 'vouchers.json', 'module_progress.json'];
 dataFiles.forEach(file => {
+  // Seed courses if empty
+  try {
+    const coursesPath = path.join(dataDir, "courses.json");
+    const coursesData = fs.readFileSync(coursesPath, "utf8");
+    const parsed = JSON.parse(coursesData);
+    if (!parsed.courses || parsed.courses.length === 0) {
+      console.log("🌱 Seeding courses...");
+      require("./seedCourses");
+    } else {
+      console.log(`📚 Found ${parsed.courses.length} existing courses`);
+    }
+  } catch (e) {
+    console.log("🌱 Seeding courses...");
+    require("./seedCourses");
+  }
   const filePath = path.join(dataDir, file);
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, JSON.stringify([], null, 2));
