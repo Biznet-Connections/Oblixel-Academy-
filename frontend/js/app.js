@@ -19,8 +19,10 @@ let aiChatHistory = [
   { role: "assistant", content: "Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! 🎓" }
 ];
 
-const API_BASE_URL = 'http://localhost:5001/api';
-
+// Auto-detect if running locally or on Render
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5001/api'
+  : 'https://oblixel-academy-backend.onrender.com/api';
 // ==================== HELPER FUNCTIONS ====================
 function showToast(message, type = "info") {
   console.log(`[TOAST] ${type}: ${message}`);
