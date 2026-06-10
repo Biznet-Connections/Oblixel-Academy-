@@ -7,10 +7,18 @@
     "start": "node backend/app.js",
     "dev": "concurrently \"cd backend && node app.js\" \"cd frontend && python3 -m http.server 5500\""
   },
-  "devDependencies": {
-    "concurrently": "^8.2.0"
+  "dependencies": {
+    "concurrently": "^8.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
+
