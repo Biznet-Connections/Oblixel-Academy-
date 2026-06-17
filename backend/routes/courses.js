@@ -1,367 +1,344 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
+const ModuleProgress = require('../models/ModuleProgress');
 const authenticate = require('../middleware/auth');
-const { readJSON, writeJSON, addItem, findById } = require('../utils/jsonDB');
-const { generateId } = require('../utils/helpers');
 
-// COURSE MODULES DATA
-const COURSE_MODULES = {
-  cyber: [
-    { id: 1, name: "Introduction to Cybersecurity", duration: "45 min", quizQuestions: 5, videoUrl: "https://www.youtube.com/watch?v=inWWhr5tnEA" },
-    { id: 2, name: "Network Security Fundamentals", duration: "60 min", quizQuestions: 5, videoUrl: "https://www.youtube.com/watch?v=9G9I_8UvGgA" },
-    { id: 3, name: "SOC Operations", duration: "50 min", quizQuestions: 5, videoUrl: null },
-    { id: 4, name: "Incident Response", duration: "55 min", quizQuestions: 5, videoUrl: null },
-    { id: 5, name: "Threat Hunting", duration: "60 min", quizQuestions: 5, videoUrl: null },
-    { id: 6, name: "Penetration Testing", duration: "70 min", quizQuestions: 5, videoUrl: null },
-    { id: 7, name: "Security Compliance", duration: "40 min", quizQuestions: 5, videoUrl: null },
-    { id: 8, name: "Final Review", duration: "60 min", quizQuestions: 10, videoUrl: null }
-  ],
-  cloud: [
-    { id: 1, name: "Cloud Computing Basics", duration: "45 min", quizQuestions: 5, videoUrl: "https://www.youtube.com/watch?v=2LaAJqXMP_s" },
-    { id: 2, name: "AWS Fundamentals", duration: "60 min", quizQuestions: 5, videoUrl: "https://www.youtube.com/watch?v=Z3SYDTUhI4M" },
-    { id: 3, name: "Azure Services", duration: "50 min", quizQuestions: 5, videoUrl: null },
-    { id: 4, name: "Google Cloud Platform", duration: "55 min", quizQuestions: 5, videoUrl: null },
-    { id: 5, name: "Kubernetes & Containers", duration: "70 min", quizQuestions: 5, videoUrl: null },
-    { id: 6, name: "DevOps Practices", duration: "60 min", quizQuestions: 5, videoUrl: null }
-  ],
-  ccna: [
-    { id: 1, name: "Networking Fundamentals", duration: "60 min", quizQuestions: 5, videoUrl: "https://www.youtube.com/watch?v=H7-NR3Q3BeI" },
-    { id: 2, name: "IP Addressing & Subnetting", duration: "90 min", quizQuestions: 10, videoUrl: null },
-    { id: 3, name: "Routing Protocols", duration: "75 min", quizQuestions: 5, videoUrl: null },
-    { id: 4, name: "Switching Concepts", duration: "70 min", quizQuestions: 5, videoUrl: null },
-    { id: 5, name: "Network Security", duration: "60 min", quizQuestions: 5, videoUrl: null },
-    { id: 6, name: "Network Automation", duration: "50 min", quizQuestions: 5, videoUrl: null },
-    { id: 7, name: "Troubleshooting", duration: "80 min", quizQuestions: 5, videoUrl: null },
-    { id: 8, name: "Final Exam Prep", duration: "90 min", quizQuestions: 10, videoUrl: null }
-  ]
-};
-
-function getCourseModules(courseId) {
-  if (COURSE_MODULES[courseId]) return COURSE_MODULES[courseId];
-  // Generate default modules for any course
-  return Array.from({ length: 6 }, (_, idx) => ({
-    id: idx + 1,
-    name: `Module ${idx + 1}`,
-    duration: `${45 + idx * 5} min`,
-    quizQuestions: 5,
-    videoUrl: null
-  }));
-}
-
-// Get all courses
+// ==================== GET ALL COURSES ====================
 router.get('/', async (req, res) => {
-  const coursesData = readJSON('courses.json');
-  const courses = coursesData.courses || coursesData;
-  res.json({ courses });
+  try {
+    // NCP and CCP first, then others
+    const ncpCourse = await Course.findOne({ courseId: 'ncp' });
+    const ccpCourse = await Course.findOne({ courseId: 'ccp' });
+    const otherCourses = await Course.find({
+      courseId: { $nin: ['ncp', 'ccp', 'ona', 'onp'] },
+      isActive: true
+    }).sort({ enrolledCount: -1 });
+
+    const sortedCourses = [ncpCourse, ccpCourse, ...otherCourses].filter(Boolean);
+
+    // Format for frontend
+    const courses = sortedCourses.map(c => ({
+      id: c.courseId,
+      name: c.name,
+      abbreviation: c.abbreviation,
+      level: c.level,
+      description: c.description,
+      examPrice: c.examPrice,
+      pathPrice: c.pathPrice,
+      icon: c.icon,
+      category: c.category,
+      color: c.color,
+      enrolledCount: c.enrolledCount,
+      duration: c.duration,
+      modules: c.totalModules,
+      prerequisite: c.prerequisite || null
+    }));
+
+    res.json({ courses });
+  } catch (error) {
+    console.error('[COURSES] Error:', error.message);
+    res.status(500).json({ error: 'Failed to load courses' });
+  }
 });
 
-// Get single course by ID with modules
+// ==================== GET COURSE DETAILS ====================
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
-  const coursesData = readJSON('courses.json');
-  const courses = coursesData.courses || coursesData;
-  const course = courses.find(c => c.id === id);
 
-  if (!course) {
-    return res.status(404).json({ error: 'Course not found' });
-  }
+  try {
+    const course = await Course.findOne({ courseId: id.toLowerCase(), isActive: true });
 
-  const modules = getCourseModules(id);
-  
-  res.json({ course, modules });
-});
-
-// Get user's module progress for a course
-router.get('/:id/progress', authenticate, async (req, res) => {
-  const { id: courseId } = req.params;
-  
-  let progressData = readJSON('module_progress.json');
-  const userProgress = progressData.find(p => p.userId === req.user.id && p.courseId === courseId);
-  
-  if (!userProgress) {
-    const modules = getCourseModules(courseId);
-    const defaultProgress = {
-      userId: req.user.id,
-      courseId,
-      modules: modules.map((m, idx) => ({
-        moduleId: m.id,
-        completed: idx === 0,
-        quizScore: null,
-        unlocked: idx === 0
-      })),
-      totalModules: modules.length,
-      completedCount: 1,
-      examUnlocked: false,
-      updatedAt: new Date().toISOString()
-    };
-    res.json({ progress: defaultProgress });
-  } else {
-    res.json({ progress: userProgress });
-  }
-});
-
-// Save module progress
-router.post('/:id/progress', authenticate, async (req, res) => {
-  const { id: courseId } = req.params;
-  const { progress } = req.body;
-  
-  let progressData = readJSON('module_progress.json');
-  const existingIndex = progressData.findIndex(p => p.userId === req.user.id && p.courseId === courseId);
-  
-  const newProgress = {
-    ...progress,
-    userId: req.user.id,
-    courseId,
-    updatedAt: new Date().toISOString()
-  };
-  
-  if (existingIndex !== -1) {
-    progressData[existingIndex] = newProgress;
-  } else {
-    progressData.push(newProgress);
-  }
-  
-  writeJSON('module_progress.json', progressData);
-  
-  res.json({ success: true, progress: newProgress });
-});
-
-// Complete a module
-router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) => {
-  const { id: courseId, moduleId } = req.params;
-  const { quizScore } = req.body;
-  
-  let progressData = readJSON('module_progress.json');
-  let userProgress = progressData.find(p => p.userId === req.user.id && p.courseId === courseId);
-  
-  if (!userProgress) {
-    const modules = getCourseModules(courseId);
-    userProgress = {
-      userId: req.user.id,
-      courseId,
-      modules: modules.map((m, idx) => ({
-        moduleId: m.id,
-        completed: false,
-        quizScore: null,
-        unlocked: idx === 0
-      })),
-      totalModules: modules.length,
-      completedCount: 0,
-      examUnlocked: false
-    };
-    progressData.push(userProgress);
-  }
-  
-  const moduleIndex = userProgress.modules.findIndex(m => m.moduleId === parseInt(moduleId));
-  if (moduleIndex !== -1 && !userProgress.modules[moduleIndex].completed) {
-    userProgress.modules[moduleIndex].completed = true;
-    userProgress.modules[moduleIndex].quizScore = quizScore;
-    userProgress.completedCount = userProgress.modules.filter(m => m.completed).length;
-    
-    // Unlock next module if exists
-    if (moduleIndex + 1 < userProgress.modules.length) {
-      userProgress.modules[moduleIndex + 1].unlocked = true;
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
     }
-    
-    // Check if exam should be unlocked
-    userProgress.examUnlocked = userProgress.completedCount === userProgress.totalModules;
-    
-    const index = progressData.findIndex(p => p.userId === req.user.id && p.courseId === courseId);
-    progressData[index] = userProgress;
-    writeJSON('module_progress.json', progressData);
-    
-    // Also update enrollment progress
-    const enrollments = readJSON('enrollments.json');
-    const enrollmentIndex = enrollments.findIndex(e => e.userId === req.user.id && e.courseId === courseId);
-    if (enrollmentIndex !== -1) {
-      enrollments[enrollmentIndex].progress = (userProgress.completedCount / userProgress.totalModules) * 100;
-      writeJSON('enrollments.json', enrollments);
-    }
-    
-    console.log(`[COURSES] User ${req.user.id} completed module ${moduleId} of ${courseId} with score ${quizScore}%`);
-    
-    res.json({ 
-      success: true, 
-      message: `Module completed! Score: ${quizScore}%`,
-      progress: userProgress,
-      examUnlocked: userProgress.examUnlocked
+
+    // Build modules array
+    const modules = course.modules.map(m => ({
+      id: m.moduleId,
+      name: m.name,
+      duration: m.duration,
+      quizQuestions: m.quizQuestions,
+      videoUrl: m.videoUrl
+    }));
+
+    res.json({
+      course: {
+        id: course.courseId,
+        name: course.name,
+        description: course.description,
+        examPrice: course.examPrice,
+        pathPrice: course.pathPrice,
+        icon: course.icon,
+        category: course.category,
+        color: course.color,
+        duration: course.duration,
+        modules: course.totalModules,
+        enrolledCount: course.enrolledCount,
+        prerequisite: course.prerequisite
+      },
+      modules,
+      totalModules: course.totalModules
     });
-  } else {
-    res.json({ success: false, message: 'Module already completed or not found' });
+  } catch (error) {
+    console.error('[COURSES] Error:', error.message);
+    res.status(500).json({ error: 'Failed to load course details' });
   }
 });
 
-// Enroll in course (requires authentication)
+// ==================== GET MODULE PROGRESS ====================
+router.get('/:id/progress', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  try {
+    const course = await Course.findOne({ courseId: id.toLowerCase() });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Get all completed modules for this user and course
+    const completedProgress = await ModuleProgress.find({
+      userId,
+      courseId: id.toLowerCase(),
+      completed: true
+    });
+
+    const completedModuleIds = completedProgress.map(p => p.moduleId);
+    const completedCount = completedModuleIds.length;
+    const totalModules = course.totalModules;
+
+    // Build module status
+    const modulesStatus = [];
+    for (let i = 1; i <= totalModules; i++) {
+      const progress = completedProgress.find(p => p.moduleId === i);
+      modulesStatus.push({
+        moduleId: i,
+        completed: progress ? true : false,
+        unlocked: i === 1 || completedModuleIds.includes(i - 1),
+        quizScore: progress ? progress.quizScore : null,
+        completedAt: progress ? progress.completedAt : null
+      });
+    }
+
+    const examUnlocked = completedCount >= totalModules && totalModules > 0;
+
+    // Find next module name
+    let nextModuleName = null;
+    if (!examUnlocked) {
+      const nextModule = modulesStatus.find(m => m.unlocked && !m.completed);
+      if (nextModule) {
+        const moduleData = course.modules.find(m => m.moduleId === nextModule.moduleId);
+        nextModuleName = moduleData ? moduleData.name : `Module ${nextModule.moduleId}`;
+      }
+    }
+
+    res.json({
+      progress: {
+        courseId: id,
+        completedCount,
+        totalModules,
+        modules: modulesStatus,
+        examUnlocked,
+        nextModuleName,
+        percentComplete: totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0
+      }
+    });
+  } catch (error) {
+    console.error('[COURSES] Progress error:', error.message);
+    res.status(500).json({ error: 'Failed to load progress' });
+  }
+});
+
+// ==================== COMPLETE MODULE ====================
+router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) => {
+  const { id, moduleId } = req.params;
+  const { quizScore } = req.body;
+  const userId = req.user._id;
+
+  if (quizScore === undefined || quizScore === null) {
+    return res.status(400).json({ error: 'Quiz score is required' });
+  }
+
+  try {
+    const course = await Course.findOne({ courseId: id.toLowerCase() });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Upsert module progress
+    await ModuleProgress.findOneAndUpdate(
+      { userId, courseId: id.toLowerCase(), moduleId: parseInt(moduleId) },
+      {
+        completed: true,
+        quizScore: parseInt(quizScore),
+        completedAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    // Update enrollment progress
+    const completedCount = await ModuleProgress.countDocuments({
+      userId,
+      courseId: id.toLowerCase(),
+      completed: true
+    });
+
+    const progressPercent = Math.round((completedCount / course.totalModules) * 100);
+
+    // Find next module name
+    let nextModuleName = null;
+    if (completedCount < course.totalModules) {
+      const nextModule = course.modules.find(m => m.moduleId === completedCount + 1);
+      nextModuleName = nextModule ? nextModule.name : `Module ${completedCount + 1}`;
+    }
+
+    await Enrollment.findOneAndUpdate(
+      { userId, courseId: id.toLowerCase() },
+      {
+        progress: progressPercent,
+        'moduleProgress.completedCount': completedCount,
+        'moduleProgress.totalModules': course.totalModules,
+        'moduleProgress.nextModuleName': nextModuleName || 'All modules completed!'
+      }
+    );
+
+    console.log(`[COURSES] Module ${moduleId} completed by ${req.user.email} - ${id} - Score: ${quizScore}%`);
+
+    res.json({
+      success: true,
+      message: `Module ${moduleId} completed! Score: ${quizScore}%`
+    });
+  } catch (error) {
+    console.error('[COURSES] Complete module error:', error.message);
+    res.status(500).json({ error: 'Failed to complete module' });
+  }
+});
+
+// ==================== ENROLL IN COURSE ====================
 router.post('/enroll', authenticate, async (req, res) => {
-  const { courseId, type, paymentMethod, voucherCode } = req.body;
+  const { courseId, type, voucherCode } = req.body;
+  const userId = req.user._id;
 
   if (!courseId || !type) {
     return res.status(400).json({ error: 'Course ID and type are required' });
   }
 
-  const coursesData = readJSON('courses.json');
-  const courses = coursesData.courses || coursesData;
-  const course = courses.find(c => c.id === courseId);
-
-  if (!course) {
-    return res.status(404).json({ error: 'Course not found' });
-  }
-
-  const enrollments = readJSON('enrollments.json');
-  const existingEnrollment = enrollments.find(
-    e => e.userId === req.user.id && e.courseId === courseId
-  );
-
-  if (existingEnrollment) {
-    return res.status(400).json({ error: 'Already enrolled in this course' });
-  }
-
-  let price = type === 'exam_only' ? course.examPrice : course.pathPrice;
-  let discountApplied = 0;
-  let usedVoucher = null;
-
-  if (voucherCode) {
-    const vouchers = readJSON('vouchers.json');
-    const voucher = vouchers.find(v =>
-      v.code === voucherCode &&
-      v.active &&
-      (v.courseId === courseId || v.courseId === 'all') &&
-      v.usedCount < v.maxUses &&
-      new Date(v.expiresAt) > new Date()
-    );
-
-    if (voucher) {
-      usedVoucher = voucher;
-      if (voucher.discountType === 'free') {
-        discountApplied = price;
-        price = 0;
-      } else if (voucher.discountType === 'percentage') {
-        discountApplied = price * (voucher.discountValue / 100);
-        price = price - discountApplied;
-      }
+  try {
+    const course = await Course.findOne({ courseId: courseId.toLowerCase(), isActive: true });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
     }
-  }
 
-  const modules = getCourseModules(courseId);
-  const enrollment = {
-    id: generateId(),
-    userId: req.user.id,
-    courseId,
-    type,
-    status: 'enrolled',
-    progress: type === 'exam_only' ? 100 : 0,
-    examAttempts: 0,
-    lastExamDate: null,
-    cooldownUntil: null,
-    feePaid: price,
-    enrolledAt: new Date().toISOString(),
-    voucherUsed: usedVoucher ? usedVoucher.code : null,
-    discountApplied
-  };
-
-  enrollments.push(enrollment);
-  writeJSON('enrollments.json', enrollments);
-
-  if (usedVoucher) {
-    const vouchers = readJSON('vouchers.json');
-    const voucherIndex = vouchers.findIndex(v => v.id === usedVoucher.id);
-    if (voucherIndex !== -1) {
-      vouchers[voucherIndex].usedCount += 1;
-      writeJSON('vouchers.json', vouchers);
+    // Check if already enrolled
+    const existingEnrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
+    if (existingEnrollment) {
+      return res.status(400).json({
+        error: 'Already enrolled',
+        alreadyEnrolled: true,
+        courseId
+      });
     }
-  }
 
-  course.enrolledCount = (course.enrolledCount || 0) + 1;
-  writeJSON('courses.json', { courses });
-
-  const users = readJSON('users.json');
-  const userIndex = users.findIndex(u => u.id === req.user.id);
-  if (userIndex !== -1) {
-    users[userIndex].totalSpent = (users[userIndex].totalSpent || 0) + price;
-    writeJSON('users.json', users);
-  }
-
-  const payments = readJSON('payments.json');
-  const payment = {
-    id: generateId(),
-    userId: req.user.id,
-    courseId,
-    amount: price,
-    originalAmount: type === 'exam_only' ? course.examPrice : course.pathPrice,
-    discount: discountApplied,
-    currency: 'USD',
-    method: paymentMethod || 'mock',
-    status: 'completed',
-    transactionId: `mock_${Date.now()}`,
-    voucherCode: voucherCode || null,
-    createdAt: new Date().toISOString()
-  };
-  payments.push(payment);
-  writeJSON('payments.json', payments);
-
-  // Create initial module progress
-  let progressData = readJSON('module_progress.json');
-  const existingProgress = progressData.find(p => p.userId === req.user.id && p.courseId === courseId);
-  if (!existingProgress && type !== 'exam_only') {
-    const newProgress = {
-      userId: req.user.id,
-      courseId,
-      modules: modules.map((m, idx) => ({
-        moduleId: m.id,
-        completed: idx === 0,
-        quizScore: null,
-        unlocked: idx === 0
-      })),
-      totalModules: modules.length,
-      completedCount: 1,
-      examUnlocked: false,
-      createdAt: new Date().toISOString()
-    };
-    progressData.push(newProgress);
-    writeJSON('module_progress.json', progressData);
-  }
-
-  res.json({
-    success: true,
-    message: `Successfully enrolled in ${course.name}`,
-    enrollment: {
-      id: enrollment.id,
-      courseId,
+    // Create enrollment
+    const enrollment = await Enrollment.create({
+      userId,
+      courseId: courseId.toLowerCase(),
       courseName: course.name,
+      courseIcon: course.icon,
       type,
-      price,
-      originalPrice: type === 'exam_only' ? course.examPrice : course.pathPrice,
-      discountApplied
-    }
-  });
-});
-
-// Get user's enrolled courses
-router.get('/enrollments/me', authenticate, async (req, res) => {
-  const enrollments = readJSON('enrollments.json');
-  const coursesData = readJSON('courses.json');
-  const courses = coursesData.courses || coursesData;
-  const progressData = readJSON('module_progress.json');
-
-  const userEnrollments = enrollments
-    .filter(e => e.userId === req.user.id)
-    .map(e => {
-      const course = courses.find(c => c.id === e.courseId);
-      const progress = progressData.find(p => p.userId === req.user.id && p.courseId === e.courseId);
-      return {
-        ...e,
-        courseName: course ? course.name : 'Unknown Course',
-        courseIcon: course ? course.icon : 'fa-book',
-        courseColor: course ? course.color : 'gray',
-        moduleProgress: progress ? {
-          completedCount: progress.completedCount,
-          totalModules: progress.totalModules,
-          percentComplete: (progress.completedCount / progress.totalModules) * 100
-        } : null
-      };
+      status: 'enrolled',
+      progress: 0,
+      moduleProgress: {
+        completedCount: 0,
+        totalModules: course.totalModules,
+        nextModuleName: course.modules.length > 0 ? course.modules[0].name : 'Module 1'
+      },
+      examAttempts: 0,
+      voucherCode: voucherCode || null
     });
 
-  res.json({ enrollments: userEnrollments });
+    // Update course enrolled count
+    await Course.findOneAndUpdate(
+      { courseId: courseId.toLowerCase() },
+      { $inc: { enrolledCount: 1 } }
+    );
+
+    // Update user enrolled count
+    await User.findByIdAndUpdate(userId, { $inc: { enrolledCourses: 1 } });
+
+    console.log(`[COURSES] ${req.user.email} enrolled in ${course.name}`);
+
+    res.json({
+      success: true,
+      message: `Enrolled in ${course.name}`,
+      enrollment: {
+        id: enrollment._id,
+        courseId: enrollment.courseId,
+        courseName: enrollment.courseName,
+        type: enrollment.type,
+        status: enrollment.status
+      }
+    });
+  } catch (error) {
+    console.error('[COURSES] Enroll error:', error.message);
+    res.status(500).json({ error: 'Failed to enroll' });
+  }
 });
 
-module.exports = router;
+// ==================== GET USER ENROLLMENTS ====================
+router.get('/enrollments/me', authenticate, async (req, res) => {
+  try {
+    const enrollments = await Enrollment.find({ userId: req.user._id })
+      .sort({ createdAt: -1 });
+
+    // Get module progress for each enrollment
+    const enrollmentsWithProgress = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const completedCount = await ModuleProgress.countDocuments({
+          userId: req.user._id,
+          courseId: enrollment.courseId,
+          completed: true
+        });
+
+        const course = await Course.findOne({ courseId: enrollment.courseId });
+        const totalModules = course ? course.totalModules : enrollment.moduleProgress?.totalModules || 8;
+
+        let nextModuleName = null;
+        if (completedCount < totalModules && course) {
+          const nextModule = course.modules.find(m => m.moduleId === completedCount + 1);
+          nextModuleName = nextModule ? nextModule.name : `Module ${completedCount + 1}`;
+        }
+
+        return {
+          courseId: enrollment.courseId,
+          courseName: enrollment.courseName,
+          courseIcon: enrollment.courseIcon,
+          type: enrollment.type,
+          status: enrollment.status,
+          progress: totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0,
+          moduleProgress: {
+            completedCount,
+            totalModules,
+            nextModuleName: nextModuleName || (completedCount >= totalModules ? 'All modules completed!' : 'Module 1')
+          },
+          examAttempts: enrollment.examAttempts,
+          score: enrollment.score,
+          enrolledAt: enrollment.createdAt
+        };
+      })
+    );
+
+    res.json({ enrollments: enrollmentsWithProgress });
+  } catch (error) {
+    console.error('[COURSES] Enrollments error:', error.message);
+    res.status(500).json({ error: 'Failed to load enrollments' });
+  }
+});
+
+// Helper to require User model (imported at top for enrollments route)
+const User = require('../models/User');
+
+module.exports = router;	

@@ -1,220 +1,288 @@
 const express = require('express');
 const router = express.Router();
 const authenticate = require('../middleware/auth');
-const { readJSON, writeJSON } = require('../utils/jsonDB');
+const { v4: uuidv4 } = require('uuid');
+const Payment = require('../models/Payment');
+const Voucher = require('../models/Voucher');
+const Enrollment = require('../models/Enrollment');
+const Course = require('../models/Course');
+const User = require('../models/User');
 
-// Create checkout session
+// ==================== CREATE CHECKOUT (VOUCHER AUTO-ENROLL) ====================
 router.post('/create-checkout', authenticate, async (req, res) => {
   const { courseId, type, voucherCode, billingInfo } = req.body;
-  
+  const userId = req.user._id;
+
   if (!courseId || !type) {
     return res.status(400).json({ error: 'Course ID and type are required' });
   }
-  
+
   try {
-    const coursesData = readJSON('courses.json');
-    const courses = coursesData.courses || coursesData || [];
-    const course = courses.find(c => c.id === courseId);
-    
+    const course = await Course.findOne({ courseId: courseId.toLowerCase(), isActive: true });
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
     }
-    
+
+    // Check if already enrolled
+    const existingEnrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
+    if (existingEnrollment) {
+      return res.status(400).json({
+        error: 'Already enrolled',
+        message: 'You are already enrolled. Redirecting to course dashboard.',
+        courseId: courseId,
+        alreadyEnrolled: true
+      });
+    }
+
     let amount = type === 'exam_only' ? course.examPrice : course.pathPrice;
     let discount = 0;
     let voucherInfo = null;
-    
+
     // Apply voucher if provided
     if (voucherCode) {
-      const vouchers = readJSON('vouchers.json') || [];
-      const voucher = vouchers.find(v => v.code === voucherCode && v.active);
-      
-      if (voucher) {
-        const isExpired = voucher.expiresAt && new Date(voucher.expiresAt) < new Date();
-        const hasUsesLeft = voucher.usedCount < (voucher.maxUses || 1);
-        const appliesToCourse = voucher.courseId === 'all' || voucher.courseId === courseId;
-        
-        if (!isExpired && hasUsesLeft && appliesToCourse) {
-          if (voucher.discountType === 'free') {
-            discount = amount;
-          } else if (voucher.discountType === 'percentage') {
-            discount = amount * (voucher.discountValue / 100);
-          } else if (voucher.discountType === 'fixed') {
-            discount = voucher.discountValue;
-          }
-          voucherInfo = voucher;
+      const voucher = await Voucher.findOne({
+        code: voucherCode.toUpperCase(),
+        active: true,
+        $or: [
+          { expiresAt: null },
+          { expiresAt: { $gt: new Date() } }
+        ]
+      });
+
+      if (!voucher) {
+        return res.status(400).json({ error: 'Invalid or expired voucher code.' });
+      }
+
+      if (voucher.usedCount >= voucher.maxUses) {
+        return res.status(400).json({
+          error: 'This voucher has already been used. Each code works only ONCE.',
+          code: 'VOUCHER_EXHAUSTED'
+        });
+      }
+
+      if (voucher.courseId !== 'all' && voucher.courseId !== courseId.toLowerCase()) {
+        const voucherCourse = await Course.findOne({ courseId: voucher.courseId });
+        return res.status(400).json({
+          error: `This voucher is only valid for ${voucherCourse ? voucherCourse.name : voucher.courseId}.`
+        });
+      }
+
+      if (voucher.discountType === 'free') {
+        discount = amount;
+      } else if (voucher.discountType === 'percentage') {
+        discount = Math.round((amount * (voucher.discountValue / 100)) * 100) / 100;
+      } else if (voucher.discountType === 'fixed') {
+        discount = Math.min(voucher.discountValue, amount);
+      }
+
+      voucherInfo = voucher;
+    } else {
+      // No voucher - payment methods coming soon
+      return res.status(400).json({
+        error: 'Payment methods coming soon. Please use a valid voucher code to enroll.',
+        comingSoon: true
+      });
+    }
+
+    const finalAmount = Math.round(Math.max(0, amount - discount) * 100) / 100;
+    const sessionId = uuidv4();
+
+    // Create payment record
+    await Payment.create({
+      sessionId,
+      userId,
+      courseId: courseId.toLowerCase(),
+      type,
+      originalAmount: Math.round(amount * 100) / 100,
+      discountAmount: Math.round(discount * 100) / 100,
+      amount: finalAmount,
+      voucherCode: voucherCode ? voucherCode.toUpperCase() : null,
+      voucherDiscountType: voucherInfo ? voucherInfo.discountType : null,
+      voucherDiscountValue: voucherInfo ? voucherInfo.discountValue : null,
+      status: 'completed',
+      paymentMethod: 'voucher',
+      billingInfo: billingInfo || {
+        firstName: req.user.name || 'Student',
+        lastName: '',
+        email: req.user.email,
+        phone: '',
+        country: 'Zimbabwe'
+      },
+      completedAt: new Date()
+    });
+
+    // Create enrollment (all modules start uncompleted)
+    const enrollment = await Enrollment.create({
+      userId,
+      courseId: courseId.toLowerCase(),
+      courseName: course.name,
+      courseIcon: course.icon,
+      type,
+      status: 'enrolled',
+      progress: 0,
+      moduleProgress: {
+        completedCount: 0,
+        totalModules: course.totalModules,
+        nextModuleName: course.modules.length > 0 ? course.modules[0].name : 'Module 1'
+      },
+      examAttempts: 0,
+      voucherCode: voucherCode ? voucherCode.toUpperCase() : null,
+      amountPaid: finalAmount,
+      originalPrice: Math.round(amount * 100) / 100
+    });
+
+    // Update voucher usage atomically
+    if (voucherInfo) {
+      await Voucher.findOneAndUpdate(
+        {
+          code: voucherCode.toUpperCase(),
+          $expr: { $lt: ['$usedCount', '$maxUses'] }
+        },
+        {
+          $inc: { usedCount: 1 }
         }
+      );
+
+      // Deactivate if max uses reached
+      const updatedVoucher = await Voucher.findOne({ code: voucherCode.toUpperCase() });
+      if (updatedVoucher && updatedVoucher.usedCount >= updatedVoucher.maxUses) {
+        updatedVoucher.active = false;
+        await updatedVoucher.save();
       }
     }
-    
-    const finalAmount = Math.max(0, amount - discount);
-    const { v4: uuidv4 } = require('uuid');
-    const sessionId = uuidv4();
-    
-    // Create payment record
-    const payments = readJSON('payments.json') || [];
-    payments.push({
-      id: uuidv4(),
-      sessionId,
-      userId: req.user.id,
-      courseId,
-      type,
-      originalAmount: amount,
-      discountAmount: discount,
-      amount: finalAmount,
-      voucherCode: voucherCode || null,
-      status: 'pending',
-      billingInfo,
-      createdAt: new Date().toISOString()
+
+    // Update user totals
+    await User.findByIdAndUpdate(userId, {
+      $inc: {
+        totalSpent: finalAmount,
+        enrolledCourses: 1
+      }
     });
-    
-    writeJSON('payments.json', payments);
-    
+
+    // Update course enrolled count
+    await Course.findOneAndUpdate(
+      { courseId: courseId.toLowerCase() },
+      { $inc: { enrolledCount: 1 } }
+    );
+
+    console.log(`[PAYMENT] ✅ Voucher auto-enroll: ${req.user.email} → ${course.name} (${voucherCode}) - $${finalAmount}`);
+
     res.json({
+      success: true,
+      autoEnrolled: true,
+      message: `🎉 Voucher applied! You've been enrolled in ${course.name}.`,
       sessionId,
       amount: finalAmount,
-      originalAmount: amount,
-      discount,
-      courseName: course.name
+      originalAmount: Math.round(amount * 100) / 100,
+      discount: Math.round(discount * 100) / 100,
+      courseName: course.name,
+      courseId: courseId,
+      enrollmentId: enrollment._id
     });
   } catch (error) {
-    console.error('[PAYMENT] Create checkout error:', error);
-    res.status(500).json({ error: 'Failed to create checkout' });
+    console.error('[PAYMENT] Create checkout error:', error.message);
+    res.status(500).json({ error: 'Failed to create checkout: ' + error.message });
   }
 });
 
-// Confirm payment
+// ==================== CONFIRM PAYMENT (FUTURE USE) ====================
 router.post('/confirm-payment/:sessionId', authenticate, async (req, res) => {
   const { sessionId } = req.params;
-  const { paymentMethod, billingInfo } = req.body;
-  
+
   try {
-    const payments = readJSON('payments.json') || [];
-    const paymentIndex = payments.findIndex(p => p.sessionId === sessionId);
-    
-    if (paymentIndex === -1) {
+    const payment = await Payment.findOne({ sessionId, userId: req.user._id });
+
+    if (!payment) {
       return res.status(404).json({ error: 'Payment session not found' });
     }
-    
-    const payment = payments[paymentIndex];
-    
+
     if (payment.status === 'completed') {
       return res.status(400).json({ error: 'Payment already completed' });
     }
-    
-    // Update payment status
-    payments[paymentIndex].status = 'completed';
-    payments[paymentIndex].paymentMethod = paymentMethod;
-    payments[paymentIndex].completedAt = new Date().toISOString();
-    if (billingInfo) payments[paymentIndex].billingInfo = { ...payment.billingInfo, ...billingInfo };
-    
-    writeJSON('payments.json', payments);
-    
-    // Create enrollment
-    const enrollments = readJSON('enrollments.json') || [];
-    const { v4: uuidv4 } = require('uuid');
-    
-    enrollments.push({
-      id: uuidv4(),
-      userId: req.user.id,
-      courseId: payment.courseId,
-      type: payment.type,
-      status: 'enrolled',
-      enrolledAt: new Date().toISOString(),
-      progress: 0,
-      moduleProgress: [],
-      examAttempts: 0,
-      voucherCode: payment.voucherCode,
-      amountPaid: payment.amount
-    });
-    
-    writeJSON('enrollments.json', enrollments);
-    
-    // Update voucher usage count if voucher was used
-    if (payment.voucherCode) {
-      const vouchers = readJSON('vouchers.json') || [];
-      const voucherIndex = vouchers.findIndex(v => v.code === payment.voucherCode);
-      if (voucherIndex !== -1) {
-        vouchers[voucherIndex].usedCount += 1;
-        writeJSON('vouchers.json', vouchers);
-      }
-    }
-    
-    // Update user's total spent
-    const users = readJSON('users.json') || [];
-    const userIndex = users.findIndex(u => u.id === req.user.id);
-    if (userIndex !== -1) {
-      users[userIndex].totalSpent = (users[userIndex].totalSpent || 0) + payment.amount;
-      writeJSON('users.json', users);
-    }
-    
-    res.json({
-      success: true,
-      message: 'Payment confirmed and enrollment created',
-      enrollmentId: enrollments[enrollments.length - 1].id
-    });
+
+    payment.status = 'completed';
+    payment.completedAt = new Date();
+    await payment.save();
+
+    res.json({ success: true, message: 'Payment confirmed' });
   } catch (error) {
-    console.error('[PAYMENT] Confirm payment error:', error);
     res.status(500).json({ error: 'Failed to confirm payment' });
   }
 });
 
-// Validate voucher code
+// ==================== VALIDATE VOUCHER ====================
 router.post('/validate-voucher', async (req, res) => {
   const { code, courseId } = req.body;
-  
+
   if (!code) {
     return res.status(400).json({ error: 'Voucher code is required' });
   }
-  
+
   try {
-    const vouchers = readJSON('vouchers.json') || [];
-    const voucher = vouchers.find(v => v.code === code.toUpperCase() && v.active);
-    
+    const voucher = await Voucher.findOne({
+      code: code.toUpperCase(),
+      active: true,
+      $or: [
+        { expiresAt: null },
+        { expiresAt: { $gt: new Date() } }
+      ]
+    });
+
     if (!voucher) {
-      return res.json({ valid: false, message: 'Invalid voucher code' });
+      return res.json({ valid: false, message: 'Invalid voucher code. Please check and try again.' });
     }
-    
-    const isExpired = voucher.expiresAt && new Date(voucher.expiresAt) < new Date();
-    if (isExpired) {
-      return res.json({ valid: false, message: 'Voucher has expired' });
+
+    if (voucher.usedCount >= voucher.maxUses) {
+      return res.json({
+        valid: false,
+        message: 'This voucher has already been used. Each code works only ONCE.'
+      });
     }
-    
-    const hasUsesLeft = voucher.usedCount < (voucher.maxUses || 1);
-    if (!hasUsesLeft) {
-      return res.json({ valid: false, message: 'Voucher has reached maximum uses' });
+
+    if (courseId && voucher.courseId !== 'all' && voucher.courseId !== courseId.toLowerCase()) {
+      const voucherCourse = await Course.findOne({ courseId: voucher.courseId });
+      return res.json({
+        valid: false,
+        message: `This voucher is only valid for ${voucherCourse ? voucherCourse.name : voucher.courseId}.`
+      });
     }
-    
-    const appliesToCourse = voucher.courseId === 'all' || voucher.courseId === courseId;
-    if (!appliesToCourse && courseId) {
-      return res.json({ valid: false, message: 'Voucher does not apply to this course' });
-    }
-    
+
     let discountText = '';
     if (voucher.discountType === 'free') {
-      discountText = 'FREE';
+      discountText = '🎉 FREE enrollment!';
     } else if (voucher.discountType === 'percentage') {
       discountText = `${voucher.discountValue}% off`;
-    } else {
+    } else if (voucher.discountType === 'fixed') {
       discountText = `$${voucher.discountValue} off`;
     }
-    
+
     res.json({
       valid: true,
-      voucher,
-      message: `✅ Voucher applied! ${discountText}`
+      voucher: {
+        code: voucher.code,
+        discountType: voucher.discountType,
+        discountValue: voucher.discountValue,
+        courseId: voucher.courseId,
+        maxUses: voucher.maxUses,
+        usedCount: voucher.usedCount
+      },
+      message: `✅ Voucher applied! ${discountText} — Enrolling now...`
     });
   } catch (error) {
+    console.error('[VOUCHER] Validation error:', error.message);
     res.status(500).json({ error: 'Failed to validate voucher' });
   }
 });
 
-// Get user payment history
+// ==================== GET PAYMENT HISTORY ====================
 router.get('/my-payments', authenticate, async (req, res) => {
   try {
-    const payments = readJSON('payments.json') || [];
-    const userPayments = payments.filter(p => p.userId === req.user.id && p.status === 'completed');
-    res.json({ payments: userPayments });
+    const payments = await Payment.find({
+      userId: req.user._id,
+      status: 'completed'
+    }).sort({ completedAt: -1 });
+
+    res.json({ payments });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load payment history' });
   }
