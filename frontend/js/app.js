@@ -727,7 +727,7 @@ function renderPage(page) {
 // ==================== END OF PART 1 ====================
 console.log('✅ Part 1 (Core & Auth) loaded - NCP/CCP ready, AI Widget landing only, Voucher instant auto-enroll, 10 questions per module, 70% pass');
 // ==================== PART 2: USER FEATURES & PAGES ====================
-console.log('🚀 Loading Part 2 (All Pages, Checkout, Admin, AI, Init)');
+console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes)');
 
 // ==================== LANDING PAGE ====================
 function renderLandingPage() {
@@ -1056,7 +1056,7 @@ function renderLogin() {
   applyAllPasswordFixes();
 }
 
-// ==================== DASHBOARD PAGE ====================
+// ==================== DASHBOARD PAGE (No inline AI - uses widget bubble) ====================
 async function renderDashboard() {
   if (!currentUser) {
     renderPage('login');
@@ -1101,12 +1101,6 @@ async function renderDashboard() {
           <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-dollar-sign text-purple-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">$${formatMoney(user.totalSpent || 0)}</h3><p class="text-xs text-gray-400">Spent</p></div>
         </div>
 
-        <div class="glass rounded-2xl p-5 mb-8" data-aos="fade-up">
-          <div class="flex justify-between items-center mb-3"><h2 class="text-lg sm:text-xl font-bold"><i class="fa-regular fa-message text-cyan-400 mr-2"></i> Ask AI Assistant</h2></div>
-          <div class="flex gap-3 flex-wrap sm:flex-nowrap"><input type="text" id="widgetAiQuestion" placeholder="Ask me anything about your courses... 💬" class="flex-1 bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition" autocomplete="off"><button id="widgetAiSend" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm"><i class="fa-solid fa-paper-plane"></i> Send</button></div>
-          <div id="widgetAiResponse" class="text-gray-300 text-sm mt-3"></div>
-        </div>
-
         <h2 class="text-xl sm:text-2xl font-bold mb-4"><i class="fa-regular fa-clock mr-2 text-cyan-400"></i> Continue Learning</h2>
         <div class="space-y-4 mb-10">
           ${enrollmentsData.length > 0 ? enrollmentsData.map(e => `
@@ -1133,20 +1127,9 @@ async function renderDashboard() {
       </div>
     `;
 
-    document.getElementById('widgetAiSend')?.addEventListener('click', async () => {
-      const q = document.getElementById('widgetAiQuestion').value;
-      if (q) {
-        const rd = document.getElementById('widgetAiResponse');
-        rd.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
-        try {
-          const result = await sendAIMessage(q);
-          rd.innerHTML = `<p class="text-sm">${result.response}</p>`;
-        } catch (e) {
-          rd.innerHTML = '<p class="text-red-400">AI unavailable. Please try again later.</p>';
-        }
-        document.getElementById('widgetAiQuestion').value = '';
-      }
-    });
+    // Show AI widget on dashboard
+    const aiBtn = document.getElementById('aiChatButton');
+    if (aiBtn) aiBtn.classList.remove('hidden');
   } catch (error) {
     console.error('Dashboard error:', error);
     root.innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load dashboard: ${error.message}</p><button onclick="renderPage('landing')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Go Home</button></div>`;
@@ -1212,21 +1195,11 @@ async function renderCourses() {
       <p class="text-gray-400 text-sm mb-4" id="searchResultsCount">${coursesData.length} of ${coursesData.length} courses</p>
 
       <div id="coursesContainer" class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        ${filteredCourses.map(cert => {
-          const enrolled = currentUser && isAlreadyEnrolled(cert.id);
-          return `
-          <div class="glass rounded-2xl p-5 card-hover course-card">
-            <i class="fa-solid ${cert.icon || 'fa-certificate'} text-4xl text-purple-400"></i>
-            <h3 class="text-xl font-bold mt-3">${escapeHtml(cert.name)}</h3>
-            <p class="text-gray-400 text-sm mt-1">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p>
-            <div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div>
-            <p class="text-xs mt-2">💰 Exam: $${cert.examPrice} | Path: $${cert.pathPrice}</p>
-            <button onclick="window.handleEnrollClick('${cert.id}')" class="w-full mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 py-2 rounded-xl text-sm">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button>
-          </div>
-        `}).join('')}
       </div>
     </div>
   `;
+
+  renderCourseList();
 
   const searchInput = document.getElementById('courseSearchInput');
   const clearBtn = document.getElementById('clearSearchBtn');
@@ -1271,7 +1244,7 @@ async function renderExams() {
         ${activeExams.length > 0 ? activeExams.map(e => `
           <div class="glass rounded-2xl p-5 mb-4 flex justify-between items-center flex-wrap gap-3">
             <div><h2 class="text-xl font-bold">${escapeHtml(e.courseName)}</h2><p class="text-gray-400">Attempts: ${e.examAttempts || 0}</p>${e.score ? `<p class="text-xs ${e.score >= 70 ? 'text-green-400' : 'text-red-400'}">Last score: ${e.score}%</p>` : ''}</div>
-            <button onclick="window.startExam('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm">Start Exam →</button>
+            <button onclick="window.startExam('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm">Start Final Exam →</button>
           </div>
         `).join('') : '<div class="glass rounded-3xl p-12 text-center"><p>No active exams available.</p><button onclick="renderPage(\'courses\')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Browse Courses</button></div>'}
       </div>
@@ -1298,7 +1271,7 @@ async function renderCertificates() {
         ${pending.length > 0 ? pending.map(cer => `
           <div class="glass rounded-2xl p-5 mb-4 border border-yellow-500/30">
             <div class="flex justify-between flex-wrap gap-3">
-              <div><h2 class="text-xl font-bold">${escapeHtml(cer.courseName)}</h2><p class="text-yellow-400 text-sm">⏳ Pending Admin Approval</p><p class="text-sm">Score: ${cer.score}%</p></div>
+              <div><h2 class="text-xl font-bold">${escapeHtml(cer.courseName)}</h2><p class="text-yellow-400 text-sm">⏳ Pending Admin Approval</p><p class="text-sm">Score: ${cer.score}%</p><p class="text-sm text-cyan-400 mt-1">Code: <span class="certificate-code-display">${cer.certificateId || 'N/A'}</span></p></div>
               <i class="fa-solid fa-hourglass-half text-3xl text-yellow-400"></i>
             </div>
           </div>
@@ -1363,7 +1336,7 @@ async function renderProfile() {
   }
 }
 
-// ==================== COURSE DASHBOARD PAGE ====================
+// ==================== COURSE DASHBOARD WITH FINAL EXAM AS 9TH ITEM ====================
 async function renderCourseDashboard(courseId) {
   if (!currentUser) { renderPage('login'); return; }
 
@@ -1382,17 +1355,17 @@ async function renderCourseDashboard(courseId) {
     currentModuleProgress = progress;
 
     const completedCount = progress.completedCount || 0;
-    const percentComplete = modules.length > 0 ? (completedCount / modules.length) * 100 : 0;
-    const examUnlocked = progress.examUnlocked || (completedCount === modules.length && modules.length > 0);
+    const totalModules = modules.length;
+    const percentComplete = totalModules > 0 ? (completedCount / totalModules) * 100 : 0;
+    const examUnlocked = progress.examUnlocked || (completedCount >= totalModules && totalModules > 0);
 
-    // AI Teacher profiles
+    // AI Teacher profiles with unique UI themes
     const aiTeachers = {
-      ncp: { name: 'Coach Carlos', title: 'Cisco Certified Instructor • 12 Years', avatar: '🏈', message: '"Subnetting is like learning a sport. Practice daily, and you\'ll master it!"' },
-      ccp: { name: 'Dr. Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '👩‍🏫', message: '"Computers are logical machines. Master the fundamentals first!"' },
-      oca: { name: 'Dr. Sarah Chen', title: 'Senior SOC Analyst • 15 Years', avatar: '👩‍🏫', message: '"Security is serious. Every mistake can be a breach."' },
-      clp: { name: 'Professor Mike Ross', title: 'Cloud Architect • AWS Certified', avatar: '👨‍🏫', message: '"The cloud is just someone else\'s computer!"' },
-      aip: { name: 'Dr. Nova Turing', title: 'AI Research Scientist', avatar: '🤖', message: '"Neural networks are like brains — let me explain how they learn."' },
-      default: { name: 'Dr. Sarah Chen', title: 'Senior Instructor', avatar: '👩‍🏫', message: 'Ready to learn? Let\'s get started!' }
+      ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor • 12 Years', avatar: '📡', message: '"Subnetting is like building a city. Every device needs a proper address!"', theme: 'ncp' },
+      ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '📚', message: '"Computers are logical machines. Master the fundamentals first!"', theme: 'ccp' },
+      clp: { name: 'Professor Mike Ross', title: 'Cloud Architect • AWS Certified', avatar: '☁️', message: '"The cloud is just someone else\'s computer — but infinitely scalable!"', theme: 'clp' },
+      aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: '🧠', message: '"Neural networks are like brains — let me explain how they learn."', theme: 'aip' },
+      default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚', message: 'Ready to learn? Let\'s get started!', theme: 'default' }
     };
     const teacher = aiTeachers[courseId] || aiTeachers.default;
 
@@ -1402,11 +1375,11 @@ async function renderCourseDashboard(courseId) {
 
         <div class="glass rounded-3xl p-6 mb-6">
           <div class="flex justify-between items-start flex-wrap gap-4">
-            <div><div class="flex items-center gap-3 mb-2"><i class="fa-solid ${course.icon || 'fa-certificate'} text-3xl text-purple-400"></i><h1 class="text-2xl sm:text-3xl font-black">${escapeHtml(course.name)}</h1></div><p class="text-gray-400 text-sm">🎯 70% to pass • 25 questions • 60 minutes</p></div>
+            <div><div class="flex items-center gap-3 mb-2"><i class="fa-solid ${course.icon || 'fa-certificate'} text-3xl text-purple-400"></i><h1 class="text-2xl sm:text-3xl font-black">${escapeHtml(course.name)}</h1></div><p class="text-gray-400 text-sm">🎯 Final Exam: 70% to pass • 25 questions • 60 minutes</p></div>
             <div class="text-right"><div class="text-2xl font-bold text-cyan-400">${Math.round(percentComplete)}%</div><p class="text-xs text-gray-400">Progress</p></div>
           </div>
           <div class="w-full bg-gray-700 h-2 rounded-full mt-4"><div class="bg-gradient-to-r from-purple-600 to-cyan-500 h-2 rounded-full transition-all" style="width: ${percentComplete}%"></div></div>
-          <p class="text-gray-400 text-sm mt-3">${completedCount}/${modules.length} modules completed • ${examUnlocked ? '✅ Exam unlocked!' : '🔒 Complete all modules to unlock exam'}</p>
+          <p class="text-gray-400 text-sm mt-3">${completedCount}/${totalModules} modules completed • ${examUnlocked ? '✅ Final Exam unlocked! 🎉' : '🔒 Complete all modules to unlock final exam'}</p>
         </div>
 
         <div class="course-dashboard-grid">
@@ -1431,7 +1404,7 @@ async function renderCourseDashboard(courseId) {
                             <span><i class="fa-regular fa-clock"></i> ${mod.duration || '30 min'}</span>
                             <span><i class="fa-regular fa-question-circle"></i> ${mod.quizQuestions || 10} questions</span>
                           </div>
-                          ${quizScore ? `<div class="mt-1 text-xs ${quizScore >= 70 ? 'text-green-400' : 'text-yellow-400'}">Quiz: ${quizScore}% ${quizScore >= 70 ? '✅' : '⚠️'}</div>` : ''}
+                          ${quizScore ? `<div class="mt-1 text-xs ${quizScore >= 70 ? 'text-green-400' : 'text-yellow-400'}">Module Exam: ${quizScore}% ${quizScore >= 70 ? '✅' : '⚠️'}</div>` : ''}
                         </div>
                         ${isUnlocked && !isCompleted ? `<button onclick="window.renderModulePage('${courseId}', ${mod.id})" class="bg-cyan-600 px-4 py-2 rounded-xl text-sm">Start Module →</button>` : ''}
                         ${isCompleted ? `<span class="text-green-400 text-sm"><i class="fa-regular fa-circle-check mr-1"></i> Completed</span>` : ''}
@@ -1439,6 +1412,25 @@ async function renderCourseDashboard(courseId) {
                     </div>
                   `;
                 }).join('')}
+
+                <!-- FINAL EXAMINATION AS 9TH ITEM -->
+                <div class="glass rounded-xl p-4 ${examUnlocked ? 'final-exam-item-unlocked' : 'final-exam-locked final-exam-item'}">
+                  <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        ${examUnlocked ? '<i class="fa-solid fa-trophy text-yellow-400 animate-pulse"></i>' : '<i class="fa-solid fa-lock text-yellow-600"></i>'}
+                        <h3 class="font-semibold text-yellow-400">🎯 Final Examination</h3>
+                      </div>
+                      <div class="flex gap-3 mt-1 text-xs text-gray-500">
+                        <span><i class="fa-regular fa-clock"></i> 60 min</span>
+                        <span><i class="fa-regular fa-question-circle"></i> 25 questions</span>
+                        <span>📊 70% to pass</span>
+                      </div>
+                      <p class="text-xs text-yellow-500/70 mt-1">Certificate code issued upon passing</p>
+                    </div>
+                    ${examUnlocked ? `<button onclick="window.startExam('${courseId}')" class="bg-gradient-to-r from-yellow-600 to-orange-500 px-5 py-2 rounded-xl text-sm font-bold glow animate-pulse">🚀 Take Final Exam</button>` : `<span class="text-yellow-600/50 text-sm"><i class="fa-solid fa-lock mr-1"></i> Complete all ${totalModules} modules</span>`}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1449,17 +1441,7 @@ async function renderCourseDashboard(courseId) {
               <h3 class="text-xl font-bold">${teacher.name}</h3>
               <p class="text-gray-400 text-xs">${teacher.title}</p>
               <p class="text-sm mt-3 italic">${teacher.message}</p>
-              <button onclick="window.openAIChatModal('${courseId}')" class="mt-4 glass px-4 py-2 rounded-xl text-sm w-full hover:bg-white/10 transition">💬 Chat with ${teacher.name.split(' ')[0]}</button>
-            </div>
-
-            <div class="glass rounded-2xl p-6 text-center">
-              <i class="fa-solid fa-file-excel text-4xl text-yellow-400 mb-3"></i>
-              <h3 class="text-xl font-bold">Certification Exam</h3>
-              <p class="text-gray-400 text-sm mt-2">25 questions • 60 minutes • 70% to pass</p>
-              ${examUnlocked ?
-                `<button onclick="window.startExam('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold w-full glow">🚀 Take Exam Now</button>` :
-                `<div class="mt-4 p-3 glass rounded-xl"><p class="text-sm">🔒 Complete all ${modules.length} modules to unlock exam</p><div class="w-full bg-gray-700 h-1 rounded-full mt-2"><div class="bg-yellow-500 h-1 rounded-full" style="width: ${percentComplete}%"></div></div><p class="text-xs mt-2">${completedCount}/${modules.length} completed</p></div>`
-              }
+              <button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 glass px-4 py-2 rounded-xl text-sm w-full hover:bg-white/10 transition">💬 Chat with ${teacher.name.split(' ')[0]}</button>
             </div>
           </div>
         </div>
@@ -1497,7 +1479,7 @@ async function renderModulePage(courseId, moduleId) {
 
       <div class="glass rounded-3xl p-6 mb-6">
         <h1 class="text-2xl font-bold">${escapeHtml(module.name)}</h1>
-        <p class="text-gray-400 text-sm mt-1">⏱️ ${module.duration || '30 min'} • 📝 ${module.quizQuestions || 10} quiz questions • 70% to pass</p>
+        <p class="text-gray-400 text-sm mt-1">⏱️ ${module.duration || '30 min'} • 📝 ${module.quizQuestions || 10} exam questions • 70% to pass</p>
       </div>
 
       ${videoCardHtml ? `<div class="mb-6">${videoCardHtml}</div>` : ''}
@@ -1505,23 +1487,22 @@ async function renderModulePage(courseId, moduleId) {
       <div class="glass rounded-2xl p-6 mb-6">
         <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
           <h2 class="text-xl font-bold">📝 Study Notes</h2>
-          <button id="generateNotesBtn" class="text-xs text-cyan-400 hover:underline">🔄 Generate with AI</button>
+          <button id="generateNotesBtn" class="text-xs text-cyan-400 hover:underline">📝 Open Study Notes</button>
         </div>
         <div id="notesContent" class="prose prose-invert max-w-none">
-          <p class="text-gray-400">Click "Generate with AI" to create smart study notes for this module.</p>
+          <p class="text-gray-400">Click "Open Study Notes" to create smart study notes for this module.</p>
         </div>
         <button id="downloadNotesBtn" class="hidden mt-3 glass px-4 py-2 rounded-xl text-sm">📥 Download Notes</button>
       </div>
 
       <div class="glass rounded-2xl p-6">
         <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-          <h2 class="text-xl font-bold">📋 Module Quiz (10 Questions)</h2>
-          <button id="generateQuizBtn" class="text-xs text-cyan-400 hover:underline">🔄 Generate with AI</button>
+          <h2 class="text-xl font-bold">📋 Module Examination (10 Questions)</h2>
         </div>
         <div id="quizContent">
-          <p class="text-gray-400">Click "Generate with AI" to create 10 practice questions. Pass with 70% to unlock next module.</p>
+          <p class="text-gray-400">Take the module exam to test your knowledge. Pass with 70% to unlock the next module.</p>
         </div>
-        <button id="takeQuizBtn" class="w-full mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 py-2 rounded-xl font-bold hidden">Start Quiz →</button>
+        <button id="takeQuizBtn" class="w-full mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 py-2 rounded-xl font-bold">Take Module Exam →</button>
       </div>
 
       <div class="mt-6 flex justify-between">
@@ -1538,7 +1519,7 @@ async function renderModulePage(courseId, moduleId) {
     try {
       const result = await generateAINotes(courseId, module.name);
       currentNotes = result.notes;
-      // Clean up formatting - replace ** with nothing, ensure • bullets
+      // Clean up formatting
       const cleanedNotes = currentNotes
         .replace(/\*\*/g, '')
         .replace(/^[#]+\s/gm, '')
@@ -1546,6 +1527,7 @@ async function renderModulePage(courseId, moduleId) {
         .replace(/^- /gm, '• ');
       notesDiv.innerHTML = `<div class="text-sm whitespace-pre-wrap">${escapeHtml(cleanedNotes)}</div>`;
       document.getElementById('downloadNotesBtn')?.classList.remove('hidden');
+      showToast('Study notes generated!', 'success');
     } catch (error) {
       notesDiv.innerHTML = '<p class="text-red-400">Failed to generate notes. Please try again.</p>';
     }
@@ -1562,27 +1544,21 @@ async function renderModulePage(courseId, moduleId) {
     }
   });
 
-  document.getElementById('generateQuizBtn')?.addEventListener('click', async () => {
+  document.getElementById('takeQuizBtn')?.addEventListener('click', async () => {
     const quizDiv = document.getElementById('quizContent');
     quizDiv.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
     try {
-      const result = await generateAIGuiz(courseId, module.name);
+      const result = await generateAIGuiz(courseId, module.name, module.name);
       currentQuizQuestions = result.quiz;
       currentQuizOriginalOrder = [...result.quiz]; // Store original for shuffling
-      quizDiv.innerHTML = `<div class="text-sm"><p class="text-green-400 mb-2">✅ Quiz generated! ${currentQuizQuestions.length} questions ready.</p><p class="text-gray-400">Click "Start Quiz" below. Pass with 70% to unlock next module.</p></div>`;
-      document.getElementById('takeQuizBtn').classList.remove('hidden');
+      quizDiv.innerHTML = `<div class="text-sm"><p class="text-green-400 mb-2">✅ Exam ready! ${currentQuizQuestions.length} questions. Pass with 70% to unlock next module.</p></div>`;
+      // Start quiz immediately
+      if (currentQuizQuestions && currentQuizQuestions.length > 0) {
+        currentQuizQuestions = [...currentQuizQuestions].sort(() => Math.random() - 0.5);
+        renderQuizPage(courseId, moduleId, module.name);
+      }
     } catch (error) {
-      quizDiv.innerHTML = '<p class="text-red-400">Failed to generate quiz. Please try again.</p>';
-    }
-  });
-
-  document.getElementById('takeQuizBtn')?.addEventListener('click', () => {
-    if (currentQuizQuestions && currentQuizQuestions.length > 0) {
-      // Shuffle questions before starting
-      currentQuizQuestions = [...currentQuizQuestions].sort(() => Math.random() - 0.5);
-      renderQuizPage(courseId, moduleId, module.name);
-    } else {
-      showToast('Please generate quiz questions first', 'error');
+      quizDiv.innerHTML = '<p class="text-red-400">Failed to generate exam. Please try again.</p>';
     }
   });
 }
@@ -1602,7 +1578,7 @@ function renderQuizPage(courseId, moduleId, moduleName) {
       <div class="max-w-3xl mx-auto fade-in">
         <button onclick="window.renderModulePage('${courseId}', ${moduleId})" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Module</button>
         <div class="glass rounded-3xl p-6">
-          <div class="flex justify-between items-center mb-4"><h1 class="text-xl font-bold">Module Quiz: ${escapeHtml(moduleName)}</h1><span class="text-sm text-gray-400">Question ${currentIndex + 1} of ${questions.length} • 70% to pass</span></div>
+          <div class="flex justify-between items-center mb-4"><h1 class="text-xl font-bold">Module Exam: ${escapeHtml(moduleName)}</h1><span class="text-sm text-gray-400">Question ${currentIndex + 1} of ${questions.length} • 70% to pass</span></div>
           <div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full transition-all" style="width: ${percent}%"></div></div>
           <p class="text-lg font-semibold mb-6">${escapeHtml(q.question)}</p>
           <div class="space-y-3 mb-8">
@@ -1615,7 +1591,7 @@ function renderQuizPage(courseId, moduleId, moduleName) {
           </div>
           <div class="flex justify-between">
             <button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button>
-            <button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Quiz' : 'Next →'}</button>
+            <button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Exam' : 'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1635,7 +1611,7 @@ function renderQuizPage(courseId, moduleId, moduleName) {
       if (userAnswers[i] === questions[i].correctAnswer) score++;
     }
     const percentage = Math.round((score / questions.length) * 100);
-    const passed = percentage >= 70; // 70% pass
+    const passed = percentage >= 70;
 
     const wrongAnswers = [];
     for (let i = 0; i < questions.length; i++) {
@@ -1652,7 +1628,7 @@ function renderQuizPage(courseId, moduleId, moduleName) {
       <div class="max-w-3xl mx-auto fade-in">
         <div class="glass rounded-3xl p-6 text-center">
           <div class="text-6xl mb-4">${passed ? '🎉' : '😅'}</div>
-          <h2 class="text-2xl font-bold mb-2">Quiz ${passed ? 'Passed!' : 'Not Passed'}</h2>
+          <h2 class="text-2xl font-bold mb-2">Module Exam ${passed ? 'Passed!' : 'Not Passed'}</h2>
           <p class="text-4xl font-black gradient-text mb-4">${score}/${questions.length} (${percentage}%)</p>
           <p class="text-gray-400 mb-6">${passed ? 'Great job! Next module unlocked.' : `Need 70% to pass. You got ${percentage}%. Try again — questions will shuffle!`}</p>
           ${wrongAnswers.length > 0 ? `
@@ -1667,7 +1643,7 @@ function renderQuizPage(courseId, moduleId, moduleName) {
               `).join('')}
             </div>
           ` : ''}
-          ${passed ? `<button onclick="window.completeModuleAndReturn('${courseId}', ${moduleId}, ${percentage})" class="bg-green-600 px-6 py-3 rounded-xl font-bold">Continue to Next Module →</button>` : `<button onclick="window.retryQuiz('${courseId}', ${moduleId}, '${escapeHtml(moduleName).replace(/'/g, "\\'")}')" class="bg-purple-600 px-6 py-3 rounded-xl font-bold">🔄 Retry Quiz (Shuffled)</button>`}
+          ${passed ? `<button onclick="window.completeModuleAndReturn('${courseId}', ${moduleId}, ${percentage})" class="bg-green-600 px-6 py-3 rounded-xl font-bold">Continue to Next Module →</button>` : `<button onclick="window.retryQuiz('${courseId}', ${moduleId}, '${escapeHtml(moduleName).replace(/'/g, "\\'")}')" class="bg-purple-600 px-6 py-3 rounded-xl font-bold">🔄 Retry Exam (Shuffled)</button>`}
         </div>
       </div>
     `;
@@ -1679,7 +1655,6 @@ function renderQuizPage(courseId, moduleId, moduleName) {
 // Retry quiz with shuffled questions
 window.retryQuiz = function(courseId, moduleId, moduleName) {
   if (currentQuizQuestions && currentQuizQuestions.length > 0) {
-    // Shuffle questions for retry
     currentQuizQuestions = [...currentQuizQuestions].sort(() => Math.random() - 0.5);
     renderQuizPage(courseId, moduleId, moduleName);
   } else {
@@ -1690,13 +1665,17 @@ window.retryQuiz = function(courseId, moduleId, moduleName) {
 // ==================== COMPLETE MODULE ====================
 window.completeModuleAndReturn = async (courseId, moduleId, score) => {
   try {
-    await completeModule(courseId, moduleId, score);
+    const result = await completeModule(courseId, moduleId, score);
     showToast(`Module completed! Score: ${score}%`, 'success');
     // Refresh enrollment cache
     try {
       const enrollmentData = await getMyEnrollments();
       userEnrollmentsCache = enrollmentData.enrollments || [];
     } catch (e) {}
+    // If exam is now unlocked, show message
+    if (result.examUnlocked) {
+      showToast('🎉 All modules completed! Final Exam unlocked!', 'success');
+    }
     renderCourseDashboard(courseId);
   } catch (error) {
     showToast('Failed to save progress', 'error');
@@ -1704,7 +1683,7 @@ window.completeModuleAndReturn = async (courseId, moduleId, score) => {
   }
 };
 
-// ==================== START EXAM ====================
+// ==================== START EXAM (Final Exam) ====================
 window.startExam = async (courseId) => {
   try {
     const examData = await startExam(courseId);
@@ -1714,7 +1693,7 @@ window.startExam = async (courseId) => {
   }
 };
 
-// ==================== EXAM PAGE ====================
+// ==================== FINAL EXAM PAGE WITH CERTIFICATE CODE ====================
 function renderExamPage(courseId, examData) {
   const questions = examData.questions;
   let userAnswers = new Array(questions.length).fill(null);
@@ -1733,7 +1712,7 @@ function renderExamPage(courseId, examData) {
       <div class="max-w-4xl mx-auto p-4 fade-in">
         <div class="glass rounded-3xl p-6">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-            <h1 class="text-xl font-bold">Certification Exam</h1>
+            <h1 class="text-xl font-bold">Final Certification Exam</h1>
             <div class="exam-timer">${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}</div>
           </div>
           <div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full" style="width: ${percent}%"></div></div>
@@ -1748,7 +1727,7 @@ function renderExamPage(courseId, examData) {
           </div>
           <div class="flex justify-between">
             <button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button>
-            <button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Exam' : 'Next →'}</button>
+            <button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Final Exam' : 'Next →'}</button>
           </div>
           <p class="text-xs text-gray-500 mt-4 text-center">⚠️ Do not refresh the page. Progress is saved automatically.</p>
         </div>
@@ -1760,12 +1739,12 @@ function renderExamPage(courseId, examData) {
     });
 
     document.getElementById('prevBtn')?.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; renderQuestion(); } });
-    document.getElementById('nextBtn')?.addEventListener('click', () => { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitExam(); } else { currentIndex++; renderQuestion(); } });
+    document.getElementById('nextBtn')?.addEventListener('click', () => { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitFinalExam(); } else { currentIndex++; renderQuestion(); } });
   }
 
   function startTimer() {
     timerInterval = setInterval(() => {
-      if (timeLeft <= 0) { clearInterval(timerInterval); submitExam(); }
+      if (timeLeft <= 0) { clearInterval(timerInterval); submitFinalExam(); }
       timeLeft--;
       const timerSpan = document.querySelector('.exam-timer');
       if (timerSpan) {
@@ -1776,16 +1755,52 @@ function renderExamPage(courseId, examData) {
     }, 1000);
   }
 
-  async function submitExam() {
+  async function submitFinalExam() {
     const timeSpent = (examData.timeLimit || 3600) - timeLeft;
     try {
       const result = await submitExam(examData.sessionId, courseId, userAnswers, timeSpent);
+
       if (result.passed) {
-        showToast(`🎉 PASSED! Score: ${result.score}% - Certificate pending approval`, 'success');
+        // Show certificate code
+        root.innerHTML = `
+          <div class="max-w-2xl mx-auto fade-in">
+            <div class="glass rounded-3xl p-8 text-center">
+              <div class="text-6xl mb-4">🎉</div>
+              <h2 class="text-2xl font-bold mb-2">Congratulations!</h2>
+              <p class="text-4xl font-black gradient-text mb-2">${result.score}% - PASSED</p>
+              <p class="text-gray-300 mb-4">${result.correctCount}/${result.totalQuestions} correct</p>
+              <div class="bg-purple-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30">
+                <p class="text-sm text-gray-400 mb-2">Your Certificate Code:</p>
+                <div class="certificate-code-display text-2xl mb-1">${result.certificateCode}</div>
+                <button onclick="window.copyToClipboard('${result.certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button>
+              </div>
+              <div class="glass rounded-xl p-4 mb-6">
+                <p class="text-sm">📞 Show this code to the academics team to claim your certificate:</p>
+                <a href="https://wa.me/${(result.supportWhatsApp || '+263714587259').replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-lg whatsapp-link">${result.supportWhatsApp || '+263714587259'}</a>
+              </div>
+              <button onclick="window.renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-8 py-3 rounded-xl font-bold">View Certificates →</button>
+            </div>
+          </div>
+        `;
+        showToast('🎉 PASSED! Certificate code generated!', 'success');
       } else {
+        root.innerHTML = `
+          <div class="max-w-2xl mx-auto fade-in">
+            <div class="glass rounded-3xl p-8 text-center">
+              <div class="text-6xl mb-4">😔</div>
+              <h2 class="text-2xl font-bold mb-2">Not Passed</h2>
+              <p class="text-4xl font-black text-red-400 mb-2">${result.score}%</p>
+              <p class="text-gray-400 mb-4">${result.correctCount}/${result.totalQuestions} correct • Need 70% to pass</p>
+              <div class="glass rounded-xl p-4 mb-6">
+                <p class="text-sm">⏳ 7-day cooldown before retake</p>
+                ${result.retakePrice ? `<p class="text-sm mt-1">Retake fee: $${formatMoney(result.retakePrice)}</p>` : ''}
+              </div>
+              <button onclick="window.renderPage('dashboard')" class="bg-purple-600 px-8 py-3 rounded-xl font-bold">Back to Dashboard</button>
+            </div>
+          </div>
+        `;
         showToast(`❌ Failed: ${result.score}% (Need 70%). Cooldown 7 days.`, 'error');
       }
-      renderPage('exams');
     } catch (error) {
       showToast('Failed to submit exam', 'error');
       renderPage('exams');
@@ -1800,7 +1815,6 @@ function renderExamPage(courseId, examData) {
 window.openCheckout = async (courseId) => {
   if (!currentUser) { renderPage('login'); return; }
 
-  // Check if already enrolled
   if (isAlreadyEnrolled(courseId)) {
     showToast('You are already enrolled! Redirecting...', 'info');
     setTimeout(() => renderCourseDashboard(courseId), 500);
@@ -1810,23 +1824,6 @@ window.openCheckout = async (courseId) => {
   const course = coursesData.find(c => c.id === courseId);
   if (!course) { showToast('Course not found', 'error'); return; }
   const root = document.getElementById('app-root');
-
-  const countriesList = `
-    <option value="">Select Country</option>
-    <option value="Zimbabwe" selected>Zimbabwe</option>
-    <option value="South Africa">South Africa</option>
-    <option value="Nigeria">Nigeria</option>
-    <option value="Kenya">Kenya</option>
-    <option value="United States">United States</option>
-    <option value="United Kingdom">United Kingdom</option>
-    <option value="Canada">Canada</option>
-    <option value="Australia">Australia</option>
-    <option value="India">India</option>
-    <option value="Germany">Germany</option>
-    <option value="France">France</option>
-    <option value="Brazil">Brazil</option>
-    <option value="Mexico">Mexico</option>
-  `;
 
   root.innerHTML = `
     <div class="max-w-4xl mx-auto p-4 fade-in">
@@ -1853,7 +1850,7 @@ window.openCheckout = async (courseId) => {
             <label class="flex items-center gap-3 glass p-3 rounded-xl cursor-not-allowed opacity-60"><input type="radio" disabled><span>📱 EcoCash <span class="text-xs text-yellow-400 ml-2">Coming Soon</span></span></label>
           </div>
           <div class="p-3 bg-yellow-500/10 rounded-xl text-xs text-yellow-400 mb-4">
-            <i class="fa-solid fa-circle-info mr-1"></i> <strong>Vouchers = instant enrollment!</strong> Enter a voucher code above and click Apply — you'll be enrolled immediately. No billing info needed. Credit Card, PayPal & EcoCash coming soon.
+            <i class="fa-solid fa-circle-info mr-1"></i> <strong>Vouchers = instant enrollment!</strong> Enter a voucher code above and click Apply — you'll be enrolled immediately.
           </div>
           <div id="autoEnrollStatus" class="hidden text-center p-4 bg-green-500/10 rounded-xl">
             <p class="text-green-400 font-bold text-lg">🎉 Enrolled Successfully!</p>
@@ -1885,15 +1882,12 @@ window.openCheckout = async (courseId) => {
     voucherMessage.innerHTML = '<span class="text-cyan-400">Validating voucher...</span>';
 
     try {
-      // Validate first
       const validationResult = await validateVoucher(code, courseId);
       if (!validationResult.valid) {
         voucherMessage.innerHTML = `<span class="text-red-400">❌ ${validationResult.message}</span>`;
         return;
       }
 
-      // Voucher valid - create checkout (auto-enrolls on backend)
-      const basePrice = selectedType === 'exam_only' ? course.examPrice : course.pathPrice;
       const checkoutResult = await createCheckout(courseId, selectedType, code, {
         firstName: currentUser.name?.split(' ')[0] || 'Student',
         lastName: currentUser.name?.split(' ')[1] || '',
@@ -1903,7 +1897,6 @@ window.openCheckout = async (courseId) => {
       });
 
       if (checkoutResult.autoEnrolled) {
-        // Show success and redirect
         voucherMessage.innerHTML = `<span class="text-green-400">✅ ${validationResult.message}</span>`;
         document.getElementById('discountAmount').innerText = `-$${formatMoney(checkoutResult.discount || 0)}`;
         document.getElementById('totalAmount').innerHTML = `<strong>$${formatMoney(checkoutResult.amount || 0)}</strong>`;
@@ -1914,7 +1907,6 @@ window.openCheckout = async (courseId) => {
         const statusDiv = document.getElementById('autoEnrollStatus');
         if (statusDiv) statusDiv.classList.remove('hidden');
 
-        // Refresh enrollment cache
         try {
           const enrollmentData = await getMyEnrollments();
           userEnrollmentsCache = enrollmentData.enrollments || [];
@@ -1922,7 +1914,6 @@ window.openCheckout = async (courseId) => {
 
         showToast('🎉 Enrolled successfully!', 'success');
 
-        // Redirect to course dashboard
         setTimeout(() => {
           renderCourseDashboard(courseId);
         }, 2000);
@@ -1931,12 +1922,12 @@ window.openCheckout = async (courseId) => {
       }
     } catch (error) {
       console.error('[CHECKOUT] Voucher apply error:', error);
-      voucherMessage.innerHTML = `<span class="text-red-400">❌ ${error.message || 'Failed to apply voucher. It may have already been used.'}</span>`;
+      voucherMessage.innerHTML = `<span class="text-red-400">❌ ${error.message || 'Failed to apply voucher.'}</span>`;
     }
   });
 };
 
-// ==================== ADMIN CONSOLE (FULLY WORKING) ====================
+// ==================== ADMIN CONSOLE WITH DRAG & DROP + ADD ADMIN MODAL ====================
 async function renderAdmin() {
   if (!currentUser || currentUser.role !== 'admin') {
     renderPage('dashboard');
@@ -1958,46 +1949,110 @@ async function renderAdmin() {
     const users = usersData.users || [];
     const courses = coursesList;
 
-    root.innerHTML = `
-      <div class="max-w-7xl mx-auto fade-in">
-        <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
-          <div>
-            <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button>
-            <h1 class="text-3xl sm:text-5xl font-black text-purple-400">👑 Admin Console</h1>
+    // Admin render function (reused after reorder)
+    window._adminCoursesData = courses;
+
+    function renderAdminContent() {
+      const currentCourses = window._adminCoursesData || courses;
+
+      return `
+        <div class="max-w-7xl mx-auto fade-in">
+          <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+            <div>
+              <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button>
+              <h1 class="text-3xl sm:text-5xl font-black text-purple-400">👑 Admin Console</h1>
+            </div>
           </div>
+
+          <div class="stats-grid mb-8">
+            <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-cyan-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">${stats.totalStudents || 0}</h3><p class="text-xs">Students</p></div>
+            <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-book-open text-green-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-green-400">${stats.totalCourses || currentCourses.length}</h3><p class="text-xs">Courses</p></div>
+            <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-dollar-sign text-yellow-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">$${formatMoney(financeData.total || stats.totalRevenue || 0)}</h3><p class="text-xs">Revenue</p></div>
+            <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-purple-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">${pending.length}</h3><p class="text-xs">Pending</p></div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+            <button id="quickAddCourse" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-plus-circle text-green-400 text-2xl"></i><p class="text-xs mt-1">Add Course</p></button>
+            <button id="quickCreateVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Voucher</p></button>
+            <button id="quickManageUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button>
+            <button id="quickAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button>
+            <button id="quickApproveCerts" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button>
+          </div>
+
+          <div class="glass rounded-3xl p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2>
+              <div class="flex gap-2">
+                <button id="saveCourseOrderBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Order</button>
+                <button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mb-2">Drag rows using the <i class="fa-solid fa-grip-vertical"></i> handle to reorder courses, then click Save Order.</p>
+            <div class="overflow-x-auto">
+              <table class="w-full admin-table" id="adminCourseTable">
+                <thead><tr class="border-b border-white/10"><th class="text-left py-3 w-8"></th><th class="text-left">Course</th><th class="text-left">Exam $</th><th class="text-left">Path $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead>
+                <tbody id="adminCourseTableBody">
+                  ${currentCourses.map((c, index) => `
+                    <tr class="border-b border-white/10 hover:bg-white/5 course-drag-row" draggable="true" data-course-id="${c.id}" data-display-order="${index}">
+                      <td class="py-3"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span></td>
+                      <td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ${c.icon || 'fa-certificate'} text-purple-400"></i><span class="font-medium">${escapeHtml(c.name)}</span></div></td>
+                      <td>$${c.examPrice}</td>
+                      <td>$${c.pathPrice || ''}</td>
+                      <td>${c.enrolledCount || 0}</td>
+                      <td class="space-x-2">
+                        <button onclick="window.showEditCourseModal('${c.id}')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="window.showDeleteCourseModal('${c.id}', '${escapeHtml(c.name).replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="window.showManageVideosModal('${c.id}')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 mb-8">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Vouchers</h2><div class="flex gap-2"><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm">+ Create</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm">📦 Batch</button></div></div>
+            <div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used/Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 text-gray-400 hover:text-cyan-400"><i class="fa-regular fa-copy"></i></button></td><td>${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td>${v.courseId === 'all' ? 'All Courses' : currentCourses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td>${v.usedCount}/${v.maxUses || 1}</td><td>${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>'}</tbody></table></div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (${pending.length})</h2><div class="space-y-3">${pending.length > 0 ? pending.map(p => `<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div><p class="font-medium">${escapeHtml(p.userName || p.userEmail)}</p><p class="text-sm text-gray-400">${escapeHtml(p.courseName)} • Score: ${p.score}% • Code: ${p.certificateId || 'N/A'}</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem('${p.id}')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm">✅ Approve</button><button onclick="window.rejectCertificateItem('${p.id}')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm">❌ Reject</button></div></div>`).join('') : '<div class="text-center py-8 text-gray-400">✅ No pending certificates</div>'}</div></div>
+
+          <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20'}">${u.role}</span></td><td>${u.enrolledCourses || 0}</td><td>$${formatMoney(u.totalSpent || 0)}</td><td class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-crown"></i> Make Admin</button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name).replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-300 ml-2"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
         </div>
+      `;
+    }
 
-        <div class="stats-grid mb-8">
-          <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-cyan-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">${stats.totalStudents || 0}</h3><p class="text-xs">Students</p></div>
-          <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-book-open text-green-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-green-400">${stats.totalCourses || courses.length}</h3><p class="text-xs">Courses</p></div>
-          <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-dollar-sign text-yellow-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">$${formatMoney(financeData.total || stats.totalRevenue || 0)}</h3><p class="text-xs">Revenue</p></div>
-          <div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-purple-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">${pending.length}</h3><p class="text-xs">Pending</p></div>
-        </div>
+    root.innerHTML = renderAdminContent();
 
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
-          <button id="quickAddCourse" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-plus-circle text-green-400 text-2xl"></i><p class="text-xs mt-1">Add Course</p></button>
-          <button id="quickCreateVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Voucher</p></button>
-          <button id="quickManageUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button>
-          <button id="quickApproveCerts" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button>
-          <button id="quickAnalytics" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-chart-line text-green-400 text-2xl"></i><p class="text-xs mt-1">Analytics</p></button>
-        </div>
+    // Drag and Drop for course reorder
+    initDragAndDrop();
 
-        <div class="glass rounded-3xl p-6 mb-8">
-          <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button></div>
-          <div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Course</th><th class="text-left">Exam $</th><th class="text-left">Path $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody>${courses.map(c => `<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ${c.icon || 'fa-certificate'} text-purple-400"></i><span class="font-medium">${escapeHtml(c.name)}</span></div></td><td>$${c.examPrice}</td><td>$${c.pathPrice || ''}</td><td>${c.enrolledCount || 0}</td><td class="space-x-2"><button onclick="window.showEditCourseModal('${c.id}')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal('${c.id}', '${escapeHtml(c.name).replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button><button onclick="window.showManageVideosModal('${c.id}')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button></td></tr>`).join('')}</tbody></table></div>
-        </div>
+    document.getElementById('saveCourseOrderBtn')?.addEventListener('click', async () => {
+      const rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row');
+      const orderData = [];
+      rows.forEach((row, index) => {
+        orderData.push({
+          courseId: row.dataset.courseId,
+          displayOrder: index
+        });
+      });
 
-        <div class="glass rounded-3xl p-6 mb-8">
-          <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Vouchers</h2><div class="flex gap-2"><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm">+ Create</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm">📦 Batch</button></div></div>
-          <div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used/Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>${vouchers.length > 0 ? vouchers.map(v => `<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><span class="font-mono text-cyan-400">${escapeHtml(v.code)}</span><button onclick="window.copyToClipboard('${v.code}')" class="ml-2 text-gray-400 hover:text-cyan-400"><i class="fa-regular fa-copy"></i></button></td><td>${v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')}</td><td>${v.courseId === 'all' ? 'All Courses' : courses.find(c => c.id === v.courseId)?.name || v.courseId}</td><td>${v.usedCount}/${v.maxUses || 1}</td><td>${v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never'}</td><td><button onclick="window.deleteVoucherItem('${v.id}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>'}</tbody></table></div>
-        </div>
+      try {
+        const response = await apiRequest('/admin/courses/reorder', {
+          method: 'PUT',
+          body: JSON.stringify({ courses: orderData })
+        });
+        showToast('Course order saved!', 'success');
+        // Refresh courses data
+        await loadCourses();
+        window._adminCoursesData = [...coursesData];
+      } catch (error) {
+        showToast('Failed to save order: ' + error.message, 'error');
+      }
+    });
 
-        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (${pending.length})</h2><div class="space-y-3">${pending.length > 0 ? pending.map(p => `<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div><p class="font-medium">${escapeHtml(p.userName || p.userEmail)}</p><p class="text-sm text-gray-400">${escapeHtml(p.courseName)} • Score: ${p.score}%</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem('${p.id}')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm">✅ Approve</button><button onclick="window.rejectCertificateItem('${p.id}')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm">❌ Reject</button></div></div>`).join('') : '<div class="text-center py-8 text-gray-400">✅ No pending certificates</div>'}</div></div>
-
-        <div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>${users.map(u => `<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div><p class="font-medium">${escapeHtml(u.name)}</p><p class="text-xs text-gray-400">${escapeHtml(u.email)}</p></div></td><td><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20'}">${u.role}</span></td><td>${u.enrolledCourses || 0}</td><td>$${formatMoney(u.totalSpent || 0)}</td><td class="space-x-2">${u.role !== 'admin' ? `<button onclick="window.makeUserAdminItem('${u.id}')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-crown"></i></button>` : ''}${u.email !== currentUser.email ? `<button onclick="window.showDeleteUserModal('${u.id}', '${escapeHtml(u.name).replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>
-      </div>
-    `;
-
+    document.getElementById('quickAddAdmin')?.addEventListener('click', () => showAddAdminModal());
     document.getElementById('quickAddCourse')?.addEventListener('click', () => showAddCourseModal());
     document.getElementById('addCourseTableBtn')?.addEventListener('click', () => showAddCourseModal());
     document.getElementById('quickCreateVoucher')?.addEventListener('click', () => showCreateVoucherModal());
@@ -2007,6 +2062,160 @@ async function renderAdmin() {
     root.innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load admin panel</p></div>`;
   }
 }
+
+// ==================== DRAG & DROP FOR COURSE REORDER ====================
+function initDragAndDrop() {
+  const rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row');
+  let draggedRow = null;
+
+  rows.forEach(row => {
+    row.addEventListener('dragstart', function(e) {
+      draggedRow = this;
+      this.classList.add('course-row-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', this.dataset.courseId);
+    });
+
+    row.addEventListener('dragend', function(e) {
+      this.classList.remove('course-row-dragging');
+      document.querySelectorAll('.course-drag-row').forEach(r => r.classList.remove('course-row-drag-over'));
+      draggedRow = null;
+    });
+
+    row.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (this !== draggedRow) {
+        this.classList.add('course-row-drag-over');
+      }
+    });
+
+    row.addEventListener('dragleave', function(e) {
+      this.classList.remove('course-row-drag-over');
+    });
+
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('course-row-drag-over');
+      if (this !== draggedRow) {
+        const tbody = document.getElementById('adminCourseTableBody');
+        const allRows = [...tbody.querySelectorAll('.course-drag-row')];
+        const draggedIndex = allRows.indexOf(draggedRow);
+        const droppedIndex = allRows.indexOf(this);
+
+        if (draggedIndex < droppedIndex) {
+          tbody.insertBefore(draggedRow, this.nextSibling);
+        } else {
+          tbody.insertBefore(draggedRow, this);
+        }
+      }
+    });
+  });
+}
+
+// ==================== ADD ADMIN MODAL ====================
+function showAddAdminModal() {
+  const modalHtml = `
+    <div id="addAdminModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);">
+      <div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gradient-to-r from-yellow-600 to-amber-500 px-6 py-4 flex justify-between items-center rounded-t-3xl">
+          <h2 class="text-xl font-bold"><i class="fa-solid fa-crown mr-2"></i> Add Admin</h2>
+          <button onclick="closeModal('addAdminModal')" class="text-white/80 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-gray-400 mb-4">Create a new admin account or promote an existing user.</p>
+
+          <div class="mb-6">
+            <h3 class="font-semibold mb-3 text-yellow-400">Option 1: Create New Admin</h3>
+            <div class="space-y-3">
+              <input type="text" id="newAdminName" placeholder="Full name" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off">
+              <input type="email" id="newAdminEmail" placeholder="Email address" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off">
+              <input type="password" id="newAdminPassword" placeholder="Password (min 5 chars)" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off">
+              <button onclick="createNewAdminAccount()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-2 rounded-xl font-bold text-sm transition">➕ Create Admin Account</button>
+            </div>
+          </div>
+
+          <div class="border-t border-white/10 pt-4">
+            <h3 class="font-semibold mb-3 text-cyan-400">Option 2: Promote Existing User</h3>
+            <div class="space-y-3">
+              <input type="text" id="promoteUserEmail" placeholder="Enter user email to promote" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off">
+              <button onclick="promoteExistingUser()" class="w-full bg-cyan-600 hover:bg-cyan-500 py-2 rounded-xl font-bold text-sm transition">👑 Promote to Admin</button>
+            </div>
+          </div>
+
+          <button onclick="closeModal('addAdminModal')" class="w-full glass py-3 rounded-xl font-bold mt-4">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+async function createNewAdminAccount() {
+  const name = document.getElementById('newAdminName')?.value;
+  const email = document.getElementById('newAdminEmail')?.value;
+  const password = document.getElementById('newAdminPassword')?.value;
+
+  if (!name || !email || !password) {
+    showToast('Please fill all fields', 'error');
+    return;
+  }
+
+  if (password.length < 5) {
+    showToast('Password must be at least 5 characters', 'error');
+    return;
+  }
+
+  try {
+    const response = await apiRequest('/admin/add-admin', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password })
+    });
+    showToast(response.message, 'success');
+    closeModal('addAdminModal');
+    renderAdmin();
+  } catch (error) {
+    showToast('Failed: ' + error.message, 'error');
+  }
+}
+
+async function promoteExistingUser() {
+  const email = document.getElementById('promoteUserEmail')?.value;
+
+  if (!email) {
+    showToast('Please enter a user email', 'error');
+    return;
+  }
+
+  try {
+    // First get the user by finding them in the users list
+    const usersData = await getAllUsers();
+    const user = usersData.users?.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+      showToast('User not found with that email', 'error');
+      return;
+    }
+
+    if (user.role === 'admin') {
+      showToast('This user is already an admin', 'info');
+      return;
+    }
+
+    const response = await apiRequest('/admin/add-admin', {
+      method: 'POST',
+      body: JSON.stringify({ userId: user.id })
+    });
+    showToast(response.message, 'success');
+    closeModal('addAdminModal');
+    renderAdmin();
+  } catch (error) {
+    showToast('Failed: ' + error.message, 'error');
+  }
+}
+
+window.createNewAdminAccount = createNewAdminAccount;
+window.promoteExistingUser = promoteExistingUser;
 
 // ==================== ADMIN MODALS ====================
 function showAddCourseModal() {
@@ -2142,7 +2351,7 @@ async function createBatchVouchers() {
 window.copyToClipboard = (text) => { navigator.clipboard.writeText(text); showToast('Copied!', 'success'); };
 window.approveCertificateItem = async (id) => { try { await approveCertificate(id); showToast('Approved!', 'success'); renderAdmin(); } catch (e) { showToast('Failed', 'error'); } };
 window.rejectCertificateItem = async (id) => { try { await rejectCertificate(id); showToast('Rejected', 'info'); renderAdmin(); } catch (e) { showToast('Failed', 'error'); } };
-window.makeUserAdminItem = async (id) => { if (confirm('Make admin?')) { try { await makeAdmin(id); showToast('Admin granted', 'success'); renderAdmin(); } catch (e) { showToast('Failed', 'error'); } } };
+window.makeUserAdminItem = async (id) => { if (confirm('Make this user an admin?')) { try { await makeAdmin(id); showToast('Admin granted!', 'success'); renderAdmin(); } catch (e) { showToast('Failed', 'error'); } } };
 window.deleteVoucherItem = async (id) => { if (confirm('Delete voucher?')) { try { await deleteVoucher(id); showToast('Deleted', 'success'); renderAdmin(); } catch (e) { showToast('Failed', 'error'); } } };
 window.showDeleteUserModal = (userId, userName) => {
   const modalHtml = `<div id="deleteUserModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">🗑️ Delete User</h2><button onclick="closeModal('deleteUserModal')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-user text-5xl text-red-400 mb-3"></i><p>Delete <strong class="text-red-400">"${escapeHtml(userName)}"</strong>?</p></div><div class="mb-4"><label class="block text-sm mb-2">Type <span class="text-red-400 font-bold">DELETE</span>:</label><input type="text" id="deleteUserConfirmInput" placeholder="DELETE" class="w-full bg-transparent border border-red-500/50 rounded-xl px-4 py-2" autocomplete="off"></div><div class="flex gap-3"><button onclick="confirmDeleteUser('${userId}')" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Delete</button><button onclick="closeModal('deleteUserModal')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>`;
@@ -2157,9 +2366,297 @@ window.confirmDeleteUser = async (userId) => {
 
 function closeModal(modalId) { const modal = document.getElementById(modalId); if (modal) modal.remove(); }
 
-// ==================== AI CHAT MODAL ====================
-let currentAIChatCourseId = null;
+// ==================== AI TEACHER CHAT (SEPARATE MODAL - UNIQUE UI PER LECTURER) ====================
+let teacherChatHistory = {};
+let currentTeacherCourseId = null;
 
+function getTeacherConfig(courseId) {
+  const teachers = {
+    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor • 12 Years', avatar: '📡', theme: 'ncp', greeting: 'Hello! I\'m Professor Carlos. I specialize in networking certifications. How can I help you master NCP today? 📡' },
+    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '📚', theme: 'ccp', greeting: 'Welcome! I\'m Professor Sarah Chen. Ready to dive into computer science fundamentals? Let\'s learn together! 📚' },
+    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect • AWS Certified', avatar: '☁️', theme: 'clp', greeting: 'Hey there! I\'m Professor Mike Ross. The cloud is infinite — let me show you how to master it! ☁️' },
+    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: '🧠', theme: 'aip', greeting: 'Greetings! I\'m Professor Nova Turing. Neural networks, deep learning — let\'s explore AI together! 🧠' },
+    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚', theme: 'default', greeting: 'Hello! I\'m here to help you learn. What would you like to know?' }
+  };
+  return teachers[courseId] || teachers.default;
+}
+
+window.openAITeacherChat = function(courseId) {
+  currentTeacherCourseId = courseId;
+  const teacher = getTeacherConfig(courseId);
+  const modal = document.getElementById('aiTeacherModal');
+
+  if (!modal) return;
+
+  // Update teacher header
+  const header = document.getElementById('aiTeacherHeader');
+  const avatar = document.getElementById('aiTeacherAvatar');
+  const nameEl = document.getElementById('aiTeacherName');
+  const titleEl = document.getElementById('aiTeacherTitle');
+  const sendBtn = document.getElementById('sendTeacherChat');
+  const messagesDiv = document.getElementById('teacherChatMessages');
+  const welcomeDiv = document.getElementById('teacherWelcomeMessage');
+
+  // Remove all theme classes and add correct one
+  header.className = 'px-5 py-4 flex justify-between items-center shrink-0';
+  header.classList.add('teacher-header-' + teacher.theme);
+
+  if (avatar) avatar.textContent = teacher.avatar;
+  if (nameEl) nameEl.textContent = teacher.name;
+  if (titleEl) titleEl.textContent = teacher.title;
+
+  // Update send button theme
+  if (sendBtn) {
+    sendBtn.className = 'w-10 h-10 rounded-xl flex items-center justify-center transition hover:scale-105';
+    sendBtn.classList.add('teacher-send-btn-' + teacher.theme);
+  }
+
+  // Initialize or restore chat history
+  if (!teacherChatHistory[courseId]) {
+    teacherChatHistory[courseId] = [
+      { role: 'assistant', content: teacher.greeting }
+    ];
+  }
+
+  restoreTeacherChatHistory(courseId, teacher);
+
+  // Show modal
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+};
+
+function restoreTeacherChatHistory(courseId, teacher) {
+  const chatDiv = document.getElementById('teacherChatMessages');
+  if (!chatDiv) return;
+
+  chatDiv.innerHTML = '';
+  const history = teacherChatHistory[courseId] || [];
+
+  history.forEach(msg => {
+    if (msg.role === 'user') {
+      const div = document.createElement('div');
+      div.className = 'flex justify-end mb-3';
+      div.innerHTML = `<div class="bg-purple-600/30 rounded-2xl p-3 max-w-[80%]"><p class="text-sm">${escapeHtml(msg.content)}</p></div>`;
+      chatDiv.appendChild(div);
+    } else if (msg.role === 'assistant') {
+      const div = document.createElement('div');
+      div.className = 'flex gap-2 mb-3';
+      let content = msg.content;
+      const wa = '+263714587259';
+      if (content.includes(wa)) content = content.replace(new RegExp(escapeRegex(wa), 'g'), `<a href="https://wa.me/${wa.replace(/\+/g, '')}" target="_blank" class="whatsapp-link">${wa}</a>`);
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-full teacher-avatar-bg-${teacher.theme} flex items-center justify-center text-xs text-white shrink-0">${teacher.avatar}</div>
+        <div class="glass rounded-2xl p-3 max-w-[80%]">
+          <p class="text-sm">${content}</p>
+          <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+            <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" onclick="handleTeacherCopy(this, '${escapeHtml(content).replace(/'/g, "\\'")}')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+            <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" onclick="handleTeacherLike(this)" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" onclick="handleTeacherDislike(this)" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+            <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" onclick="handleTeacherRegenerate('${courseId}')" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+          </div>
+        </div>
+      `;
+      chatDiv.appendChild(div);
+    }
+  });
+
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+async function sendTeacherChatMessage() {
+  const input = document.getElementById('teacherChatInput');
+  const message = input.value.trim();
+  if (!message || !currentTeacherCourseId) return;
+
+  const courseId = currentTeacherCourseId;
+  const teacher = getTeacherConfig(courseId);
+  const chatDiv = document.getElementById('teacherChatMessages');
+
+  // Add user message
+  const userDiv = document.createElement('div');
+  userDiv.className = 'flex justify-end mb-3';
+  userDiv.innerHTML = `<div class="bg-purple-600/30 rounded-2xl p-3 max-w-[80%]"><p class="text-sm">${escapeHtml(message)}</p></div>`;
+  chatDiv.appendChild(userDiv);
+
+  // Add thinking indicator
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'flex gap-2 mb-3';
+  aiDiv.innerHTML = `
+    <div class="w-8 h-8 rounded-full teacher-avatar-bg-${teacher.theme} flex items-center justify-center text-xs text-white shrink-0">${teacher.avatar}</div>
+    <div class="glass rounded-2xl p-3 max-w-[80%]"><div class="thinking-dots"><span></span><span></span><span></span></div></div>
+  `;
+  chatDiv.appendChild(aiDiv);
+
+  const responseDiv = aiDiv.querySelector('.glass');
+  const dots = aiDiv.querySelector('.thinking-dots');
+  input.value = '';
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  // Save user message to history
+  if (!teacherChatHistory[courseId]) teacherChatHistory[courseId] = [];
+  teacherChatHistory[courseId].push({ role: 'user', content: message });
+
+  try {
+    // Send to AI teacher endpoint
+    const response = await apiRequest(`/ai/teacher/${courseId}`, {
+      method: 'POST',
+      body: JSON.stringify({ message, moduleContext: teacher.title })
+    });
+
+    const aiResponse = response.response || 'Let me help you with that!';
+    if (dots) dots.remove();
+
+    let formattedResponse = aiResponse;
+    const wa = '+263714587259';
+    if (formattedResponse.includes(wa)) formattedResponse = formattedResponse.replace(new RegExp(escapeRegex(wa), 'g'), `<a href="https://wa.me/${wa.replace(/\+/g, '')}" target="_blank" class="whatsapp-link">${wa}</a>`);
+
+    responseDiv.innerHTML = `
+      <p class="text-sm">${formattedResponse}</p>
+      <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+        <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
+        <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+        <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+        <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+    `;
+
+    // Attach event listeners to new buttons
+    attachAIActionListeners(responseDiv, aiResponse, courseId);
+
+    // Save assistant message to history
+    teacherChatHistory[courseId].push({ role: 'assistant', content: aiResponse });
+
+  } catch (e) {
+    if (dots) dots.remove();
+    responseDiv.innerHTML = '<p class="text-red-400 text-sm">Sorry, I\'m having trouble responding. Please try again.</p>';
+    teacherChatHistory[courseId].push({ role: 'assistant', content: 'Sorry, I\'m having trouble responding.' });
+  }
+
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+// ==================== AI ACTION BUTTONS (Like/Dislike/Copy/Regenerate) ====================
+function attachAIActionListeners(container, responseText, courseId) {
+  if (!container) return;
+
+  const copyBtn = container.querySelector('.ai-copy-btn');
+  const likeBtn = container.querySelector('.ai-like-btn');
+  const dislikeBtn = container.querySelector('.ai-dislike-btn');
+  const regenerateBtn = container.querySelector('.ai-regenerate-btn');
+
+  copyBtn?.addEventListener('click', () => {
+    navigator.clipboard.writeText(responseText);
+    showToast('Copied!', 'success');
+  });
+
+  likeBtn?.addEventListener('click', () => {
+    likeBtn.classList.add('ai-liked');
+    dislikeBtn?.classList.remove('ai-disliked');
+    showToast('Thanks for your feedback! 👍', 'success');
+  });
+
+  dislikeBtn?.addEventListener('click', () => {
+    dislikeBtn.classList.add('ai-disliked');
+    likeBtn?.classList.remove('ai-liked');
+    showToast('Thanks for your feedback. We\'ll improve.', 'info');
+  });
+
+  regenerateBtn?.addEventListener('click', () => {
+    if (courseId) {
+      // Remove last assistant message and re-send last user message
+      const history = teacherChatHistory[courseId] || [];
+      if (history.length >= 2) {
+        history.pop(); // Remove last assistant message
+        const lastUserMsg = history[history.length - 1];
+        if (lastUserMsg && lastUserMsg.role === 'user') {
+          // Re-send
+          history.pop(); // Remove user message too
+          sendTeacherChatRegenerate(courseId, lastUserMsg.content);
+        }
+      }
+    }
+  });
+}
+
+async function sendTeacherChatRegenerate(courseId, message) {
+  const teacher = getTeacherConfig(courseId);
+  const chatDiv = document.getElementById('teacherChatMessages');
+  if (!chatDiv) return;
+
+  // Add user message again
+  const userDiv = document.createElement('div');
+  userDiv.className = 'flex justify-end mb-3';
+  userDiv.innerHTML = `<div class="bg-purple-600/30 rounded-2xl p-3 max-w-[80%]"><p class="text-sm">${escapeHtml(message)}</p></div>`;
+  chatDiv.appendChild(userDiv);
+
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'flex gap-2 mb-3';
+  aiDiv.innerHTML = `
+    <div class="w-8 h-8 rounded-full teacher-avatar-bg-${teacher.theme} flex items-center justify-center text-xs text-white shrink-0">${teacher.avatar}</div>
+    <div class="glass rounded-2xl p-3 max-w-[80%]"><div class="thinking-dots"><span></span><span></span><span></span></div></div>
+  `;
+  chatDiv.appendChild(aiDiv);
+
+  const responseDiv = aiDiv.querySelector('.glass');
+  const dots = aiDiv.querySelector('.thinking-dots');
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  teacherChatHistory[courseId].push({ role: 'user', content: message });
+
+  try {
+    const response = await apiRequest(`/ai/teacher/${courseId}`, {
+      method: 'POST',
+      body: JSON.stringify({ message, moduleContext: teacher.title })
+    });
+    const aiResponse = response.response || 'Let me help you with that!';
+    if (dots) dots.remove();
+
+    responseDiv.innerHTML = `
+      <p class="text-sm">${aiResponse}</p>
+      <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+        <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition"><i class="fa-regular fa-copy"></i></button>
+        <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition"><i class="fa-regular fa-thumbs-up"></i></button>
+        <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition"><i class="fa-regular fa-thumbs-down"></i></button>
+        <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+    `;
+    attachAIActionListeners(responseDiv, aiResponse, courseId);
+    teacherChatHistory[courseId].push({ role: 'assistant', content: aiResponse });
+  } catch (e) {
+    if (dots) dots.remove();
+    responseDiv.innerHTML = '<p class="text-red-400 text-sm">Sorry, I\'m having trouble responding.</p>';
+    teacherChatHistory[courseId].push({ role: 'assistant', content: 'Sorry, I\'m having trouble responding.' });
+  }
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+function closeTeacherChatModal() {
+  const modal = document.getElementById('aiTeacherModal');
+  if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  currentTeacherCourseId = null;
+}
+
+function clearTeacherChat() {
+  if (currentTeacherCourseId) {
+    const teacher = getTeacherConfig(currentTeacherCourseId);
+    teacherChatHistory[currentTeacherCourseId] = [
+      { role: 'assistant', content: teacher.greeting }
+    ];
+    restoreTeacherChatHistory(currentTeacherCourseId, teacher);
+    showToast('Chat cleared', 'info');
+  }
+}
+
+function expandTeacherChat() {
+  const modal = document.getElementById('aiTeacherModal');
+  if (modal) {
+    modal.classList.toggle('expanded');
+    const icon = document.querySelector('#expandTeacherChat i');
+    if (icon) icon.className = modal.classList.contains('expanded') ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+  }
+}
+
+// ==================== AI WIDGET CHAT (Landing + Dashboard) ====================
 function openAIChatModal(courseId = null) {
   currentAIChatCourseId = courseId;
   aiWidgetActive = true;
@@ -2181,22 +2678,59 @@ function restoreChatHistory() {
       const div = document.createElement('div');
       div.className = 'flex gap-2 mb-3';
       let content = msg.content;
-      const wa = "+263714587259";
-      if (content.includes(wa)) content = content.replace(new RegExp(escapeRegex(wa), 'g'), `<a href="https://wa.me/${wa.replace(/\+/g,'')}" target="_blank" class="whatsapp-link">${wa}</a>`);
-      div.innerHTML = `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs text-white shrink-0">AI</div><div class="glass rounded-2xl p-3 max-w-[80%]"><p class="text-sm">${content}</p></div>`;
+      const wa = '+263714587259';
+      if (content.includes(wa)) content = content.replace(new RegExp(escapeRegex(wa), 'g'), `<a href="https://wa.me/${wa.replace(/\+/g, '')}" target="_blank" class="whatsapp-link">${wa}</a>`);
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs text-white shrink-0">AI</div>
+        <div class="glass rounded-2xl p-3 max-w-[80%]">
+          <p class="text-sm">${content}</p>
+          <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+            <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
+            <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+            <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+          </div>
+        </div>
+      `;
       chatDiv.appendChild(div);
     }
   });
   chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  // Attach listeners to all action buttons
+  chatDiv.querySelectorAll('.ai-action-buttons').forEach(btnGroup => {
+    const copyBtn = btnGroup.querySelector('.ai-copy-btn');
+    const likeBtn = btnGroup.querySelector('.ai-like-btn');
+    const dislikeBtn = btnGroup.querySelector('.ai-dislike-btn');
+
+    copyBtn?.addEventListener('click', (e) => {
+      const responseText = btnGroup.closest('.glass')?.querySelector('p')?.textContent || '';
+      navigator.clipboard.writeText(responseText);
+      showToast('Copied!', 'success');
+    });
+
+    likeBtn?.addEventListener('click', () => {
+      likeBtn.classList.add('ai-liked');
+      dislikeBtn?.classList.remove('ai-disliked');
+      showToast('Thanks for your feedback! 👍', 'success');
+    });
+
+    dislikeBtn?.addEventListener('click', () => {
+      dislikeBtn.classList.add('ai-disliked');
+      likeBtn?.classList.remove('ai-liked');
+      showToast('Thanks for your feedback. We\'ll improve.', 'info');
+    });
+  });
 }
 
 window.openAIChatModal = openAIChatModal;
+window.openAITeacherChat = openAITeacherChat;
 
 function closeAIChatModal() {
   const modal = document.getElementById('aiChatModal');
   if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   aiWidgetActive = false;
-  aiChatHistory = [{ role: "assistant", content: "Hi! I'm ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓" }];
+  aiChatHistory = [{ role: 'assistant', content: 'Hi! I\'m ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓' }];
 }
 
 async function sendAIChatMessage() {
@@ -2223,7 +2757,16 @@ async function sendAIChatMessage() {
   try {
     const result = await sendAIMessage(message);
     if (dots) dots.remove();
-    responseDiv.innerHTML = `<p class="text-sm">${result.response}</p>`;
+    responseDiv.innerHTML = `
+      <p class="text-sm">${result.response}</p>
+      <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+        <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
+        <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+        <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+        <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+      </div>
+    `;
+    attachWidgetActionListeners(responseDiv);
   } catch (e) {
     if (dots) dots.remove();
     responseDiv.innerHTML = '<p class="text-red-400 text-sm">AI unavailable.</p>';
@@ -2231,8 +2774,32 @@ async function sendAIChatMessage() {
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
 
+function attachWidgetActionListeners(container) {
+  const copyBtn = container.querySelector('.ai-copy-btn');
+  const likeBtn = container.querySelector('.ai-like-btn');
+  const dislikeBtn = container.querySelector('.ai-dislike-btn');
+
+  copyBtn?.addEventListener('click', () => {
+    const text = container.querySelector('p')?.textContent || '';
+    navigator.clipboard.writeText(text);
+    showToast('Copied!', 'success');
+  });
+
+  likeBtn?.addEventListener('click', () => {
+    likeBtn.classList.add('ai-liked');
+    dislikeBtn?.classList.remove('ai-disliked');
+    showToast('Thanks for your feedback! 👍', 'success');
+  });
+
+  dislikeBtn?.addEventListener('click', () => {
+    dislikeBtn.classList.add('ai-disliked');
+    likeBtn?.classList.remove('ai-liked');
+    showToast('Thanks for your feedback. We\'ll improve.', 'info');
+  });
+}
+
 function clearAIChat() {
-  aiChatHistory = [{ role: "assistant", content: "Hi! I'm ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓" }];
+  aiChatHistory = [{ role: 'assistant', content: 'Hi! I\'m ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓' }];
   const chatDiv = document.getElementById('chatMessages');
   if (chatDiv) restoreChatHistory();
   showToast('Chat cleared', 'info');
@@ -2256,6 +2823,8 @@ window.completeModuleAndReturn = completeModuleAndReturn;
 window.retryQuiz = retryQuiz;
 window.handleEnrollClick = handleEnrollClick;
 window.openCheckout = openCheckout;
+window.openAIChatModal = openAIChatModal;
+window.openAITeacherChat = openAITeacherChat;
 window.showEditCourseModal = showEditCourseModal;
 window.saveEditCourse = saveEditCourse;
 window.showDeleteCourseModal = showDeleteCourseModal;
@@ -2299,6 +2868,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('[data-nav]').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); renderPage(btn.dataset.nav); mobileMenu?.classList.add('hidden'); }));
 
+  // AI Widget event listeners
   const aiBtn = document.getElementById('aiChatButton');
   const closeBtn = document.getElementById('closeAiChat');
   const sendBtn = document.getElementById('sendChat');
@@ -2313,9 +2883,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   expandBtn?.addEventListener('click', expandAIChat);
   chatInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendAIChatMessage(); });
 
-  const modal = document.getElementById('aiChatModal');
-  modal?.addEventListener('click', (e) => { if (e.target === modal) closeAIChatModal(); });
+  // AI Teacher event listeners
+  const closeTeacherBtn = document.getElementById('closeTeacherChat');
+  const sendTeacherBtn = document.getElementById('sendTeacherChat');
+  const clearTeacherBtn = document.getElementById('clearTeacherChat');
+  const expandTeacherBtn = document.getElementById('expandTeacherChat');
+  const teacherChatInput = document.getElementById('teacherChatInput');
 
+  closeTeacherBtn?.addEventListener('click', closeTeacherChatModal);
+  sendTeacherBtn?.addEventListener('click', sendTeacherChatMessage);
+  clearTeacherBtn?.addEventListener('click', clearTeacherChat);
+  expandTeacherBtn?.addEventListener('click', expandTeacherChat);
+  teacherChatInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendTeacherChatMessage(); });
+
+  // Close modals on backdrop click
+  const widgetModal = document.getElementById('aiChatModal');
+  widgetModal?.addEventListener('click', (e) => { if (e.target === widgetModal) closeAIChatModal(); });
+
+  const teacherModal = document.getElementById('aiTeacherModal');
+  teacherModal?.addEventListener('click', (e) => { if (e.target === teacherModal) closeTeacherChatModal(); });
+
+  // Loader
   const loader = document.getElementById('loader');
   const progressBar = document.getElementById('loaderProgress');
   if (progressBar) {
@@ -2340,4 +2928,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 6000);
 });
 
-console.log('🎉 obliXel Academy v10.0 - COMPLETE - All fixes applied');
+console.log('🎉 obliXel Academy v10.0 - COMPLETE - All Features Implemented');

@@ -29,8 +29,8 @@ select {
 }
 
 /* Force LTR on all inputs with highest specificity */
-input, 
-textarea, 
+input,
+textarea,
 select {
   direction: ltr !important;
   unicode-bidi: normal !important;
@@ -396,6 +396,23 @@ input[type="password"] {
   pointer-events: none;
 }
 
+/* ==================== FINAL EXAM LOCKED STATE (same as module locked) ==================== */
+.final-exam-locked {
+  opacity: 0.6;
+  filter: blur(1px);
+  pointer-events: none;
+  position: relative;
+}
+
+.final-exam-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
 /* ==================== AI CHAT PILL ==================== */
 .ai-chat-pill {
   display: flex;
@@ -418,6 +435,28 @@ input[type="password"] {
   font-size: 14px;
   font-weight: 600;
   color: white;
+}
+
+/* ==================== AI ACTION BUTTONS (Copy/Like/Dislike/Regenerate) ==================== */
+.ai-action-buttons button {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-action-buttons button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ai-action-buttons button.ai-liked {
+  color: #22c55e !important;
+}
+
+.ai-action-buttons button.ai-disliked {
+  color: #ef4444 !important;
 }
 
 /* ==================== YOUTUBE CARD ==================== */
@@ -447,7 +486,8 @@ input[type="password"] {
 }
 
 /* ==================== AI CHAT MODAL EXPANDED ==================== */
-#aiChatModal.expanded {
+#aiChatModal.expanded,
+#aiTeacherModal.expanded {
   position: fixed !important;
   inset: 0 !important;
   width: 100% !important;
@@ -456,15 +496,99 @@ input[type="password"] {
   border-radius: 0 !important;
 }
 
-#aiChatModal.expanded .ai-chat-container {
+#aiChatModal.expanded .ai-chat-container,
+#aiTeacherModal.expanded .ai-teacher-chat-container {
   width: 100% !important;
   height: 100% !important;
   max-width: none !important;
   border-radius: 0 !important;
 }
 
-#aiChatModal.expanded #chatMessages {
+#aiChatModal.expanded #chatMessages,
+#aiTeacherModal.expanded #teacherChatMessages {
   height: calc(100vh - 140px) !important;
+}
+
+/* ==================== AI TEACHER MODAL - LECTURER THEMES ==================== */
+
+/* Professor Carlos - NCP (Navy/Network theme) */
+.teacher-header-ncp {
+  background: linear-gradient(135deg, #0a1a3f, #0d2b6b, #0f3f8c);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.teacher-avatar-bg-ncp {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+}
+
+.teacher-send-btn-ncp {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+}
+
+/* Professor Sarah Chen - CCP (Amber/Academic theme) */
+.teacher-header-ccp {
+  background: linear-gradient(135deg, #3d1a00, #6b3a0a, #8b5e14);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.teacher-avatar-bg-ccp {
+  background: linear-gradient(135deg, #92400e, #d97706);
+}
+
+.teacher-send-btn-ccp {
+  background: linear-gradient(135deg, #92400e, #d97706);
+}
+
+/* Professor Mike Ross - Cloud (Sky theme) */
+.teacher-header-clp {
+  background: linear-gradient(135deg, #0c4a6e, #0369a1, #0284c7);
+  border-bottom: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.teacher-avatar-bg-clp {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+}
+
+.teacher-send-btn-clp {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+}
+
+/* Professor Nova Turing - AI (Purple/Neural theme) */
+.teacher-header-aip {
+  background: linear-gradient(135deg, #1a0033, #3b0a6b, #5b1a8b);
+  border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.teacher-avatar-bg-aip {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+.teacher-send-btn-aip {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+/* Default teacher theme */
+.teacher-header-default {
+  background: linear-gradient(135deg, #4a1d6b, #6b3a8b, #8b5aa0);
+  border-bottom: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+.teacher-avatar-bg-default {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+.teacher-send-btn-default {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+/* ==================== AI TEACHER CARD ON COURSE DASHBOARD ==================== */
+.ai-teacher-card {
+  transition: all 0.3s ease;
+}
+
+.ai-teacher-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* ==================== HAMBURGER MENU - FIXED POSITION ==================== */
@@ -496,7 +620,7 @@ input[type="password"] {
   }
 }
 
-#mobileMenu a, 
+#mobileMenu a,
 #mobileMenu button {
   padding: 12px 16px;
   border-radius: 12px;
@@ -647,6 +771,62 @@ input[type="password"] {
   color: #06b6d4;
 }
 
+/* ==================== DRAG & DROP HANDLE FOR ADMIN COURSE REORDER ==================== */
+.drag-handle {
+  cursor: grab;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.2s;
+  padding: 4px 8px;
+}
+
+.drag-handle:hover {
+  color: #06b6d4;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.course-row-dragging {
+  opacity: 0.5;
+  background: rgba(139, 92, 246, 0.1) !important;
+}
+
+.course-row-drag-over {
+  border-top: 2px solid #06b6d4 !important;
+}
+
+/* ==================== FINAL EXAM ITEM IN MODULE LIST ==================== */
+.final-exam-item {
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: rgba(234, 179, 8, 0.05);
+}
+
+.final-exam-item-unlocked {
+  border: 1px solid rgba(34, 197, 94, 0.5) !important;
+  background: rgba(34, 197, 94, 0.08) !important;
+  animation: glowPulse 2s infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(34, 197, 94, 0.6); }
+}
+
+/* ==================== CERTIFICATE CODE DISPLAY ==================== */
+.certificate-code-display {
+  font-family: monospace;
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  background: rgba(139, 92, 246, 0.2);
+  padding: 16px 24px;
+  border-radius: 16px;
+  border: 2px dashed rgba(139, 92, 246, 0.5);
+  text-align: center;
+  user-select: all;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 
 /* Mobile Styles (0 - 768px) */
@@ -654,56 +834,56 @@ input[type="password"] {
   .hamburger-btn {
     display: block;
   }
-  
+
   .desktop-nav-links {
     display: none !important;
   }
-  
+
   .stats-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem !important;
   }
-  
+
   .course-dashboard-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
   }
-  
+
   .course-dashboard-grid > div:first-child {
     order: 1 !important;
   }
-  
+
   .course-dashboard-grid > div:last-child {
     order: 2 !important;
   }
-  
+
   .checkout-container {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
   }
-  
+
   .checkout-container > div {
     width: 100% !important;
     margin: 0 !important;
   }
-  
+
   .checkout-container input,
   .checkout-container select,
   .checkout-container button {
     width: 100% !important;
     font-size: 14px !important;
   }
-  
+
   .checkout-container .name-row {
     display: flex !important;
     flex-direction: column !important;
     gap: 0.5rem !important;
   }
-  
-  button, 
+
+  button,
   a,
   .cursor-pointer,
   input[type="checkbox"],
@@ -712,11 +892,11 @@ input[type="password"] {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   .admin-table thead {
     display: none !important;
   }
-  
+
   .admin-table tbody tr {
     display: block !important;
     margin-bottom: 1rem !important;
@@ -724,7 +904,7 @@ input[type="password"] {
     background: rgba(255,255,255,0.05) !important;
     padding: 1rem !important;
   }
-  
+
   .admin-table tbody td {
     display: flex !important;
     justify-content: space-between !important;
@@ -732,36 +912,38 @@ input[type="password"] {
     padding: 0.5rem 0 !important;
     border-bottom: 1px solid rgba(255,255,255,0.1) !important;
   }
-  
+
   .admin-table tbody td:before {
     content: attr(data-label) !important;
     font-weight: 600 !important;
     color: #8b5cf6 !important;
   }
-  
-  #aiChatModal {
+
+  #aiChatModal,
+  #aiTeacherModal {
     padding: 0 !important;
   }
-  
-  #aiChatModal .glass {
+
+  #aiChatModal .glass,
+  #aiTeacherModal .glass {
     width: 100% !important;
     height: 100% !important;
     max-width: none !important;
     border-radius: 0 !important;
   }
-  
+
   .glass-nav {
     padding: 10px 12px !important;
   }
-  
+
   h1 {
     font-size: 1.75rem !important;
   }
-  
+
   h2 {
     font-size: 1.25rem !important;
   }
-  
+
   .toast-msg {
     bottom: 20px;
     right: 20px;
@@ -769,74 +951,74 @@ input[type="password"] {
     text-align: center;
     font-size: 12px;
   }
-  
+
   .courses-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 1rem !important;
   }
-  
+
   button, .btn {
     font-size: 12px;
     padding: 8px 12px;
   }
-  
+
   input, select, textarea {
     font-size: 16px !important;
   }
-  
+
   body, main, .container {
     overflow-x: hidden !important;
   }
-  
+
   img, video, iframe {
     max-width: 100%;
     height: auto;
   }
-  
+
   .continue-learning-card {
     padding: 1rem !important;
   }
-  
+
   .search-container {
     max-width: 100%;
   }
-  
+
   .user-controls {
     gap: 8px;
   }
-  
+
   .user-controls .avatar {
     width: 32px;
     height: 32px;
     font-size: 12px;
   }
-  
+
   .user-controls .logout-btn {
     padding: 6px 12px;
     font-size: 12px;
   }
-  
+
   .auth-buttons {
     gap: 8px;
   }
-  
+
   .auth-buttons .login-btn,
   .auth-buttons .register-btn {
     padding: 6px 12px;
     font-size: 12px;
   }
-  
+
   .navbar-logo {
     gap: 4px;
   }
-  
+
   .navbar-logo .w-8 {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
-  
+
   .navbar-logo h1 {
     font-size: 14px !important;
   }
@@ -849,13 +1031,13 @@ input[type="password"] {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 1rem !important;
   }
-  
+
   .checkout-container {
     display: flex !important;
     flex-direction: column !important;
     gap: 1.5rem !important;
   }
-  
+
   .checkout-container > div {
     width: 100% !important;
   }
@@ -867,28 +1049,28 @@ input[type="password"] {
     padding-left: 3rem;
     padding-right: 3rem;
   }
-  
+
   main, section {
     padding-left: 2rem;
     padding-right: 2rem;
   }
-  
+
   .stats-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     gap: 1.5rem !important;
   }
-  
+
   .checkout-container {
     display: flex !important;
     flex-direction: row !important;
     gap: 2rem !important;
   }
-  
+
   .checkout-container > div {
     flex: 1 !important;
   }
-  
+
   .course-dashboard-grid {
     display: grid !important;
     grid-template-columns: 2fr 1fr !important;

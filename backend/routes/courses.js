@@ -9,13 +9,13 @@ const authenticate = require('../middleware/auth');
 // ==================== GET ALL COURSES ====================
 router.get('/', async (req, res) => {
   try {
-    // NCP and CCP first, then others
+    // NCP and CCP first, then others sorted by displayOrder
     const ncpCourse = await Course.findOne({ courseId: 'ncp' });
     const ccpCourse = await Course.findOne({ courseId: 'ccp' });
     const otherCourses = await Course.find({
       courseId: { $nin: ['ncp', 'ccp', 'ona', 'onp'] },
       isActive: true
-    }).sort({ enrolledCount: -1 });
+    }).sort({ displayOrder: 1, enrolledCount: -1 });
 
     const sortedCourses = [ncpCourse, ccpCourse, ...otherCourses].filter(Boolean);
 
@@ -34,7 +34,8 @@ router.get('/', async (req, res) => {
       enrolledCount: c.enrolledCount,
       duration: c.duration,
       modules: c.totalModules,
-      prerequisite: c.prerequisite || null
+      prerequisite: c.prerequisite || null,
+      displayOrder: c.displayOrder || 0
     }));
 
     res.json({ courses });
@@ -123,6 +124,7 @@ router.get('/:id/progress', authenticate, async (req, res) => {
       });
     }
 
+    // Exam is unlocked when ALL modules are completed
     const examUnlocked = completedCount >= totalModules && totalModules > 0;
 
     // Find next module name
@@ -135,6 +137,8 @@ router.get('/:id/progress', authenticate, async (req, res) => {
       }
     }
 
+    console.log(`[COURSES] Progress for ${req.user.email} on ${id}: ${completedCount}/${totalModules}, examUnlocked: ${examUnlocked}`);
+
     res.json({
       progress: {
         courseId: id,
@@ -142,7 +146,7 @@ router.get('/:id/progress', authenticate, async (req, res) => {
         totalModules,
         modules: modulesStatus,
         examUnlocked,
-        nextModuleName,
+        nextModuleName: nextModuleName || (examUnlocked ? 'Final Exam Ready!' : 'Continue learning'),
         percentComplete: totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0
       }
     });
@@ -176,7 +180,7 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
         quizScore: parseInt(quizScore),
         completedAt: new Date()
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' } // Fixed deprecation
     );
 
     // Update enrollment progress
@@ -187,6 +191,7 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
     });
 
     const progressPercent = Math.round((completedCount / course.totalModules) * 100);
+    const examUnlocked = completedCount >= course.totalModules;
 
     // Find next module name
     let nextModuleName = null;
@@ -201,15 +206,20 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
         progress: progressPercent,
         'moduleProgress.completedCount': completedCount,
         'moduleProgress.totalModules': course.totalModules,
-        'moduleProgress.nextModuleName': nextModuleName || 'All modules completed!'
-      }
+        'moduleProgress.nextModuleName': nextModuleName || 'Final Exam Ready!',
+        'moduleProgress.examUnlocked': examUnlocked
+      },
+      { returnDocument: 'after' } // Fixed deprecation
     );
 
-    console.log(`[COURSES] Module ${moduleId} completed by ${req.user.email} - ${id} - Score: ${quizScore}%`);
+    console.log(`[COURSES] Module ${moduleId} completed by ${req.user.email} - ${id} - Score: ${quizScore}% - Exam Unlocked: ${examUnlocked}`);
 
     res.json({
       success: true,
-      message: `Module ${moduleId} completed! Score: ${quizScore}%`
+      message: `Module ${moduleId} completed! Score: ${quizScore}%`,
+      examUnlocked,
+      completedCount,
+      totalModules: course.totalModules
     });
   } catch (error) {
     console.error('[COURSES] Complete module error:', error.message);
@@ -254,7 +264,8 @@ router.post('/enroll', authenticate, async (req, res) => {
       moduleProgress: {
         completedCount: 0,
         totalModules: course.totalModules,
-        nextModuleName: course.modules.length > 0 ? course.modules[0].name : 'Module 1'
+        nextModuleName: course.modules.length > 0 ? course.modules[0].name : 'Module 1',
+        examUnlocked: false
       },
       examAttempts: 0,
       voucherCode: voucherCode || null
@@ -305,6 +316,7 @@ router.get('/enrollments/me', authenticate, async (req, res) => {
 
         const course = await Course.findOne({ courseId: enrollment.courseId });
         const totalModules = course ? course.totalModules : enrollment.moduleProgress?.totalModules || 8;
+        const examUnlocked = completedCount >= totalModules;
 
         let nextModuleName = null;
         if (completedCount < totalModules && course) {
@@ -322,7 +334,8 @@ router.get('/enrollments/me', authenticate, async (req, res) => {
           moduleProgress: {
             completedCount,
             totalModules,
-            nextModuleName: nextModuleName || (completedCount >= totalModules ? 'All modules completed!' : 'Module 1')
+            examUnlocked,
+            nextModuleName: nextModuleName || (examUnlocked ? 'Final Exam Ready!' : 'Continue learning')
           },
           examAttempts: enrollment.examAttempts,
           score: enrollment.score,
@@ -341,4 +354,4 @@ router.get('/enrollments/me', authenticate, async (req, res) => {
 // Helper to require User model (imported at top for enrollments route)
 const User = require('../models/User');
 
-module.exports = router;	
+module.exports = router;

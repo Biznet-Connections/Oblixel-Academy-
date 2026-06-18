@@ -74,7 +74,7 @@ router.get('/courses', async (req, res) => {
     const others = await Course.find({
       courseId: { $nin: ['ncp', 'ccp', 'ona', 'onp'] },
       isActive: true
-    }).sort({ enrolledCount: -1 });
+    }).sort({ displayOrder: 1, enrolledCount: -1 });
 
     const courses = [ncp, ccp, ...others].filter(Boolean).map(c => ({
       id: c.courseId,
@@ -85,7 +85,8 @@ router.get('/courses', async (req, res) => {
       category: c.category,
       enrolledCount: c.enrolledCount,
       totalModules: c.totalModules,
-      modules: c.modules
+      modules: c.modules,
+      displayOrder: c.displayOrder || 0
     }));
 
     res.json(courses);
@@ -94,11 +95,42 @@ router.get('/courses', async (req, res) => {
   }
 });
 
+// ==================== COURSE REORDER (DRAG & DROP) ====================
+router.put('/courses/reorder', async (req, res) => {
+  const { courses } = req.body; // [{ courseId: 'ncp', displayOrder: 0 }, { courseId: 'ccp', displayOrder: 1 }, ...]
+
+  if (!courses || !Array.isArray(courses) || courses.length === 0) {
+    return res.status(400).json({ error: 'Courses array is required' });
+  }
+
+  try {
+    const updatePromises = courses.map(course =>
+      Course.findOneAndUpdate(
+        { courseId: course.courseId },
+        { displayOrder: course.displayOrder },
+        { returnDocument: 'after' } // Fixed deprecation
+      )
+    );
+
+    await Promise.all(updatePromises);
+
+    console.log(`[ADMIN] Courses reordered by ${req.user.email}`);
+    res.json({ success: true, message: 'Course order saved successfully' });
+  } catch (error) {
+    console.error('[ADMIN] Reorder error:', error.message);
+    res.status(500).json({ error: 'Failed to save course order' });
+  }
+});
+
 router.post('/courses', async (req, res) => {
   const { name, description, examPrice, pathPrice, icon, category, color } = req.body;
   if (!name || !examPrice) return res.status(400).json({ error: 'Name and exam price required' });
 
   try {
+    // Get the highest displayOrder to put new course at the end
+    const highestOrder = await Course.findOne({ isActive: true }).sort({ displayOrder: -1 });
+    const newOrder = highestOrder && highestOrder.displayOrder ? highestOrder.displayOrder + 1 : 0;
+
     const courseId = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_' + Date.now();
     const course = await Course.create({
       courseId,
@@ -110,6 +142,7 @@ router.post('/courses', async (req, res) => {
       category: category || 'Professional',
       color: color || 'purple',
       totalModules: 8,
+      displayOrder: newOrder,
       modules: Array.from({ length: 8 }, (_, i) => ({
         moduleId: i + 1,
         name: `Module ${i + 1}`,
@@ -131,7 +164,7 @@ router.put('/courses/:id', async (req, res) => {
     const course = await Course.findOneAndUpdate(
       { courseId: req.params.id },
       { $set: req.body },
-      { new: true }
+      { returnDocument: 'after' } // Fixed deprecation
     );
 
     if (!course) return res.status(404).json({ error: 'Course not found' });
@@ -289,9 +322,14 @@ router.delete('/users/:userId', async (req, res) => {
 
 router.post('/make-admin', async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.body.userId, { role: 'admin' }, { new: true });
+    const user = await User.findByIdAndUpdate(
+      req.body.userId,
+      { role: 'admin' },
+      { returnDocument: 'after' } // Fixed deprecation
+    );
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ success: true, message: 'User is now admin' });
+    console.log(`[ADMIN] ${user.email} promoted to admin by ${req.user.email}`);
+    res.json({ success: true, message: `${user.name} is now an admin`, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -299,10 +337,85 @@ router.post('/make-admin', async (req, res) => {
 
 router.post('/remove-admin', async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.body.userId, { role: 'student' }, { new: true });
+    const user = await User.findByIdAndUpdate(
+      req.body.userId,
+      { role: 'student' },
+      { returnDocument: 'after' } // Fixed deprecation
+    );
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ success: true, message: 'Admin role removed' });
+    console.log(`[ADMIN] Admin role removed from ${user.email} by ${req.user.email}`);
+    res.json({ success: true, message: 'Admin role removed', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== CREATE NEW ADMIN (Add Admin Modal) ====================
+router.post('/add-admin', async (req, res) => {
+  const { name, email, password, userId } = req.body;
+
+  try {
+    // Option 1: Promote existing user by userId
+    if (userId) {
+      const existingUser = await User.findByIdAndUpdate(
+        userId,
+        { role: 'admin' },
+        { returnDocument: 'after' }
+      );
+      if (!existingUser) return res.status(404).json({ error: 'User not found' });
+      console.log(`[ADMIN] ${existingUser.email} promoted to admin by ${req.user.email}`);
+      return res.json({
+        success: true,
+        message: `${existingUser.name} is now an admin`,
+        admin: { id: existingUser._id, name: existingUser.name, email: existingUser.email, role: existingUser.role }
+      });
+    }
+
+    // Option 2: Create brand new admin account
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required to create a new admin' });
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    if (existingEmail) {
+      // Promote existing user instead
+      const promoted = await User.findByIdAndUpdate(
+        existingEmail._id,
+        { role: 'admin' },
+        { returnDocument: 'after' }
+      );
+      console.log(`[ADMIN] ${existingEmail.email} promoted to admin (already existed) by ${req.user.email}`);
+      return res.json({
+        success: true,
+        message: `${promoted.name} promoted to admin (account already existed)`,
+        admin: { id: promoted._id, name: promoted.name, email: promoted.email, role: promoted.role }
+      });
+    }
+
+    // Create new admin user
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newAdmin = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: 'admin',
+      xp: 0,
+      level: 1,
+      streak: 0,
+      totalSpent: 0
+    });
+
+    console.log(`[ADMIN] New admin created: ${newAdmin.email} by ${req.user.email}`);
+    res.json({
+      success: true,
+      message: `Admin account created for ${name}`,
+      admin: { id: newAdmin._id, name: newAdmin.name, email: newAdmin.email, role: newAdmin.role }
+    });
+  } catch (error) {
+    console.error('[ADMIN] Add admin error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -320,6 +433,7 @@ router.get('/pending-certificates', async (req, res) => {
         userId: p.userId,
         courseId: p.courseId,
         score: p.score,
+        certificateId: p.certificateId,
         submittedAt: p.submittedAt,
         userName: user ? user.name : 'Unknown',
         userEmail: user ? user.email : 'Unknown',
@@ -335,13 +449,16 @@ router.get('/pending-certificates', async (req, res) => {
 
 router.post('/certificates/approve', async (req, res) => {
   try {
-    const certificate = await Certificate.findById(req.body.pendingId);
-    if (!certificate) return res.status(404).json({ error: 'Not found' });
+    const certificate = await Certificate.findByIdAndUpdate(
+      req.body.pendingId,
+      {
+        status: 'issued',
+        issuedAt: new Date()
+      },
+      { returnDocument: 'after' } // Fixed deprecation
+    );
 
-    certificate.status = 'issued';
-    certificate.certificateId = `OBX-${certificate.courseId.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-    certificate.issuedAt = new Date();
-    await certificate.save();
+    if (!certificate) return res.status(404).json({ error: 'Not found' });
 
     // Update enrollment status
     await Enrollment.findOneAndUpdate(
@@ -365,12 +482,13 @@ router.post('/certificates/reject', async (req, res) => {
         rejectionReason: req.body.reason || 'No reason provided',
         rejectedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' } // Fixed deprecation
     );
 
     if (!certificate) return res.status(404).json({ error: 'Not found' });
 
-    res.json({ success: true, message: 'Certificate rejected' });
+    console.log(`[ADMIN] Certificate rejected: ${certificate.certificateId} by ${req.user.email}`);
+    res.json({ success: true, message: 'Certificate rejected', certificate });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -21,16 +21,16 @@
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
+
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-  
+
   <!-- AOS Animation -->
   <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
-  
+
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -53,14 +53,14 @@
 <!-- ==================== NAVIGATION BAR ==================== -->
 <nav id="mainNavbar" class="fixed top-0 left-0 w-full z-50 glass-nav px-4 sm:px-6 lg:px-8 py-3 transition-all duration-300">
   <div class="flex justify-between items-center w-full">
-    
+
     <!-- LEFT SECTION: Hamburger + Logo -->
     <div class="flex items-center gap-3">
       <!-- Hamburger Menu Button - ONLY visible when logged in -->
       <button id="mobileMenuBtn" class="hamburger-btn text-white text-2xl hover:text-cyan-400 transition">
         <i class="fa-solid fa-bars"></i>
       </button>
-      
+
       <!-- Logo - Visible on landing page only (not logged in) -->
       <div id="navbarLogo" class="navbar-logo cursor-pointer">
         <div class="w-8 h-8 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-base font-black">O</div>
@@ -133,7 +133,7 @@
 <!-- ==================== MAIN CONTENT ==================== -->
 <main id="app-root" class="pt-20 sm:pt-24 px-4 sm:px-6 lg:px-8 pb-16 min-h-screen"></main>
 
-<!-- ==================== AI CHAT FLOATING BUTTON ==================== -->
+<!-- ==================== AI CHAT FLOATING BUTTON (Landing + Dashboard) ==================== -->
 <div id="aiChatButton" class="fixed bottom-6 right-6 z-50 hidden">
   <div class="ai-chat-pill">
     <i class="fa-regular fa-message text-white"></i>
@@ -141,10 +141,10 @@
   </div>
 </div>
 
-<!-- ==================== AI CHAT MODAL ==================== -->
+<!-- ==================== AI CHAT WIDGET MODAL (Landing + Dashboard) ==================== -->
 <div id="aiChatModal" class="fixed inset-0 bg-black/80 z-[1000] hidden items-center justify-center p-4 backdrop-blur-sm">
   <div class="glass rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col ai-chat-container" style="max-height: 90vh;">
-    <!-- Header -->
+    <!-- Widget Header -->
     <div class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-4 flex justify-between items-center shrink-0">
       <div class="flex items-center gap-2">
         <i class="fa-regular fa-message text-white"></i>
@@ -160,21 +160,76 @@
         <button id="closeAiChat" class="text-white/80 hover:text-white text-2xl leading-none transition">&times;</button>
       </div>
     </div>
-    
-    <!-- Messages Area -->
+
+    <!-- Widget Messages Area -->
     <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar" style="min-height: 300px;">
       <div class="flex gap-2">
         <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs text-white shrink-0">AI</div>
         <div class="glass rounded-2xl p-3 max-w-[80%]">
           <p class="text-xs sm:text-sm">Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! 🎓</p>
+          <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+            <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
+            <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+            <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+          </div>
         </div>
       </div>
     </div>
-    
-    <!-- Input Area -->
+
+    <!-- Widget Input Area -->
     <div class="p-4 border-t border-white/10 flex gap-2 shrink-0">
       <input type="text" id="chatInput" placeholder="Ask me anything 💬" class="flex-1 bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition" autocomplete="off">
       <button id="sendChat" class="bg-gradient-to-r from-purple-600 to-cyan-500 w-10 h-10 rounded-xl flex items-center justify-center transition hover:scale-105">
+        <i class="fa-solid fa-paper-plane text-white"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== AI TEACHER MODAL (Course-Specific - COMPLETELY SEPARATE) ==================== -->
+<div id="aiTeacherModal" class="fixed inset-0 bg-black/80 z-[1001] hidden items-center justify-center p-4 backdrop-blur-sm">
+  <div class="glass rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col ai-teacher-chat-container" style="max-height: 90vh;">
+    <!-- Teacher Header - DYNAMICALLY UPDATED BY JS -->
+    <div id="aiTeacherHeader" class="px-5 py-4 flex justify-between items-center shrink-0 teacher-header-ncp">
+      <div class="flex items-center gap-2">
+        <span id="aiTeacherAvatar" class="text-2xl">📡</span>
+        <div>
+          <h3 id="aiTeacherName" class="font-bold text-white text-sm sm:text-base">Professor Carlos</h3>
+          <p id="aiTeacherTitle" class="text-xs text-white/70">Network Certified Professional</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button id="clearTeacherChat" class="text-white/80 hover:text-white transition" title="Clear chat">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+        <button id="expandTeacherChat" class="text-white/80 hover:text-white transition" title="Expand">
+          <i class="fa-solid fa-expand"></i>
+        </button>
+        <button id="closeTeacherChat" class="text-white/80 hover:text-white text-2xl leading-none transition">&times;</button>
+      </div>
+    </div>
+
+    <!-- Teacher Messages Area -->
+    <div id="teacherChatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar" style="min-height: 300px;">
+      <div id="teacherWelcomeMessage" class="flex gap-2">
+        <div class="w-8 h-8 rounded-full teacher-avatar-bg-ncp flex items-center justify-center text-xs text-white shrink-0">📡</div>
+        <div class="glass rounded-2xl p-3 max-w-[80%]">
+          <p class="text-xs sm:text-sm">Hello! I'm Professor Carlos. I specialize in networking certifications. How can I help you master NCP today? 📡</p>
+          <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
+            <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
+            <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>
+            <button class="ai-dislike-btn text-xs text-gray-400 hover:text-red-400 transition" title="Dislike"><i class="fa-regular fa-thumbs-down"></i></button>
+            <button class="ai-regenerate-btn text-xs text-gray-400 hover:text-yellow-400 transition" title="Regenerate"><i class="fa-solid fa-rotate"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teacher Input Area -->
+    <div class="p-4 border-t border-white/10 flex gap-2 shrink-0">
+      <input type="text" id="teacherChatInput" placeholder="Ask your lecturer 💬" class="flex-1 bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition" autocomplete="off">
+      <button id="sendTeacherChat" class="teacher-send-btn-ncp w-10 h-10 rounded-xl flex items-center justify-center transition hover:scale-105">
         <i class="fa-solid fa-paper-plane text-white"></i>
       </button>
     </div>
