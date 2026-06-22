@@ -1,4 +1,4 @@
-// ==================== obliXel Academy v10.0 - COMPLETE APP.JS PART 1 ====================
+9// ==================== obliXel Academy v10.0 - COMPLETE APP.JS PART 1 ====================
 // DEPLOYMENT READY: Single server (backend serves frontend)
 // v10: NCP & CCP replace ONA & ONP, AI Widget landing page only, voucher instant auto-enroll
 // Module quizzes: 10 questions, 70% pass, retry shuffles
@@ -729,7 +729,7 @@ console.log('✅ Part 1 (Core & Auth) loaded - NCP/CCP ready, AI Widget landing 
 
 
 // ==================== PART 2: USER FEATURES & PAGES ====================
-console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel)');
+console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel, Modal Confirmations)');
 
 // ==================== LANDING PAGE ====================
 function renderLandingPage() {
@@ -1181,7 +1181,7 @@ window.openCheckout = async (courseId) => {
   });
 };
 
-// ==================== ADMIN CONSOLE (FIXED - STRING CONCATENATION) ====================
+// ==================== ADMIN CONSOLE (FIXED) ====================
 async function renderAdmin() {
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
@@ -1240,7 +1240,7 @@ async function renderAdmin() {
         html += '<td>' + (v.courseId === 'all' ? 'All Courses' : (currentCourses.find(function(c2) { return c2.id === v.courseId; })?.name || v.courseId)) + '</td>';
         html += '<td>' + (v.usedCount || 0) + '/' + (v.maxUses || 1) + '</td>';
         html += '<td>' + (v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never') + '</td>';
-        html += '<td><button onclick="window.deleteVoucherItem(\'' + v.id + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>';
+        html += '<td><button onclick="window.deleteVoucherItem(\'' + v._id + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>';
       }
     } else { html += '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>'; }
     html += '</tbody></table></div></div>';
@@ -1322,8 +1322,27 @@ async function createBatchVouchers() { var p = document.getElementById('batchPre
 window.copyToClipboard = function(text) { navigator.clipboard.writeText(text); showToast('Copied!', 'success'); };
 window.approveCertificateItem = async function(id) { try { await approveCertificate(id); showToast('Approved!', 'success'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } };
 window.rejectCertificateItem = async function(id) { try { await rejectCertificate(id); showToast('Rejected', 'info'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } };
-window.makeUserAdminItem = async function(id) { if (confirm('Make this user an admin?')) { try { await makeAdmin(id); showToast('Admin granted!', 'success'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } } };
-window.deleteVoucherItem = async function(id) { if (confirm('Delete voucher?')) { try { await deleteVoucher(id); showToast('Deleted', 'success'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } } };
+
+// ==================== MAKE ADMIN - PROPER MODAL (FIXED) ====================
+window.makeUserAdminItem = function(id) {
+  var m = '<div id="makeAdminModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-yellow-600 to-amber-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">👑 Make Admin</h2><button onclick="closeModal(\'makeAdminModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-crown text-5xl text-yellow-400 mb-3"></i><p>Promote this user to <strong class="text-yellow-400">Admin</strong>?</p><p class="text-sm text-gray-400 mt-2">They will have full access to the admin panel.</p></div><div class="flex gap-3"><button onclick="confirmMakeAdmin(\'' + id + '\')" class="flex-1 bg-yellow-600 py-3 rounded-xl font-bold">👑 Make Admin</button><button onclick="closeModal(\'makeAdminModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', m);
+};
+window.confirmMakeAdmin = async function(id) {
+  closeModal('makeAdminModal');
+  try { await makeAdmin(id); showToast('Admin granted!', 'success'); renderAdmin(); } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+};
+
+// ==================== DELETE VOUCHER - PROPER MODAL (FIXED) ====================
+window.deleteVoucherItem = function(id) {
+  var m = '<div id="deleteVoucherModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">🗑️ Delete Voucher</h2><button onclick="closeModal(\'deleteVoucherModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-ticket text-5xl text-red-400 mb-3"></i><p>Delete this voucher?</p><p class="text-sm text-gray-400 mt-2">This cannot be undone.</p></div><div class="flex gap-3"><button onclick="confirmDeleteVoucher(\'' + id + '\')" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Delete</button><button onclick="closeModal(\'deleteVoucherModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', m);
+};
+window.confirmDeleteVoucher = async function(id) {
+  closeModal('deleteVoucherModal');
+  try { await deleteVoucher(id); showToast('Voucher deleted', 'success'); renderAdmin(); } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+};
+
 window.showDeleteUserModal = function(userId, userName) { var m = '<div id="deleteUserModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">🗑️ Delete User</h2><button onclick="closeModal(\'deleteUserModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-user text-5xl text-red-400 mb-3"></i><p>Delete <strong class="text-red-400">"' + escapeHtml(userName) + '"</strong>?</p></div><div class="mb-4"><label class="block text-sm mb-2">Type <span class="text-red-400 font-bold">DELETE</span>:</label><input type="text" id="deleteUserConfirmInput" placeholder="DELETE" class="w-full bg-transparent border border-red-500/50 rounded-xl px-4 py-2" autocomplete="off"></div><div class="flex gap-3"><button onclick="confirmDeleteUser(\'' + userId + '\')" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Delete</button><button onclick="closeModal(\'deleteUserModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>'; document.body.insertAdjacentHTML('beforeend', m); };
 window.confirmDeleteUser = async function(userId) { var i = document.getElementById('deleteUserConfirmInput')?.value; if (i !== 'DELETE') { showToast('Type DELETE to confirm', 'error'); return; } try { await deleteUserByAdmin(userId); showToast('User deleted', 'success'); closeModal('deleteUserModal'); renderAdmin(); } catch(e) { showToast('Failed: ' + e.message, 'error'); } };
 function closeModal(modalId) { var modal = document.getElementById(modalId); if (modal) modal.remove(); }
@@ -1348,7 +1367,7 @@ function clearAIChat() { aiChatHistory = [{ role: 'assistant', content: 'Hi! I\'
 function expandAIChat() { var modal = document.getElementById('aiChatModal'); if (modal) { modal.classList.toggle('expanded'); var icon = document.querySelector('#expandAIChat i'); if (icon) icon.className = modal.classList.contains('expanded') ? 'fa-solid fa-compress' : 'fa-solid fa-expand'; } }
 
 // ==================== INITIALIZATION ====================
-window.renderPage = renderPage; window.renderCourseDashboard = renderCourseDashboard; window.renderModulePage = renderModulePage; window.startExam = startExam; window.completeModuleAndReturn = completeModuleAndReturn; window.retryQuiz = retryQuiz; window.handleEnrollClick = handleEnrollClick; window.openCheckout = openCheckout; window.openAIChatModal = openAIChatModal; window.openAITeacherChat = openAITeacherChat; window.showEditCourseModal = showEditCourseModal; window.saveEditCourse = saveEditCourse; window.showDeleteCourseModal = showDeleteCourseModal; window.confirmDeleteCourse = confirmDeleteCourse; window.showManageVideosModal = showManageVideosModal; window.saveCourseVideos = saveCourseVideos; window.showDeleteUserModal = showDeleteUserModal; window.confirmDeleteUser = confirmDeleteUser; window.approveCertificateItem = approveCertificateItem; window.rejectCertificateItem = rejectCertificateItem; window.makeUserAdminItem = makeUserAdminItem; window.copyToClipboard = copyToClipboard; window.deleteVoucherItem = deleteVoucherItem; window.downloadCertificate = function(id) { showToast('PDF download coming soon', 'info'); }; window.shareToLinkedIn = function(id) { window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.origin + '/verify/' + id), '_blank'); }; window.verifyCertificate = function(id) { window.open('/verify/' + id, '_blank'); };
+window.renderPage = renderPage; window.renderCourseDashboard = renderCourseDashboard; window.renderModulePage = renderModulePage; window.startExam = startExam; window.completeModuleAndReturn = completeModuleAndReturn; window.retryQuiz = retryQuiz; window.handleEnrollClick = handleEnrollClick; window.openCheckout = openCheckout; window.openAIChatModal = openAIChatModal; window.openAITeacherChat = openAITeacherChat; window.showEditCourseModal = showEditCourseModal; window.saveEditCourse = saveEditCourse; window.showDeleteCourseModal = showDeleteCourseModal; window.confirmDeleteCourse = confirmDeleteCourse; window.showManageVideosModal = showManageVideosModal; window.saveCourseVideos = saveCourseVideos; window.showDeleteUserModal = showDeleteUserModal; window.confirmDeleteUser = confirmDeleteUser; window.approveCertificateItem = approveCertificateItem; window.rejectCertificateItem = rejectCertificateItem; window.makeUserAdminItem = makeUserAdminItem; window.confirmMakeAdmin = confirmMakeAdmin; window.deleteVoucherItem = deleteVoucherItem; window.confirmDeleteVoucher = confirmDeleteVoucher; window.copyToClipboard = copyToClipboard; window.downloadCertificate = function(id) { showToast('PDF download coming soon', 'info'); }; window.shareToLinkedIn = function(id) { window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.origin + '/verify/' + id), '_blank'); }; window.verifyCertificate = function(id) { window.open('/verify/' + id, '_blank'); };
 
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 obliXel Academy v10.0 - DOM loaded'); initNavbarAutoHide();
@@ -1381,4 +1400,4 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(async function() { await loadCourses(); await checkAuth(); updateAuthUI(); updateNavbarStyle(); if (loader) { loader.style.transition = 'opacity 0.5s ease-out'; loader.style.opacity = '0'; setTimeout(function() { loader.style.display = 'none'; }, 500); } renderPage(currentUser ? 'dashboard' : 'landing'); console.log('✅ obliXel Academy v10.0 fully initialized'); }, 6000);
 });
 
-console.log('🎉 obliXel Academy v10.0 - COMPLETE - All Fixes Applied');
+console.log('🎉 obliXel Academy v10.0 - COMPLETE - Modal Confirmations Fixed');
