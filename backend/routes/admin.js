@@ -6,6 +6,10 @@ const Enrollment = require('../models/Enrollment');
 const Voucher = require('../models/Voucher');
 const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
+const ModuleProgress = require('../models/ModuleProgress');
+const ExamQuestion = require('../models/ExamQuestion');
+const ExamSession = require('../models/ExamSession');
+const ExamAttempt = require('../models/ExamAttempt');
 
 // Auth middleware inline
 function authenticate(req, res, next) {
@@ -25,7 +29,7 @@ function authenticate(req, res, next) {
 
 async function isAdmin(req, res, next) {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id || req.user._id);
     if (!user || user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
@@ -62,11 +66,12 @@ router.get('/stats', async (req, res) => {
       totalPayments
     });
   } catch (error) {
+    console.error('[ADMIN] Stats error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==================== COURSES CRUD ====================
+// ==================== GET ALL COURSES ====================
 router.get('/courses', async (req, res) => {
   try {
     const ncp = await Course.findOne({ courseId: 'ncp' });
@@ -79,25 +84,28 @@ router.get('/courses', async (req, res) => {
     const courses = [ncp, ccp, ...others].filter(Boolean).map(c => ({
       id: c.courseId,
       name: c.name,
-      examPrice: c.examPrice,
-      pathPrice: c.pathPrice,
+      price: c.price || c.examPrice || 0,
+      examPrice: c.price || c.examPrice || 0,
+      pathPrice: c.price || c.examPrice || 0,
       icon: c.icon,
       category: c.category,
-      enrolledCount: c.enrolledCount,
-      totalModules: c.totalModules,
-      modules: c.modules,
+      enrolledCount: c.enrolledCount || 0,
+      totalModules: c.totalModules || 8,
+      modules: c.modules || [],
       displayOrder: c.displayOrder || 0
     }));
 
+    console.log('[ADMIN] Courses fetched:', courses.length);
     res.json(courses);
   } catch (error) {
+    console.error('[ADMIN] Courses error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==================== COURSE REORDER (DRAG & DROP) ====================
+// ==================== COURSE REORDER ====================
 router.put('/courses/reorder', async (req, res) => {
-  const { courses } = req.body; // [{ courseId: 'ncp', displayOrder: 0 }, { courseId: 'ccp', displayOrder: 1 }, ...]
+  const { courses } = req.body;
 
   if (!courses || !Array.isArray(courses) || courses.length === 0) {
     return res.status(400).json({ error: 'Courses array is required' });
@@ -108,12 +116,11 @@ router.put('/courses/reorder', async (req, res) => {
       Course.findOneAndUpdate(
         { courseId: course.courseId },
         { displayOrder: course.displayOrder },
-        { returnDocument: 'after' } // Fixed deprecation
+        { returnDocument: 'after' }
       )
     );
 
     await Promise.all(updatePromises);
-
     console.log(`[ADMIN] Courses reordered by ${req.user.email}`);
     res.json({ success: true, message: 'Course order saved successfully' });
   } catch (error) {
@@ -122,12 +129,12 @@ router.put('/courses/reorder', async (req, res) => {
   }
 });
 
+// ==================== CREATE COURSE ====================
 router.post('/courses', async (req, res) => {
-  const { name, description, examPrice, pathPrice, icon, category, color } = req.body;
-  if (!name || !examPrice) return res.status(400).json({ error: 'Name and exam price required' });
+  const { name, description, price, icon, category, color } = req.body;
+  if (!name || !price) return res.status(400).json({ error: 'Name and course fee are required' });
 
   try {
-    // Get the highest displayOrder to put new course at the end
     const highestOrder = await Course.findOne({ isActive: true }).sort({ displayOrder: -1 });
     const newOrder = highestOrder && highestOrder.displayOrder ? highestOrder.displayOrder + 1 : 0;
 
@@ -136,13 +143,16 @@ router.post('/courses', async (req, res) => {
       courseId,
       name,
       description: description || '',
-      examPrice: parseFloat(examPrice),
-      pathPrice: parseFloat(pathPrice) || parseFloat(examPrice) * 1.5,
+      price: parseFloat(price),
+      examPrice: parseFloat(price),
+      pathPrice: parseFloat(price),
       icon: icon || 'fa-certificate',
       category: category || 'Professional',
       color: color || 'purple',
       totalModules: 8,
       displayOrder: newOrder,
+      isActive: true,
+      enrolledCount: 0,
       modules: Array.from({ length: 8 }, (_, i) => ({
         moduleId: i + 1,
         name: `Module ${i + 1}`,
@@ -155,33 +165,48 @@ router.post('/courses', async (req, res) => {
     console.log(`[ADMIN] Course created: ${name} by ${req.user.email}`);
     res.json({ success: true, course: { id: course.courseId, name: course.name } });
   } catch (error) {
+    console.error('[ADMIN] Create course error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ==================== UPDATE COURSE ====================
 router.put('/courses/:id', async (req, res) => {
   try {
+    console.log(`[ADMIN] Updating course: ${req.params.id}`, req.body);
+
+    const updates = { ...req.body };
+    // If price is updated, sync examPrice and pathPrice
+    if (updates.price) {
+      updates.examPrice = parseFloat(updates.price);
+      updates.pathPrice = parseFloat(updates.price);
+    }
+
     const course = await Course.findOneAndUpdate(
       { courseId: req.params.id },
-      { $set: req.body },
-      { returnDocument: 'after' } // Fixed deprecation
+      { $set: updates },
+      { returnDocument: 'after' }
     );
 
-    if (!course) return res.status(404).json({ error: 'Course not found' });
+    if (!course) {
+      console.log(`[ADMIN] Course not found: ${req.params.id}`);
+      return res.status(404).json({ error: 'Course not found' });
+    }
 
     console.log(`[ADMIN] Course updated: ${req.params.id} by ${req.user.email}`);
-    res.json({ success: true, course: { id: course.courseId, name: course.name } });
+    res.json({ success: true, course: { id: course.courseId, name: course.name, price: course.price || course.examPrice || 0 } });
   } catch (error) {
+    console.error('[ADMIN] Update course error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ==================== DELETE COURSE ====================
 router.delete('/courses/:id', async (req, res) => {
   try {
     const course = await Course.findOneAndDelete({ courseId: req.params.id });
     if (!course) return res.status(404).json({ error: 'Course not found' });
 
-    // Clean related data
     await Promise.all([
       Enrollment.deleteMany({ courseId: req.params.id }),
       ModuleProgress.deleteMany({ courseId: req.params.id }),
@@ -191,6 +216,7 @@ router.delete('/courses/:id', async (req, res) => {
     console.log(`[ADMIN] Course deleted: ${req.params.id} by ${req.user.email}`);
     res.json({ success: true, message: 'Course and related data deleted' });
   } catch (error) {
+    console.error('[ADMIN] Delete course error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -201,6 +227,7 @@ router.get('/vouchers', async (req, res) => {
     const vouchers = await Voucher.find().sort({ createdAt: -1 });
     res.json({ vouchers });
   } catch (error) {
+    console.error('[ADMIN] Vouchers error:', error.message);
     res.json({ vouchers: [] });
   }
 });
@@ -225,6 +252,7 @@ router.post('/vouchers', async (req, res) => {
     console.log(`[ADMIN] Voucher created: ${voucher.code} by ${req.user.email}`);
     res.json({ success: true, voucher });
   } catch (error) {
+    console.error('[ADMIN] Create voucher error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -253,6 +281,7 @@ router.post('/vouchers/batch', async (req, res) => {
     console.log(`[ADMIN] Batch: ${vouchers.length} vouchers by ${req.user.email}`);
     res.json({ success: true, message: `Created ${vouchers.length} vouchers`, vouchers });
   } catch (error) {
+    console.error('[ADMIN] Batch voucher error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -261,8 +290,10 @@ router.delete('/vouchers/:id', async (req, res) => {
   try {
     const voucher = await Voucher.findByIdAndDelete(req.params.id);
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    console.log(`[ADMIN] Voucher deleted: ${voucher.code} by ${req.user.email}`);
     res.json({ success: true, message: 'Voucher deleted' });
   } catch (error) {
+    console.error('[ADMIN] Delete voucher error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -288,8 +319,10 @@ router.get('/users', async (req, res) => {
       };
     }));
 
+    console.log(`[ADMIN] Users fetched: ${usersWithStats.length}`);
     res.json({ users: usersWithStats });
   } catch (error) {
+    console.error('[ADMIN] Users error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -303,7 +336,6 @@ router.delete('/users/:userId', async (req, res) => {
     const user = await User.findByIdAndDelete(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Clean all user data
     await Promise.all([
       Enrollment.deleteMany({ userId: req.params.userId }),
       ModuleProgress.deleteMany({ userId: req.params.userId }),
@@ -316,6 +348,7 @@ router.delete('/users/:userId', async (req, res) => {
     console.log(`[ADMIN] User deleted: ${user.email} by ${req.user.email}`);
     res.json({ success: true, message: `User ${user.email} deleted` });
   } catch (error) {
+    console.error('[ADMIN] Delete user error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -325,12 +358,13 @@ router.post('/make-admin', async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.body.userId,
       { role: 'admin' },
-      { returnDocument: 'after' } // Fixed deprecation
+      { returnDocument: 'after' }
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
     console.log(`[ADMIN] ${user.email} promoted to admin by ${req.user.email}`);
     res.json({ success: true, message: `${user.name} is now an admin`, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
+    console.error('[ADMIN] Make admin error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -340,22 +374,22 @@ router.post('/remove-admin', async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.body.userId,
       { role: 'student' },
-      { returnDocument: 'after' } // Fixed deprecation
+      { returnDocument: 'after' }
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
-    console.log(`[ADMIN] Admin role removed from ${user.email} by ${req.user.email}`);
+    console.log(`[ADMIN] Admin removed from ${user.email} by ${req.user.email}`);
     res.json({ success: true, message: 'Admin role removed', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
+    console.error('[ADMIN] Remove admin error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==================== CREATE NEW ADMIN (Add Admin Modal) ====================
+// ==================== ADD ADMIN ====================
 router.post('/add-admin', async (req, res) => {
   const { name, email, password, userId } = req.body;
 
   try {
-    // Option 1: Promote existing user by userId
     if (userId) {
       const existingUser = await User.findByIdAndUpdate(
         userId,
@@ -371,21 +405,18 @@ router.post('/add-admin', async (req, res) => {
       });
     }
 
-    // Option 2: Create brand new admin account
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required to create a new admin' });
+      return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    // Check if email already exists
     const existingEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingEmail) {
-      // Promote existing user instead
       const promoted = await User.findByIdAndUpdate(
         existingEmail._id,
         { role: 'admin' },
         { returnDocument: 'after' }
       );
-      console.log(`[ADMIN] ${existingEmail.email} promoted to admin (already existed) by ${req.user.email}`);
+      console.log(`[ADMIN] ${existingEmail.email} promoted to admin by ${req.user.email}`);
       return res.json({
         success: true,
         message: `${promoted.name} promoted to admin (account already existed)`,
@@ -393,7 +424,6 @@ router.post('/add-admin', async (req, res) => {
       });
     }
 
-    // Create new admin user
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -441,8 +471,10 @@ router.get('/pending-certificates', async (req, res) => {
       };
     }));
 
+    console.log(`[ADMIN] Pending certificates: ${withDetails.length}`);
     res.json({ pending: withDetails });
   } catch (error) {
+    console.error('[ADMIN] Pending certs error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -451,16 +483,12 @@ router.post('/certificates/approve', async (req, res) => {
   try {
     const certificate = await Certificate.findByIdAndUpdate(
       req.body.pendingId,
-      {
-        status: 'issued',
-        issuedAt: new Date()
-      },
-      { returnDocument: 'after' } // Fixed deprecation
+      { status: 'issued', issuedAt: new Date() },
+      { returnDocument: 'after' }
     );
 
     if (!certificate) return res.status(404).json({ error: 'Not found' });
 
-    // Update enrollment status
     await Enrollment.findOneAndUpdate(
       { userId: certificate.userId, courseId: certificate.courseId },
       { status: 'certified' }
@@ -469,6 +497,7 @@ router.post('/certificates/approve', async (req, res) => {
     console.log(`[ADMIN] Certificate approved: ${certificate.certificateId} by ${req.user.email}`);
     res.json({ success: true, certificate });
   } catch (error) {
+    console.error('[ADMIN] Approve cert error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -477,12 +506,8 @@ router.post('/certificates/reject', async (req, res) => {
   try {
     const certificate = await Certificate.findByIdAndUpdate(
       req.body.pendingId,
-      {
-        status: 'rejected',
-        rejectionReason: req.body.reason || 'No reason provided',
-        rejectedAt: new Date()
-      },
-      { returnDocument: 'after' } // Fixed deprecation
+      { status: 'rejected', rejectionReason: req.body.reason || 'No reason provided', rejectedAt: new Date() },
+      { returnDocument: 'after' }
     );
 
     if (!certificate) return res.status(404).json({ error: 'Not found' });
@@ -490,6 +515,7 @@ router.post('/certificates/reject', async (req, res) => {
     console.log(`[ADMIN] Certificate rejected: ${certificate.certificateId} by ${req.user.email}`);
     res.json({ success: true, message: 'Certificate rejected', certificate });
   } catch (error) {
+    console.error('[ADMIN] Reject cert error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -532,14 +558,9 @@ router.get('/finance', async (req, res) => {
       enrollmentsCount
     });
   } catch (error) {
+    console.error('[ADMIN] Finance error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
-
-// Need these models
-const ModuleProgress = require('../models/ModuleProgress');
-const ExamQuestion = require('../models/ExamQuestion');
-const ExamSession = require('../models/ExamSession');
-const ExamAttempt = require('../models/ExamAttempt');
 
 module.exports = router;

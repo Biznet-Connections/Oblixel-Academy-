@@ -85,7 +85,7 @@ router.post('/submit', authenticate, async (req, res) => {
           type: enrollment.type,
           submittedAt: new Date()
         });
-        console.log(`[EXAM] Certificate code generated: ${certificateCode} for ${req.user.email}`);
+        console.log(`[EXAM] ✅ Certificate code generated: ${certificateCode} for ${req.user.email}`);
       } else {
         const cd = new Date(); cd.setDate(cd.getDate() + EXAM_COOLDOWN_DAYS);
         enrollment.cooldownUntil = cd;
@@ -119,11 +119,14 @@ router.post('/submit', authenticate, async (req, res) => {
       certificateCode,
       supportWhatsApp,
       message: passed
-        ? `🎉 Congratulations! You passed with ${score}%! Your certificate code is: ${certificateCode}. Show this code to the academics team to claim your certificate. Contact: ${supportWhatsApp}`
+        ? `🎉 Congratulations! You passed with ${score}%! Your certificate code is: ${certificateCode}. Show this code to the academics team to claim your certificate.`
         : `❌ ${score}%. Need 70%. Retake in ${EXAM_COOLDOWN_DAYS} days.`,
       ...(retakePrice && { retakePrice, cooldownDays: EXAM_COOLDOWN_DAYS })
     });
-  } catch (error) { res.status(500).json({ error: 'Failed to submit' }); }
+  } catch (error) {
+    console.error('[EXAM] Submit error:', error.message);
+    res.status(500).json({ error: 'Failed to submit exam' });
+  }
 });
 
 router.get('/results/:courseId', authenticate, async (req, res) => {

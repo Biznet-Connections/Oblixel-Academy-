@@ -9,7 +9,6 @@ const authenticate = require('../middleware/auth');
 // ==================== GET ALL COURSES ====================
 router.get('/', async (req, res) => {
   try {
-    // NCP and CCP first, then others sorted by displayOrder
     const ncpCourse = await Course.findOne({ courseId: 'ncp' });
     const ccpCourse = await Course.findOne({ courseId: 'ccp' });
     const otherCourses = await Course.find({
@@ -19,15 +18,15 @@ router.get('/', async (req, res) => {
 
     const sortedCourses = [ncpCourse, ccpCourse, ...otherCourses].filter(Boolean);
 
-    // Format for frontend
     const courses = sortedCourses.map(c => ({
       id: c.courseId,
       name: c.name,
       abbreviation: c.abbreviation,
       level: c.level,
       description: c.description,
-      examPrice: c.examPrice,
-      pathPrice: c.pathPrice,
+      price: c.price || c.examPrice || 0,
+      examPrice: c.price || c.examPrice || 0,
+      pathPrice: c.price || c.examPrice || 0,
       icon: c.icon,
       category: c.category,
       color: c.color,
@@ -56,7 +55,6 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Build modules array
     const modules = course.modules.map(m => ({
       id: m.moduleId,
       name: m.name,
@@ -65,13 +63,16 @@ router.get('/:id', async (req, res) => {
       videoUrl: m.videoUrl
     }));
 
+    const coursePrice = course.price || course.examPrice || 0;
+
     res.json({
       course: {
         id: course.courseId,
         name: course.name,
         description: course.description,
-        examPrice: course.examPrice,
-        pathPrice: course.pathPrice,
+        price: coursePrice,
+        examPrice: coursePrice,
+        pathPrice: coursePrice,
         icon: course.icon,
         category: course.category,
         color: course.color,
@@ -100,7 +101,6 @@ router.get('/:id/progress', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Get all completed modules for this user and course
     const completedProgress = await ModuleProgress.find({
       userId,
       courseId: id.toLowerCase(),
@@ -111,7 +111,6 @@ router.get('/:id/progress', authenticate, async (req, res) => {
     const completedCount = completedModuleIds.length;
     const totalModules = course.totalModules;
 
-    // Build module status
     const modulesStatus = [];
     for (let i = 1; i <= totalModules; i++) {
       const progress = completedProgress.find(p => p.moduleId === i);
@@ -124,10 +123,8 @@ router.get('/:id/progress', authenticate, async (req, res) => {
       });
     }
 
-    // Exam is unlocked when ALL modules are completed
     const examUnlocked = completedCount >= totalModules && totalModules > 0;
 
-    // Find next module name
     let nextModuleName = null;
     if (!examUnlocked) {
       const nextModule = modulesStatus.find(m => m.unlocked && !m.completed);
@@ -172,7 +169,6 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Upsert module progress
     await ModuleProgress.findOneAndUpdate(
       { userId, courseId: id.toLowerCase(), moduleId: parseInt(moduleId) },
       {
@@ -180,10 +176,9 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
         quizScore: parseInt(quizScore),
         completedAt: new Date()
       },
-      { upsert: true, returnDocument: 'after' } // Fixed deprecation
+      { upsert: true, returnDocument: 'after' }
     );
 
-    // Update enrollment progress
     const completedCount = await ModuleProgress.countDocuments({
       userId,
       courseId: id.toLowerCase(),
@@ -193,7 +188,6 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
     const progressPercent = Math.round((completedCount / course.totalModules) * 100);
     const examUnlocked = completedCount >= course.totalModules;
 
-    // Find next module name
     let nextModuleName = null;
     if (completedCount < course.totalModules) {
       const nextModule = course.modules.find(m => m.moduleId === completedCount + 1);
@@ -209,7 +203,7 @@ router.post('/:id/modules/:moduleId/complete', authenticate, async (req, res) =>
         'moduleProgress.nextModuleName': nextModuleName || 'Final Exam Ready!',
         'moduleProgress.examUnlocked': examUnlocked
       },
-      { returnDocument: 'after' } // Fixed deprecation
+      { returnDocument: 'after' }
     );
 
     console.log(`[COURSES] Module ${moduleId} completed by ${req.user.email} - ${id} - Score: ${quizScore}% - Exam Unlocked: ${examUnlocked}`);
@@ -242,7 +236,6 @@ router.post('/enroll', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Check if already enrolled
     const existingEnrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
     if (existingEnrollment) {
       return res.status(400).json({
@@ -252,13 +245,12 @@ router.post('/enroll', authenticate, async (req, res) => {
       });
     }
 
-    // Create enrollment
     const enrollment = await Enrollment.create({
       userId,
       courseId: courseId.toLowerCase(),
       courseName: course.name,
       courseIcon: course.icon,
-      type,
+      type: type || 'course',
       status: 'enrolled',
       progress: 0,
       moduleProgress: {
@@ -271,13 +263,11 @@ router.post('/enroll', authenticate, async (req, res) => {
       voucherCode: voucherCode || null
     });
 
-    // Update course enrolled count
     await Course.findOneAndUpdate(
       { courseId: courseId.toLowerCase() },
       { $inc: { enrolledCount: 1 } }
     );
 
-    // Update user enrolled count
     await User.findByIdAndUpdate(userId, { $inc: { enrolledCourses: 1 } });
 
     console.log(`[COURSES] ${req.user.email} enrolled in ${course.name}`);
@@ -305,7 +295,6 @@ router.get('/enrollments/me', authenticate, async (req, res) => {
     const enrollments = await Enrollment.find({ userId: req.user._id })
       .sort({ createdAt: -1 });
 
-    // Get module progress for each enrollment
     const enrollmentsWithProgress = await Promise.all(
       enrollments.map(async (enrollment) => {
         const completedCount = await ModuleProgress.countDocuments({
@@ -351,7 +340,6 @@ router.get('/enrollments/me', authenticate, async (req, res) => {
   }
 });
 
-// Helper to require User model (imported at top for enrollments route)
 const User = require('../models/User');
 
 module.exports = router;

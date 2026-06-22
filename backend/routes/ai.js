@@ -3,16 +3,158 @@ const router = express.Router();
 const axios = require('axios');
 const Course = require('../models/Course');
 
-function getDeepSeekConfig() {
+// ==================== AI CONFIGURATION ====================
+function getAIConfig() {
   return {
-    url: process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions',
-    key: process.env.DEEPSEEK_API_KEY || null,
-    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    // OpenAI
+    openai: {
+      key: process.env.OPENAI_API_KEY || null,
+      url: process.env.OPENAI_API_URL
+        ? `${process.env.OPENAI_API_URL}/chat/completions`
+        : 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-3.5-turbo'
+    },
+    // DeepSeek
+    deepseek: {
+      key: process.env.DEEPSEEK_API_KEY || null,
+      url: process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1/chat/completions',
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+    },
     supportWhatsApp: process.env.SUPPORT_WHATSAPP || '+263714587259'
   };
 }
 
-// ==================== PUBLIC AI CHAT ====================
+// ==================== FORMAT RESPONSE HELPER ====================
+function formatAIResponse(text) {
+  if (!text) return text;
+
+  let formatted = text;
+
+  // Ensure double newlines before headings (lines that look like titles)
+  formatted = formatted.replace(/\n([A-Z][A-Za-z\s]{2,40})\n/g, '\n\n$1\n');
+
+  // Convert markdown bullets to • if not already
+  formatted = formatted.replace(/^[-*]\s/gm, '• ');
+  formatted = formatted.replace(/^(\d+)\.\s/gm, '$1. ');
+
+  // Ensure line breaks between sections
+  formatted = formatted.replace(/([.!?])\s+(?=[A-Z])/g, '$1\n\n');
+
+  // Remove any markdown symbols
+  formatted = formatted.replace(/\*\*/g, '');
+  formatted = formatted.replace(/^###\s/gm, '');
+  formatted = formatted.replace(/^##\s/gm, '');
+  formatted = formatted.replace(/^#\s/gm, '');
+
+  // Ensure bullets have proper spacing
+  formatted = formatted.replace(/•/g, '\n•');
+  formatted = formatted.replace(/^\n•/, '•'); // Remove leading newline before first bullet
+
+  // Clean up excessive newlines
+  formatted = formatted.replace(/\n{3,}/g, '\n\n');
+
+  return formatted.trim();
+}
+
+// ==================== CALL AI WITH DUAL PROVIDER ====================
+async function callAI(systemPrompt, userMessage, history = []) {
+  const config = getAIConfig();
+
+  const messages = [{ role: 'system', content: systemPrompt }];
+
+  if (history && Array.isArray(history)) {
+    history.slice(-20).forEach(msg => {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+    });
+  }
+
+  messages.push({ role: 'user', content: userMessage });
+
+  let aiResponse = null;
+  let usedApi = null;
+
+  // TRY OPENAI FIRST
+  if (config.openai.key) {
+    try {
+      console.log('[AI] Trying OpenAI...');
+      const response = await axios.post(
+        config.openai.url,
+        {
+          model: config.openai.model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${config.openai.key}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+      aiResponse = response.data.choices[0].message.content;
+      usedApi = 'OpenAI';
+      console.log('[AI] OpenAI responded successfully');
+    } catch (openaiError) {
+      console.log('[AI] OpenAI failed:', openaiError.message);
+      aiResponse = null;
+    }
+  }
+
+  // FALLBACK TO DEEPSEEK
+  if (!aiResponse && config.deepseek.key) {
+    try {
+      console.log('[AI] Trying DeepSeek...');
+      const response = await axios.post(
+        config.deepseek.url,
+        {
+          model: config.deepseek.model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${config.deepseek.key}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+      aiResponse = response.data.choices[0].message.content;
+      usedApi = 'DeepSeek';
+      console.log('[AI] DeepSeek responded successfully');
+    } catch (deepseekError) {
+      console.log('[AI] DeepSeek failed:', deepseekError.message);
+      aiResponse = null;
+    }
+  }
+
+  // If both failed and no API keys configured
+  if (!aiResponse) {
+    console.log('[AI] No AI provider available, using fallback');
+    usedApi = 'Fallback';
+  }
+
+  return { response: aiResponse ? formatAIResponse(aiResponse) : null, usedApi };
+}
+
+// ==================== FORMATTING SYSTEM PROMPT ADDITION ====================
+const FORMATTING_INSTRUCTION = `
+FORMAT YOUR RESPONSES LIKE THIS:
+• Use • bullet points for lists
+• Use clear line breaks between sections
+• Keep paragraphs short (2-3 sentences max)
+• Never output a single large block of text
+• Use spacing to make information easy to scan
+• Separate different topics with blank lines
+• Be friendly and conversational
+`;
+
+// ==================== PUBLIC AI CHAT (WIDGET) ====================
 router.post('/chat', async (req, res) => {
   const { message, history } = req.body;
   console.log(`[AI Widget] Chat: "${message?.substring(0, 80)}..."`);
@@ -21,10 +163,9 @@ router.post('/chat', async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  const config = getDeepSeekConfig();
+  const config = getAIConfig();
 
   try {
-    // Get courses from MongoDB
     const courses = await Course.find({ isActive: true }).select('courseId name examPrice pathPrice totalModules description');
     const coursesList = courses.map(c =>
       `• ${c.name} - $${c.examPrice} Exam / $${c.pathPrice} Path - ${c.totalModules} modules`
@@ -35,231 +176,383 @@ router.post('/chat', async (req, res) => {
 📚 COURSES:
 ${coursesList}
 
-📋 RULES: 25 questions, 60 min, 70% pass. Failed = 7-day cooldown. Complete all modules before final exam.
-🎟️ Vouchers = INSTANT enrollment. Each code works ONCE.
-💳 Credit Card/PayPal/EcoCash = COMING SOON.
+📋 RULES:
+• 25 questions, 60 min, 70% pass
+• Failed = 7-day cooldown
+• Complete all modules before final exam
+• Vouchers = INSTANT enrollment, each code works ONCE
+• Credit Card/PayPal/EcoCash = COMING SOON
+
 📞 Support: ${config.supportWhatsApp}
 
-Be friendly, helpful, and concise.`;
+${FORMATTING_INSTRUCTION}
 
-    const messages = [{ role: 'system', content: systemPrompt }];
-    if (history && Array.isArray(history)) {
-      history.slice(-20).forEach(msg => {
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          messages.push({ role: msg.role, content: msg.content });
-        }
+Be friendly, helpful, and concise. Use the student's name if provided.`;
+
+    const { response: aiResponse, usedApi } = await callAI(systemPrompt, message, history);
+
+    if (aiResponse) {
+      return res.json({
+        success: true,
+        response: aiResponse,
+        usedApi,
+        timestamp: new Date().toISOString()
       });
     }
-    messages.push({ role: 'user', content: message });
 
-    let aiResponse = null;
-    let usedApi = null;
-
-    if (config.key) {
-      try {
-        const response = await axios.post(config.url, {
-          model: config.model,
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 600
-        }, {
-          headers: { 'Authorization': `Bearer ${config.key}`, 'Content-Type': 'application/json' },
-          timeout: 30000
-        });
-        aiResponse = response.data.choices[0].message.content;
-        usedApi = 'DeepSeek';
-      } catch (apiError) {
-        console.log('[AI Widget] DeepSeek error:', apiError.message);
-        aiResponse = getFallbackResponse(message, config);
-        usedApi = 'Fallback';
-      }
-    } else {
-      console.log('[AI Widget] No API key');
-      aiResponse = getFallbackResponse(message, config);
-      usedApi = 'Fallback';
-    }
-
-    res.json({ success: true, response: aiResponse, usedApi, timestamp: new Date().toISOString() });
+    // Fallback response
+    const fallbackResponse = formatAIResponse(getFallbackResponse(message, config));
+    res.json({
+      success: true,
+      response: fallbackResponse,
+      usedApi: 'Fallback',
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    res.json({ success: true, response: getFallbackResponse(message, config), usedApi: 'Fallback' });
+    console.error('[AI Widget] Error:', error.message);
+    const fallbackResponse = formatAIResponse(getFallbackResponse(message, config));
+    res.json({
+      success: true,
+      response: fallbackResponse,
+      usedApi: 'Fallback'
+    });
   }
 });
 
-// ==================== AI TEACHER ====================
+// ==================== AI TEACHER (COURSE-SPECIFIC) ====================
 router.post('/teacher/:courseId', async (req, res) => {
   const { courseId } = req.params;
   const { message, moduleContext } = req.body;
 
   if (!message) return res.status(400).json({ error: 'Message is required' });
 
-  const config = getDeepSeekConfig();
+  const config = getAIConfig();
   const teachers = {
-    ncp: { name: 'Coach Carlos', title: 'Cisco Certified Instructor • 12 Years', avatar: '🏈' },
-    ccp: { name: 'Dr. Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '👩‍🏫' },
-    default: { name: 'Dr. Sarah Chen', title: 'Senior Instructor', avatar: '👩‍🏫' }
+    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor • 12 Years', avatar: '📡' },
+    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '📚' },
+    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect • AWS Certified', avatar: '☁️' },
+    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: '🧠' },
+    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚' }
   };
   const teacher = teachers[courseId] || teachers.default;
   const course = await Course.findOne({ courseId }).select('name');
 
   try {
-    const systemPrompt = `You are ${teacher.name}, ${teacher.title}, teaching ${course ? course.name : courseId}. Context: ${moduleContext || 'General help'}. Keep responses under 150 words. Be encouraging and thorough.`;
+    const systemPrompt = `You are ${teacher.name}, ${teacher.title}, teaching at OBliXel Academy.
 
-    let aiResponse = null;
-    let usedApi = null;
+COURSE: ${course ? course.name : courseId}
+CONTEXT: ${moduleContext || 'General course help'}
 
-    if (config.key) {
-      try {
-        const response = await axios.post(config.url, {
-          model: config.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message }
-          ],
-          temperature: 0.8,
-          max_tokens: 600
-        }, {
-          headers: { 'Authorization': `Bearer ${config.key}`, 'Content-Type': 'application/json' },
-          timeout: 30000
-        });
-        aiResponse = response.data.choices[0].message.content;
-        usedApi = 'DeepSeek';
-      } catch (e) {
-        aiResponse = `I'm ${teacher.name}, your instructor. ${course ? `Let me help you with ${course.name}!` : 'How can I help you learn?'}`;
-        usedApi = 'Fallback';
-      }
-    } else {
-      aiResponse = `I'm ${teacher.name}, your instructor. ${course ? `Let me help you with ${course.name}!` : 'How can I help you learn?'}`;
-      usedApi = 'Fallback';
+YOUR TEACHING STYLE:
+• Be encouraging and patient
+• Explain concepts clearly with examples
+• Ask questions to check understanding
+• Provide practical real-world applications
+• Break complex topics into simple steps
+
+${FORMATTING_INSTRUCTION}
+
+Keep responses under 200 words unless the student asks for more detail. Use the student's name if you know it.`;
+
+    const { response: aiResponse, usedApi } = await callAI(systemPrompt, message);
+
+    if (aiResponse) {
+      return res.json({
+        success: true,
+        response: aiResponse,
+        teacher,
+        usedApi,
+        timestamp: new Date().toISOString()
+      });
     }
 
-    res.json({ success: true, response: aiResponse, teacher, usedApi });
+    // Fallback
+    const fallbackMsg = formatAIResponse(
+      `I'm ${teacher.name}, your instructor for ${course ? course.name : 'this course'}.\n\n` +
+      `Here's how I can help:\n` +
+      `• Explain difficult concepts\n` +
+      `• Provide study tips\n` +
+      `• Share real-world examples\n` +
+      `• Answer your questions\n\n` +
+      `What would you like to learn about today?`
+    );
+    res.json({
+      success: true,
+      response: fallbackMsg,
+      teacher,
+      usedApi: 'Fallback'
+    });
   } catch (error) {
-    res.json({ success: true, response: `I'm ${teacher.name}. How can I help?`, teacher, usedApi: 'Fallback' });
+    console.error('[AI Teacher] Error:', error.message);
+    const fallbackMsg = formatAIResponse(
+      `I'm ${teacher.name}, your instructor.\n\n` +
+      `• Ask me anything about ${course ? course.name : 'your course'}\n` +
+      `• I'm here to help you succeed\n\n` +
+      `What would you like to know?`
+    );
+    res.json({
+      success: true,
+      response: fallbackMsg,
+      teacher,
+      usedApi: 'Fallback'
+    });
   }
 });
 
 // ==================== GENERATE QUIZ ====================
 router.post('/generate-quiz', async (req, res) => {
   const { courseId, moduleName, topic, numberOfQuestions = 10 } = req.body;
-  const config = getDeepSeekConfig();
 
-  const systemPrompt = `Generate ${numberOfQuestions} multiple-choice quiz questions about "${topic || moduleName}" for ${courseId}. Return ONLY JSON array: [{"question":"...","options":["A","B","C","D"],"correctAnswer":0}]`;
+  const systemPrompt = `Generate ${numberOfQuestions} multiple-choice quiz questions about "${topic || moduleName}" for ${courseId}.
+
+Return ONLY a JSON array in this exact format:
+[
+  {
+    "question": "Question text here",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": 0
+  }
+]
+
+Make questions:
+• Clear and concise
+• At appropriate difficulty level
+• With plausible wrong answers
+• Covering key concepts`;
 
   try {
-    if (config.key) {
-      const response = await axios.post(config.url, {
-        model: config.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate ${numberOfQuestions} specific quiz questions about ${topic || moduleName}.` }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500
-      }, {
-        headers: { 'Authorization': `Bearer ${config.key}`, 'Content-Type': 'application/json' },
-        timeout: 30000
-      });
+    const { response: aiResponse, usedApi } = await callAI(systemPrompt, `Generate ${numberOfQuestions} specific quiz questions about ${topic || moduleName}.`);
 
-      const quizData = response.data.choices[0].message.content;
-      const jsonMatch = quizData.match(/\[[\s\S]*\]/);
+    if (aiResponse) {
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        return res.json({ success: true, quiz: JSON.parse(jsonMatch[0]) });
+        try {
+          const quizData = JSON.parse(jsonMatch[0]);
+          return res.json({ success: true, quiz: quizData, usedApi });
+        } catch (parseError) {
+          console.log('[AI Quiz] JSON parse failed, using fallback');
+        }
       }
     }
 
-    res.json({ success: true, quiz: generateFallbackQuiz(topic || moduleName, numberOfQuestions) });
+    res.json({ success: true, quiz: generateFallbackQuiz(topic || moduleName, numberOfQuestions), usedApi: 'Fallback' });
   } catch (error) {
-    res.json({ success: true, quiz: generateFallbackQuiz(topic || moduleName, numberOfQuestions) });
+    console.error('[AI Quiz] Error:', error.message);
+    res.json({ success: true, quiz: generateFallbackQuiz(topic || moduleName, numberOfQuestions), usedApi: 'Fallback' });
   }
 });
 
 // ==================== GENERATE NOTES ====================
 router.post('/generate-notes', async (req, res) => {
   const { courseId, moduleName, content } = req.body;
-  const config = getDeepSeekConfig();
 
-  const systemPrompt = `Generate study notes for "${moduleName}". Use • bullets, clear headings, NO markdown symbols like ** or #. 200-400 words.`;
+  const systemPrompt = `Generate comprehensive study notes for "${moduleName}".
+
+FORMAT YOUR RESPONSE:
+• Use • bullet points for key concepts
+• Create clear section headings in UPPERCASE
+• Keep each bullet point concise (1-2 sentences)
+• Add practical examples where helpful
+• Include study tips and memory aids
+• 200-400 words total
+• No markdown symbols like ** or #
+
+Structure:
+1. KEY CONCEPTS (4-6 bullets)
+2. IMPORTANT DETAILS (4-6 bullets)
+3. REAL-WORLD APPLICATIONS (2-3 bullets)
+4. STUDY TIPS (2-3 bullets)
+5. QUICK SUMMARY (2-3 sentences)`;
 
   try {
-    if (config.key) {
-      const response = await axios.post(config.url, {
-        model: config.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate study notes for ${moduleName}.` }
-        ],
-        temperature: 0.5,
-        max_tokens: 1000
-      }, {
-        headers: { 'Authorization': `Bearer ${config.key}`, 'Content-Type': 'application/json' },
-        timeout: 30000
-      });
-      return res.json({ success: true, notes: response.data.choices[0].message.content });
+    const { response: aiResponse, usedApi } = await callAI(systemPrompt, `Generate study notes for ${moduleName}.`);
+
+    if (aiResponse) {
+      return res.json({ success: true, notes: aiResponse, usedApi });
     }
 
-    res.json({ success: true, notes: generateFallbackNotes(moduleName) });
+    res.json({ success: true, notes: formatAIResponse(generateFallbackNotes(moduleName)), usedApi: 'Fallback' });
   } catch (error) {
-    res.json({ success: true, notes: generateFallbackNotes(moduleName) });
+    console.error('[AI Notes] Error:', error.message);
+    res.json({ success: true, notes: formatAIResponse(generateFallbackNotes(moduleName)), usedApi: 'Fallback' });
   }
 });
 
 // ==================== FALLBACK FUNCTIONS ====================
 function getFallbackResponse(message, config) {
   const lowerMsg = message.toLowerCase();
-  if (lowerMsg.includes('support') || lowerMsg.includes('whatsapp')) return `📞 WhatsApp: ${config.supportWhatsApp}`;
-  if (lowerMsg.includes('ncp')) return '🌐 NCP: 8 modules, networking cert. $379 Exam / $599 Path.';
-  if (lowerMsg.includes('ccp')) return '💻 CCP: 8 modules, computing cert. $429 Exam / $679 Path.';
-  if (lowerMsg.includes('voucher')) return '🎟️ Vouchers = instant enrollment! Enter code at checkout. Each code works ONCE.';
-  if (lowerMsg.includes('exam')) return '📝 25 questions, 60 min, 70% to pass. Failed = 7-day cooldown.';
-  return "I'm ObliXel AI! Ask me about our 25+ certifications, courses, exam prep, or vouchers!";
+
+  let response = '';
+
+  if (lowerMsg.includes('support') || lowerMsg.includes('whatsapp')) {
+    response = `You can reach our support team through:\n\n• WhatsApp: ${config.supportWhatsApp}\n• Email: support@oblixel.com\n\nWe typically respond within a few hours.`;
+  } else if (lowerMsg.includes('ncp')) {
+    response = `Network Certified Professional (NCP):\n\n• 8 comprehensive modules\n• Networking certification\n• $379 Exam Only / $599 Learning Path\n• Covers OSI model, routing, switching, security\n• Final exam: 25 questions, 60 min, 70% to pass`;
+  } else if (lowerMsg.includes('ccp')) {
+    response = `Computer Certified Professional (CCP):\n\n• 8 comprehensive modules\n• Computing certification\n• $429 Exam Only / $679 Learning Path\n• Covers hardware, OS, programming, databases\n• Final exam: 25 questions, 60 min, 70% to pass`;
+  } else if (lowerMsg.includes('voucher')) {
+    response = `About Vouchers:\n\n• Vouchers provide instant enrollment\n• Each voucher code works ONCE\n• Enter your code at checkout\n• Discounts can be percentage (%) or fixed amount ($)\n• Some vouchers give FREE enrollment\n\nContact support if your voucher isn't working.`;
+  } else if (lowerMsg.includes('exam')) {
+    response = `Certification Exam Details:\n\n• 25 multiple-choice questions\n• 60 minutes time limit\n• 70% required to pass\n• Failed exams have a 7-day cooldown\n• Complete all modules before taking the final exam\n• Certificate code issued upon passing`;
+  } else if (lowerMsg.includes('certificate') || lowerMsg.includes('code')) {
+    response = `Certificate Codes:\n\n• Generated upon passing the final exam (70%+)\n• Format: OBX-{COURSE}-{CODE} (e.g., OBX-NCP-A7X92K)\n• Show this code to the academics team\n• Contact: ${config.supportWhatsApp}\n• Codes can be verified on our platform`;
+  } else if (lowerMsg.includes('module') || lowerMsg.includes('progress')) {
+    response = `Module Structure:\n\n• Each course has 8 modules\n• Modules unlock one at a time\n• Each module has a 10-question exam (70% to pass)\n• Complete all 8 modules to unlock the final exam\n• Track your progress on the course dashboard`;
+  } else {
+    response = `Welcome to OBliXel Academy! Here's what I can help with:\n\n• Course information (NCP, CCP, and more)\n• Exam preparation and requirements\n• Voucher codes and enrollment\n• Certificate codes and claiming\n• Technical support\n\nWhat would you like to know about?`;
+  }
+
+  return response;
 }
 
 function generateFallbackQuiz(topic, count) {
   const questions = [
-    { question: `Key concept in ${topic}?`, options: ['Understanding fundamentals', 'Memorization only', 'Skipping basics', 'Ignoring practice'], correctAnswer: 0 },
-    { question: `Best approach for ${topic}?`, options: ['Passive reading', 'Active practice', 'Listening only', 'Cramming'], correctAnswer: 1 },
-    { question: `Essential for mastering ${topic}?`, options: ['Talent only', 'Consistent practice', 'Luck', 'Expensive tools'], correctAnswer: 1 },
-    { question: `How to prepare for ${topic} assessment?`, options: ['Review and practice', 'Skip prep', 'Memorize only', 'Ask for answers'], correctAnswer: 0 },
-    { question: `Most valuable resource for ${topic}?`, options: ['Social media', 'Documentation and hands-on', 'Rumors', 'Outdated books'], correctAnswer: 1 },
-    { question: `Common mistake in ${topic}?`, options: ['Taking notes', 'Skipping fundamentals', 'Regular practice', 'Asking questions'], correctAnswer: 1 },
-    { question: `Why is ${topic} important?`, options: ['Not important', 'Foundation for career growth', 'Only for tests', 'No employer cares'], correctAnswer: 1 },
-    { question: `How often to review ${topic}?`, options: ['Once and done', 'Regular spaced repetition', 'Never', 'Only before exam'], correctAnswer: 1 },
-    { question: `Best way to test ${topic} knowledge?`, options: ['Avoid testing', 'Practice quizzes and labs', 'Only read notes', 'Wait for final exam'], correctAnswer: 1 },
-    { question: `Effective mindset for ${topic}?`, options: ['Fixed mindset', 'Growth mindset', 'Competitive only', 'Passive acceptance'], correctAnswer: 1 }
+    {
+      question: `What is the most important first step when learning ${topic}?`,
+      options: [
+        'Understanding core fundamentals',
+        'Memorizing everything immediately',
+        'Skipping to advanced topics',
+        'Only watching videos without practice'
+      ],
+      correctAnswer: 0
+    },
+    {
+      question: `Which approach is best for mastering ${topic}?`,
+      options: [
+        'Passive reading only',
+        'Active practice and hands-on learning',
+        'Listening to lectures once',
+        'Cramming before the exam'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `What is essential for retaining knowledge in ${topic}?`,
+      options: [
+        'Natural talent only',
+        'Consistent practice and review',
+        'Expensive equipment',
+        'Studying only when motivated'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `How should you prepare for a ${topic} assessment?`,
+      options: [
+        'Review notes and practice quizzes',
+        'Skip preparation entirely',
+        'Only memorize definitions',
+        'Ask others for answers'
+      ],
+      correctAnswer: 0
+    },
+    {
+      question: `What is the most valuable resource for learning ${topic}?`,
+      options: [
+        'Social media opinions',
+        'Official documentation and hands-on labs',
+        'Rumors and hearsay',
+        'Outdated textbooks only'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `What is a common mistake beginners make in ${topic}?`,
+      options: [
+        'Taking detailed notes',
+        'Skipping fundamental concepts',
+        'Practicing regularly',
+        'Asking questions when confused'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `Why is ${topic} important in today's world?`,
+      options: [
+        'It has no real importance',
+        'It provides foundational skills for many careers',
+        'It is only useful for passing tests',
+        'Employers do not value it'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `How often should you review ${topic} material?`,
+      options: [
+        'Once and never again',
+        'Regular spaced repetition for best retention',
+        'Only right before the exam',
+        'Whenever you feel like it'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `What is the best way to test your ${topic} knowledge?`,
+      options: [
+        'Avoid testing to not feel bad',
+        'Practice quizzes and hands-on exercises',
+        'Only re-read your notes',
+        'Wait for the final exam only'
+      ],
+      correctAnswer: 1
+    },
+    {
+      question: `What mindset leads to success in ${topic}?`,
+      options: [
+        'Fixed mindset - talent is everything',
+        'Growth mindset - skills develop with effort',
+        'Competitive mindset - beat everyone else',
+        'Passive mindset - just attend and listen'
+      ],
+      correctAnswer: 1
+    }
   ];
-  return questions.slice(0, Math.min(count, 10));
+
+  // Shuffle and return requested count
+  const shuffled = [...questions].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, 10));
 }
 
 function generateFallbackNotes(moduleName) {
-  return `${moduleName.toUpperCase()}
+  return `
+${moduleName.toUpperCase()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 KEY CONCEPTS
 
-• Understanding core fundamentals is essential for building advanced knowledge
-• Each concept connects to real-world applications and scenarios
-• Regular practice and review strengthens retention
+• Understanding core fundamentals builds the foundation for advanced knowledge
+• Each concept connects to real-world applications and practical scenarios
+• Regular practice and consistent review strengthens long-term retention
+• Applying concepts through hands-on exercises deepens understanding
+• Connecting new information to existing knowledge improves learning speed
 
-IMPORTANT PRINCIPLES
+IMPORTANT DETAILS
 
-• Start with basics and progress systematically through each topic
-• Apply concepts through practical exercises and hands-on practice
-• Test your knowledge regularly with quizzes and self-assessment
-• Review challenging material using spaced repetition
-• Connect new information to concepts you already understand
+• Start with basic principles and progress systematically through each topic
+• Apply concepts through practical exercises and hands-on practice labs
+• Test your knowledge regularly with self-assessment and practice quizzes
+• Review challenging material using spaced repetition techniques
+• Connect new information to concepts you already understand well
 
-STUDY RECOMMENDATIONS
+REAL-WORLD APPLICATIONS
+
+• These concepts are used daily in professional IT environments
+• Understanding these fundamentals prepares you for advanced certifications
+• Practical application in lab environments simulates real workplace scenarios
+
+STUDY TIPS
 
 • Set aside dedicated study time each day for consistent progress
-• Take detailed notes organized by topic and subtopic
-• Explain concepts aloud to reinforce understanding
-• Join study groups to discuss and clarify difficult topics
-• Use multiple learning resources for comprehensive coverage
+• Take detailed notes organized by topic and subtopic for easy review
+• Explain concepts aloud to reinforce understanding and identify gaps
+• Join study groups to discuss difficult topics and share perspectives
+• Use multiple learning resources for comprehensive topic coverage
 
-SUMMARY
+QUICK SUMMARY
 
-${moduleName} requires dedication and consistent effort. Focus on understanding concepts deeply. Combine theoretical study with practical application for best results.
+${moduleName} requires dedication and consistent effort to master. Focus on understanding concepts deeply rather than memorizing. Combine theoretical study with practical application for the best results in your certification journey.
 
 ---
 OBliXel Academy • ${new Date().toLocaleDateString()}`;
