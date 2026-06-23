@@ -10,7 +10,7 @@ const Course = require('../models/Course');
 const ModuleProgress = require('../models/ModuleProgress');
 
 const EXAM_PASS_SCORE = 70;
-const EXAM_COOLDOWN_DAYS = 7;
+const EXAM_COOLDOWN_HOURS = 3;
 const EXAM_TIME_LIMIT = 3600;
 const EXAM_TOTAL_QUESTIONS = 25;
 
@@ -21,6 +21,7 @@ function generateCertificateCode(courseId) {
   return `OBX-${courseId.toUpperCase()}-${code}`;
 }
 
+// ==================== START EXAM ====================
 router.post('/start', authenticate, async (req, res) => {
   const { courseId } = req.body;
   const userId = req.user._id;
@@ -29,30 +30,78 @@ router.post('/start', authenticate, async (req, res) => {
   try {
     const enrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
     if (!enrollment) return res.status(403).json({ error: 'Enroll first' });
+
+    // Check cooldown
     if (enrollment.cooldownUntil && enrollment.cooldownUntil > new Date()) {
-      const daysLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60 * 60 * 24));
-      return res.status(403).json({ error: 'Cooldown', message: `Retake in ${daysLeft} day(s).` });
+      const hoursLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60 * 60));
+      const minutesLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60));
+      const retakeTime = enrollment.cooldownUntil.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const retakeDate = enrollment.cooldownUntil.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      return res.status(403).json({
+        error: 'Cooldown',
+        message: `Retake available at ${retakeTime} on ${retakeDate}`,
+        retakeTime: enrollment.cooldownUntil.toISOString(),
+        hoursLeft,
+        minutesLeft
+      });
     }
+
     const course = await Course.findOne({ courseId: courseId.toLowerCase() });
     const totalModules = course ? course.totalModules : 8;
     const completedCount = await ModuleProgress.countDocuments({ userId, courseId: courseId.toLowerCase(), completed: true });
     if (completedCount < totalModules) return res.status(403).json({ error: 'Not all modules done', completed: completedCount, total: totalModules });
 
+    // Get questions and shuffle them fresh for every attempt
     let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
-    if (questions.length < EXAM_TOTAL_QUESTIONS) questions = getFallbackQuestions(courseId);
+
+    // If not enough questions in DB, use fallbacks
+    if (questions.length < EXAM_TOTAL_QUESTIONS) {
+      const fallbackQuestions = getFallbackQuestions(courseId);
+      // Combine DB questions with fallback questions
+      const combinedQuestions = [...questions, ...fallbackQuestions];
+      questions = combinedQuestions;
+    }
+
+    // Shuffle ALL questions before selecting (ensures different set each attempt)
     const shuffled = questions.sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
-    const safeQuestions = selected.map(q => ({ id: q._id, text: q.text, options: q.options }));
 
-    const session = await ExamSession.create({ userId, courseId: courseId.toLowerCase(), startTime: new Date(), status: 'in_progress', questionCount: safeQuestions.length });
-    res.json({ sessionId: session._id, questions: safeQuestions, totalQuestions: safeQuestions.length, timeLimit: EXAM_TIME_LIMIT, passingScore: EXAM_PASS_SCORE });
-  } catch (error) { res.status(500).json({ error: 'Failed to start exam' }); }
+    const safeQuestions = selected.map(q => ({
+      id: q._id,
+      text: q.text,
+      options: q.options
+    }));
+
+    const session = await ExamSession.create({
+      userId,
+      courseId: courseId.toLowerCase(),
+      startTime: new Date(),
+      status: 'in_progress',
+      questionCount: safeQuestions.length
+    });
+
+    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions`);
+
+    res.json({
+      sessionId: session._id,
+      questions: safeQuestions,
+      totalQuestions: safeQuestions.length,
+      timeLimit: EXAM_TIME_LIMIT,
+      passingScore: EXAM_PASS_SCORE
+    });
+  } catch (error) {
+    console.error('[EXAM] Start error:', error.message);
+    res.status(500).json({ error: 'Failed to start exam' });
+  }
 });
 
+// ==================== SUBMIT EXAM ====================
 router.post('/submit', authenticate, async (req, res) => {
   const { sessionId, courseId, answers, timeSpent } = req.body;
   const userId = req.user._id;
   if (!sessionId || !courseId || !answers) return res.status(400).json({ error: 'Missing fields' });
+
   try {
     const session = await ExamSession.findOne({ _id: sessionId, userId, courseId: courseId.toLowerCase() });
     if (!session) return res.status(400).json({ error: 'Invalid session' });
@@ -63,7 +112,23 @@ router.post('/submit', authenticate, async (req, res) => {
 
     let correctCount = 0;
     const totalQuestions = Math.min(answers.length, questions.length);
-    for (let i = 0; i < totalQuestions; i++) { if (answers[i] === questions[i].correct) correctCount++; }
+
+    // Track wrong answers with topic mapping
+    const wrongAnswers = [];
+
+    for (let i = 0; i < totalQuestions; i++) {
+      if (answers[i] === questions[i].correct) {
+        correctCount++;
+      } else {
+        wrongAnswers.push({
+          question: questions[i].text,
+          correctAnswer: questions[i].options[questions[i].correct],
+          yourAnswer: answers[i] !== null && answers[i] !== undefined ? questions[i].options[answers[i]] : 'Not answered',
+          topic: extractTopic(questions[i].text, courseId)
+        });
+      }
+    }
+
     const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
     const passed = score >= EXAM_PASS_SCORE;
 
@@ -72,8 +137,10 @@ router.post('/submit', authenticate, async (req, res) => {
       enrollment.examAttempts = (enrollment.examAttempts || 0) + 1;
       enrollment.lastExamDate = new Date();
       enrollment.score = score;
+
       if (passed) {
         enrollment.status = 'passed_waiting';
+        enrollment.cooldownUntil = null; // Clear any cooldown
         const certificateCode = generateCertificateCode(courseId);
         await Certificate.create({
           userId,
@@ -87,18 +154,34 @@ router.post('/submit', authenticate, async (req, res) => {
         });
         console.log(`[EXAM] ✅ Certificate code generated: ${certificateCode} for ${req.user.email}`);
       } else {
-        const cd = new Date(); cd.setDate(cd.getDate() + EXAM_COOLDOWN_DAYS);
+        // Set 3 hour cooldown
+        const cd = new Date();
+        cd.setHours(cd.getHours() + EXAM_COOLDOWN_HOURS);
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
+        console.log(`[EXAM] ❌ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
       }
       await enrollment.save();
     }
 
-    await ExamAttempt.create({ userId, courseId: courseId.toLowerCase(), sessionId, score, passed, totalQuestions, correctCount, timeSpent: timeSpent || 0, completedAt: new Date() });
-    session.status = 'completed'; session.completedAt = new Date(); session.score = score; session.passed = passed; await session.save();
+    // Save attempt
+    await ExamAttempt.create({
+      userId,
+      courseId: courseId.toLowerCase(),
+      sessionId,
+      score,
+      passed,
+      totalQuestions,
+      correctCount,
+      timeSpent: timeSpent || 0,
+      completedAt: new Date()
+    });
 
-    let retakePrice = null;
-    if (!passed) { const course = await Course.findOne({ courseId: courseId.toLowerCase() }); if (course) retakePrice = Math.round(course.examPrice * 0.5 * 100) / 100; }
+    session.status = 'completed';
+    session.completedAt = new Date();
+    session.score = score;
+    session.passed = passed;
+    await session.save();
 
     // Get certificate code if passed
     let certificateCode = null;
@@ -110,6 +193,24 @@ router.post('/submit', authenticate, async (req, res) => {
     // WhatsApp support number
     const supportWhatsApp = process.env.SUPPORT_WHATSAPP || '+263714587259';
 
+    // Get retake time if failed
+    let retakeTime = null;
+    let retakeTimeFormatted = null;
+    let retakeDateFormatted = null;
+    let hoursLeft = null;
+    let minutesLeft = null;
+
+    if (!passed && enrollment && enrollment.cooldownUntil) {
+      retakeTime = enrollment.cooldownUntil.toISOString();
+      retakeTimeFormatted = enrollment.cooldownUntil.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      retakeDateFormatted = enrollment.cooldownUntil.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      hoursLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60 * 60));
+      minutesLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60));
+    }
+
+    // Get unique review topics from wrong answers
+    const reviewTopics = [...new Set(wrongAnswers.map(wa => wa.topic).filter(Boolean))];
+
     res.json({
       success: true,
       score,
@@ -118,10 +219,17 @@ router.post('/submit', authenticate, async (req, res) => {
       totalQuestions,
       certificateCode,
       supportWhatsApp,
+      wrongAnswers,
+      reviewTopics,
+      retakeTime,
+      retakeTimeFormatted,
+      retakeDateFormatted,
+      hoursLeft,
+      minutesLeft,
+      cooldownHours: EXAM_COOLDOWN_HOURS,
       message: passed
         ? `🎉 Congratulations! You passed with ${score}%! Your certificate code is: ${certificateCode}. Show this code to the academics team to claim your certificate.`
-        : `❌ ${score}%. Need 70%. Retake in ${EXAM_COOLDOWN_DAYS} days.`,
-      ...(retakePrice && { retakePrice, cooldownDays: EXAM_COOLDOWN_DAYS })
+        : `❌ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
     });
   } catch (error) {
     console.error('[EXAM] Submit error:', error.message);
@@ -129,20 +237,74 @@ router.post('/submit', authenticate, async (req, res) => {
   }
 });
 
+// ==================== GET EXAM RESULTS ====================
 router.get('/results/:courseId', authenticate, async (req, res) => {
   const attempts = await ExamAttempt.find({ userId: req.user._id, courseId: req.params.courseId.toLowerCase() }).sort({ completedAt: -1 });
   res.json({ attempts });
 });
 
+// ==================== GET EXAM HISTORY ====================
 router.get('/history', authenticate, async (req, res) => {
   const attempts = await ExamAttempt.find({ userId: req.user._id }).sort({ completedAt: -1 });
   const history = await Promise.all(attempts.map(async (a) => {
     const c = await Course.findOne({ courseId: a.courseId });
-    return { id: a._id, courseId: a.courseId, courseName: c ? c.name : 'Unknown', courseIcon: c ? c.icon : 'fa-certificate', score: a.score, passed: a.passed, completedAt: a.completedAt };
+    return {
+      id: a._id,
+      courseId: a.courseId,
+      courseName: c ? c.name : 'Unknown',
+      courseIcon: c ? c.icon : 'fa-certificate',
+      score: a.score,
+      passed: a.passed,
+      completedAt: a.completedAt
+    };
   }));
   res.json({ history });
 });
 
+// ==================== HELPER: EXTRACT TOPIC FROM QUESTION ====================
+function extractTopic(questionText, courseId) {
+  if (!questionText) return null;
+
+  const lowerText = questionText.toLowerCase();
+
+  // NCP Topics
+  if (courseId === 'ncp') {
+    if (lowerText.includes('osi') || lowerText.includes('layer') && !lowerText.includes('data link')) return 'Networking Fundamentals';
+    if (lowerText.includes('subnet') || lowerText.includes('ip address') || lowerText.includes('cidr')) return 'IP Addressing & Subnetting';
+    if (lowerText.includes('routing') || lowerText.includes('ospf') || lowerText.includes('bgp') || lowerText.includes('rip') || lowerText.includes('eigrp') || lowerText.includes('mpls')) return 'Routing Protocols';
+    if (lowerText.includes('vlan') || lowerText.includes('switch') || lowerText.includes('layer 2')) return 'Switching & VLANs';
+    if (lowerText.includes('wan') || lowerText.includes('nat') || lowerText.includes('frame relay') || lowerText.includes('atm')) return 'WAN Technologies';
+    if (lowerText.includes('firewall') || lowerText.includes('security') || lowerText.includes('vpn') || lowerText.includes('ddos') || lowerText.includes('secure')) return 'Network Security Basics';
+    if (lowerText.includes('wireless') || lowerText.includes('wifi') || lowerText.includes('5ghz') || lowerText.includes('802.11')) return 'Wireless Networking';
+    if (lowerText.includes('ping') || lowerText.includes('troubleshoot') || lowerText.includes('loopback') || lowerText.includes('qos')) return 'Network Troubleshooting';
+  }
+
+  // CCP Topics
+  if (courseId === 'ccp') {
+    if (lowerText.includes('cpu') || lowerText.includes('ram') || lowerText.includes('brain of computer') || lowerText.includes('input device') || lowerText.includes('ssd') || lowerText.includes('usb') || lowerText.includes('bios')) return 'Computer Fundamentals';
+    if (lowerText.includes('hardware') || lowerText.includes('architecture')) return 'Hardware & Architecture';
+    if (lowerText.includes('os') || lowerText.includes('operating system') || lowerText.includes('linux') || lowerText.includes('gui') || lowerText.includes('open source')) return 'Operating Systems';
+    if (lowerText.includes('programming') || lowerText.includes('javascript') || lowerText.includes('java') || lowerText.includes('c++')) return 'Programming Basics';
+    if (lowerText.includes('http') || lowerText.includes('ip address') || lowerText.includes('router') && lowerText.includes('packets') || lowerText.includes('protocol')) return 'Networking Essentials';
+    if (lowerText.includes('database') || lowerText.includes('sql')) return 'Database Fundamentals';
+    if (lowerText.includes('web') || lowerText.includes('html') || lowerText.includes('css') || lowerText.includes('url')) return 'Web Technologies';
+    if (lowerText.includes('malware') || lowerText.includes('phishing') || lowerText.includes('antivirus') || lowerText.includes('encryption') || lowerText.includes('firewall') || lowerText.includes('support') || lowerText.includes('troubleshoot')) return 'IT Support & Troubleshooting';
+  }
+
+  // Default fallback topics based on keywords
+  if (lowerText.includes('network') || lowerText.includes('protocol') || lowerText.includes('router') || lowerText.includes('switch')) return 'Networking';
+  if (lowerText.includes('security') || lowerText.includes('firewall') || lowerText.includes('encrypt')) return 'Security';
+  if (lowerText.includes('programming') || lowerText.includes('code') || lowerText.includes('software')) return 'Programming';
+  if (lowerText.includes('hardware') || lowerText.includes('cpu') || lowerText.includes('memory')) return 'Hardware';
+  if (lowerText.includes('database') || lowerText.includes('sql') || lowerText.includes('data')) return 'Databases';
+  if (lowerText.includes('web') || lowerText.includes('html') || lowerText.includes('internet')) return 'Web Technologies';
+  if (lowerText.includes('cloud') || lowerText.includes('server')) return 'Cloud Computing';
+  if (lowerText.includes('os') || lowerText.includes('operating system')) return 'Operating Systems';
+
+  return 'General Concepts';
+}
+
+// ==================== FALLBACK QUESTIONS ====================
 function getFallbackQuestions(courseId) {
   const fb = {
     ncp: [
