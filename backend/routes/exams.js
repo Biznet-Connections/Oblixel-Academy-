@@ -31,6 +31,16 @@ router.post('/start', authenticate, async (req, res) => {
     const enrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
     if (!enrollment) return res.status(403).json({ error: 'Enroll first' });
 
+    // BLOCK if already passed
+    if (enrollment.status === 'passed_waiting' || enrollment.status === 'certified') {
+      return res.status(403).json({
+        error: 'Already passed',
+        message: '🎉 You have already passed this certification exam! No more retakes needed.',
+        score: enrollment.score,
+        certificateCode: enrollment.certificateId || null
+      });
+    }
+
     // Check cooldown
     if (enrollment.cooldownUntil && enrollment.cooldownUntil > new Date()) {
       const hoursLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60 * 60));
@@ -312,7 +322,6 @@ router.get('/history', authenticate, async (req, res) => {
 // ==================== HELPER: EXTRACT TOPIC FROM QUESTION ====================
 function extractTopic(questionText, courseId) {
   if (!questionText) return null;
-
   const lowerText = questionText.toLowerCase();
 
   if (courseId === 'ncp') {

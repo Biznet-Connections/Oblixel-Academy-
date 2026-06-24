@@ -728,7 +728,7 @@ function renderPage(page) {
 console.log('✅ Part 1 (Core & Auth) loaded - NCP/CCP ready, AI Widget landing only, Voucher instant auto-enroll, 10 questions per module, 70% pass');
 
 // ==================== PART 2: USER FEATURES & PAGES ====================
-console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel, Modal Confirmations, Payment Type Fix, 3hr Cooldown, Beautiful Failure Screen, Local Timezone Fix, Answer ID Matching Fix)');
+console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel, Modal Confirmations, Payment Type Fix, 3hr Cooldown, Beautiful Failure Screen, Local Timezone Fix, Answer ID Matching Fix, Certificate Section After Passing)');
 
 // ==================== LANDING PAGE ====================
 function renderLandingPage() {
@@ -986,11 +986,11 @@ async function renderDashboard() {
             <div class="glass rounded-2xl p-5 card-hover continue-learning-card" data-aos="fade-up">
               <div class="flex justify-between items-start flex-wrap gap-3 mb-3">
                 <div><div class="flex items-center gap-2"><i class="fa-solid ${e.courseIcon || 'fa-certificate'} text-purple-400 text-xl"></i><h3 class="text-lg sm:text-xl font-bold">${escapeHtml(e.courseName)}</h3></div><p class="text-gray-400 text-xs sm:text-sm mt-1">${e.moduleProgress?.completedCount || 0}/${e.moduleProgress?.totalModules || 8} modules completed</p></div>
-                <span class="text-xs px-3 py-1 rounded-full ${e.status === 'enrolled' ? 'bg-green-500/20 text-green-400' : e.status === 'passed_waiting' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}">${e.status === 'enrolled' ? 'Active' : e.status === 'passed_waiting' ? 'Pending Cert' : 'Failed'}</span>
+                <span class="text-xs px-3 py-1 rounded-full ${e.status === 'enrolled' ? 'bg-green-500/20 text-green-400' : e.status === 'passed_waiting' ? 'bg-yellow-500/20 text-yellow-400' : e.status === 'certified' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${e.status === 'enrolled' ? 'Active' : e.status === 'passed_waiting' ? 'Pending Cert' : e.status === 'certified' ? 'Certified' : 'Failed'}</span>
               </div>
               <div class="w-full bg-gray-700 h-2 rounded-full mb-3"><div class="bg-gradient-to-r from-purple-600 to-cyan-500 h-2 rounded-full transition-all" style="width: ${e.progress || 0}%"></div></div>
-              <p class="text-xs text-gray-400 mb-3">Next: ${e.moduleProgress?.nextModuleName || 'Final Exam Ready!'}</p>
-              <div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm font-medium">Continue →</button><button onclick="window.startExam('${e.courseId}')" class="glass px-5 py-2 rounded-xl text-sm">🎯 Take Final Exam</button></div>
+              <p class="text-xs text-gray-400 mb-3">Next: ${e.moduleProgress?.nextModuleName || (e.status === 'passed_waiting' || e.status === 'certified' ? '✅ Certification Complete!' : 'Final Exam Ready!')}</p>
+              <div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm font-medium">Continue →</button>${(e.status !== 'passed_waiting' && e.status !== 'certified') ? `<button onclick="window.startExam('${e.courseId}')" class="glass px-5 py-2 rounded-xl text-sm">🎯 Take Final Exam</button>` : ''}</div>
             </div>
           `).join('') : '<div class="glass rounded-2xl p-10 text-center"><p>No enrollments yet. <button onclick="renderPage(\'courses\')" class="text-cyan-400 hover:underline">Browse Courses →</button></p></div>'}
         </div>
@@ -1053,7 +1053,7 @@ async function renderCourses() {
 }
 
 // ==================== EXAMS PAGE ====================
-async function renderExams() { hideAIWidget(); if (!currentUser) { renderPage('login'); return; } try { const enrollments = await getMyEnrollments(); const activeExams = enrollments.enrollments?.filter(e => e.status !== 'failed') || []; const root = document.getElementById('app-root'); root.innerHTML = `<div class="max-w-4xl mx-auto fade-in"><button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button><h1 class="text-2xl font-black mb-6">🎯 Certification Exams</h1>${activeExams.length > 0 ? activeExams.map(e => `<div class="glass rounded-2xl p-5 mb-4 flex justify-between items-center flex-wrap gap-3"><div><h2 class="text-xl font-bold">${escapeHtml(e.courseName)}</h2><p class="text-gray-400">Attempts: ${e.examAttempts || 0}</p>${e.score ? `<p class="text-xs ${e.score >= 70 ? 'text-green-400' : 'text-red-400'}">Last score: ${e.score}%</p>` : ''}</div><button onclick="window.startExam('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm">Start Final Exam →</button></div>`).join('') : '<div class="glass rounded-3xl p-12 text-center"><p>No active exams available.</p><button onclick="renderPage(\'courses\')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Browse Courses</button></div>'}</div>`; } catch (error) { document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load exams</p></div>`; } }
+async function renderExams() { hideAIWidget(); if (!currentUser) { renderPage('login'); return; } try { const enrollments = await getMyEnrollments(); const activeExams = enrollments.enrollments?.filter(e => e.status !== 'failed') || []; const root = document.getElementById('app-root'); root.innerHTML = `<div class="max-w-4xl mx-auto fade-in"><button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button><h1 class="text-2xl font-black mb-6">🎯 Certification Exams</h1>${activeExams.length > 0 ? activeExams.map(e => `<div class="glass rounded-2xl p-5 mb-4 flex justify-between items-center flex-wrap gap-3"><div><h2 class="text-xl font-bold">${escapeHtml(e.courseName)}</h2><p class="text-gray-400">Attempts: ${e.examAttempts || 0}</p>${e.score ? `<p class="text-xs ${e.score >= 70 ? 'text-green-400' : 'text-red-400'}">Last score: ${e.score}%</p>` : ''}</div>${(e.status !== 'passed_waiting' && e.status !== 'certified') ? `<button onclick="window.startExam('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm">Start Final Exam →</button>` : '<span class="text-green-400 font-bold">✅ Passed!</span>'}</div>`).join('') : '<div class="glass rounded-3xl p-12 text-center"><p>No active exams available.</p><button onclick="renderPage(\'courses\')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Browse Courses</button></div>'}</div>`; } catch (error) { document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load exams</p></div>`; } }
 
 // ==================== CERTIFICATES PAGE ====================
 async function renderCertificates() { hideAIWidget(); if (!currentUser) { renderPage('login'); return; } try { const certData = await getMyCertificates(); const earned = certData.earned || []; const pending = certData.pending || []; const root = document.getElementById('app-root'); root.innerHTML = `<div class="max-w-4xl mx-auto fade-in"><button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button><h1 class="text-2xl font-black mb-6">🏅 My Certificates</h1>${pending.length > 0 ? pending.map(cer => `<div class="glass rounded-2xl p-5 mb-4 border border-yellow-500/30"><div class="flex justify-between flex-wrap gap-3"><div><h2 class="text-xl font-bold">${escapeHtml(cer.courseName)}</h2><p class="text-yellow-400 text-sm">⏳ Pending Admin Approval</p><p class="text-sm">Score: ${cer.score}%</p><p class="text-sm text-cyan-400 mt-1">Code: <span class="certificate-code-display">${cer.certificateId || 'N/A'}</span></p></div><i class="fa-solid fa-hourglass-half text-3xl text-yellow-400"></i></div></div>`).join('') : ''}${earned.length > 0 ? earned.map(cer => `<div class="glass rounded-2xl p-5 mb-4"><div class="flex justify-between flex-wrap gap-3"><div><h2 class="text-2xl font-bold">${escapeHtml(cer.courseName)}</h2><p class="text-gray-400 text-sm">ID: ${cer.certificateId}</p><p class="text-sm">Issued: ${formatDate(cer.issuedAt || cer.issueDate)} | Score: ${cer.score}%</p></div><i class="fa-solid fa-certificate text-4xl text-cyan-400"></i></div><div class="mt-3 flex gap-3 flex-wrap"><button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificate('${cer.certificateId}')"><i class="fa-regular fa-file-pdf"></i> Download PDF</button><button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.shareToLinkedIn('${cer.certificateId}')"><i class="fa-brands fa-linkedin"></i> Share</button><button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.verifyCertificate('${cer.certificateId}')"><i class="fa-solid fa-check-circle"></i> Verify</button></div></div>`).join('') : (pending.length === 0 ? '<div class="glass rounded-3xl p-12 text-center"><p>No certificates yet. Complete an exam to earn your first certificate!</p><button onclick="renderPage(\'dashboard\')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Start Learning</button></div>' : '')}</div>`; } catch (error) { document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load certificates</p></div>`; } }
@@ -1061,7 +1061,7 @@ async function renderCertificates() { hideAIWidget(); if (!currentUser) { render
 // ==================== PROFILE PAGE ====================
 async function renderProfile() { hideAIWidget(); if (!currentUser) { renderPage('login'); return; } try { const profileData = await getUserProfile(); const user = profileData.user; const root = document.getElementById('app-root'); root.innerHTML = `<div class="max-w-4xl mx-auto fade-in"><button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button><div class="glass rounded-3xl p-6"><div class="flex items-center gap-5 flex-wrap"><div class="w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-3xl font-black">${user.avatar || user.name.charAt(0)}</div><div><h1 class="text-2xl font-black">${escapeHtml(user.name)}</h1><p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? 'Admin' : 'Student'}</p><p class="text-xs text-cyan-400">Member since ${formatDate(user.createdAt)}</p></div></div><div class="stats-grid mt-6"><div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-cyan-400">${user.xp || 0}</h3><p class="text-xs">XP</p></div><div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-purple-400">${user.level || 1}</h3><p class="text-xs">Level</p></div><div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-yellow-400">$${formatMoney(user.totalSpent || 0)}</h3><p class="text-xs">Spent</p></div><div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-green-400">${user.streak || 0}</h3><p class="text-xs">Day Streak</p></div></div><button id="deleteAccountBtn" class="mt-6 glass px-4 py-2 rounded-xl text-red-400 text-sm w-full hover:bg-red-500/10 transition">Delete Account</button></div></div>`; document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => { const confirmMsg = prompt('Type "DELETE" to permanently delete your account:'); if (confirmMsg === 'DELETE') { try { await deleteAccount('DELETE'); logout(); showToast('Account deleted', 'success'); renderPage('landing'); } catch (error) { showToast('Failed to delete account', 'error'); } } }); } catch (error) { document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load profile</p></div>`; } }
 
-// ==================== COURSE DASHBOARD ====================
+// ==================== COURSE DASHBOARD (WITH CERTIFICATE SECTION AFTER PASSING) ====================
 async function renderCourseDashboard(courseId) {
   hideAIWidget();
   if (!currentUser) { renderPage('login'); return; }
@@ -1076,6 +1076,24 @@ async function renderCourseDashboard(courseId) {
     const examUnlocked = progress.examUnlocked || (completedCount >= totalModules && totalModules > 0);
     const coursePrice = course.price || course.examPrice || 0;
 
+    // Get enrollment status
+    const enrollment = userEnrollmentsCache.find(e => e.courseId === courseId);
+    const hasPassed = enrollment && (enrollment.status === 'passed_waiting' || enrollment.status === 'certified');
+    const passedScore = enrollment ? enrollment.score : null;
+
+    // Get certificate code for this course
+    let certificateCode = null;
+    if (hasPassed) {
+      try {
+        const certData = await getMyCertificates();
+        const pending = certData.pending || [];
+        const earned = certData.earned || [];
+        const allCerts = [...pending, ...earned];
+        const courseCert = allCerts.find(c => c.courseId === courseId || c.courseName === course.name);
+        if (courseCert) certificateCode = courseCert.certificateId;
+      } catch(e) {}
+    }
+
     const aiTeachers = {
       ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor • 12 Years', avatar: '📡', message: '"Subnetting is like building a city. Every device needs a proper address!"', theme: 'ncp' },
       ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '📚', message: '"Computers are logical machines. Master the fundamentals first!"', theme: 'ccp' },
@@ -1084,6 +1102,30 @@ async function renderCourseDashboard(courseId) {
       default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚', message: 'Ready to learn? Let\'s get started!', theme: 'default' }
     };
     const teacher = aiTeachers[courseId] || aiTeachers.default;
+    const supportWhatsApp = '+263714587259';
+
+    // Build certificate section HTML
+    let certSectionHTML = '';
+    if (hasPassed) {
+      certSectionHTML = `
+        <div class="glass rounded-2xl p-6 mb-6 text-center" style="border: 1px solid rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.05);">
+          <div class="text-5xl mb-3">🏅</div>
+          <h2 class="text-xl font-bold text-green-400">Certification Status</h2>
+          <p class="text-3xl font-black text-green-400 mt-2">${passedScore}% - Passed!</p>
+          <p class="text-gray-400 text-sm mt-1">${enrollment.status === 'certified' ? '✅ Certificate Issued' : '⏳ Pending Admin Approval'}</p>
+          ${certificateCode ? `
+          <div class="mt-4 p-4 bg-purple-600/20 rounded-2xl border border-purple-500/30">
+            <p class="text-xs text-gray-400 mb-1">Certificate Code:</p>
+            <div class="certificate-code-display text-lg">${certificateCode}</div>
+            <button onclick="window.copyToClipboard('${certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button>
+          </div>` : ''}
+          <div class="glass rounded-xl p-3 mt-4">
+            <p class="text-xs text-gray-400">📞 Contact academics team to claim your certificate:</p>
+            <a href="https://wa.me/${supportWhatsApp.replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-sm whatsapp-link">${supportWhatsApp}</a>
+          </div>
+          <button onclick="window.renderPage('certificates')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm font-medium w-full">🏅 View My Certificates</button>
+        </div>`;
+    }
 
     root.innerHTML = `
       <div class="max-w-6xl mx-auto fade-in">
@@ -1094,8 +1136,11 @@ async function renderCourseDashboard(courseId) {
             <div class="text-right"><div class="text-2xl font-bold text-cyan-400">${Math.round(percentComplete)}%</div><p class="text-xs text-gray-400">Progress</p></div>
           </div>
           <div class="w-full bg-gray-700 h-2 rounded-full mt-4"><div class="bg-gradient-to-r from-purple-600 to-cyan-500 h-2 rounded-full transition-all" style="width: ${percentComplete}%"></div></div>
-          <p class="text-gray-400 text-sm mt-3">${completedCount}/${totalModules} modules completed • ${examUnlocked ? '✅ Final Exam unlocked! 🎉' : '🔒 Complete all modules to unlock final exam'}</p>
+          <p class="text-gray-400 text-sm mt-3">${completedCount}/${totalModules} modules completed • ${hasPassed ? '✅ Certification Complete! 🎉' : (examUnlocked ? '✅ Final Exam unlocked! 🎉' : '🔒 Complete all modules to unlock final exam')}</p>
         </div>
+
+        ${hasPassed ? certSectionHTML : ''}
+
         <div class="professor-card-wrapper mb-6 lg:hidden">
           <div class="glass rounded-2xl p-5 text-center ai-teacher-card"><div class="flex items-center justify-center gap-4 flex-wrap"><div class="text-4xl">${teacher.avatar}</div><div class="text-left"><h3 class="text-lg font-bold">${teacher.name}</h3><p class="text-gray-400 text-xs">${teacher.title}</p></div></div><p class="text-sm mt-3 italic">${teacher.message}</p><button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm w-full hover:opacity-90 transition font-medium">📖 Take Lectures</button></div>
         </div>
@@ -1103,7 +1148,13 @@ async function renderCourseDashboard(courseId) {
           <div class="space-y-6">
             <div class="glass rounded-2xl p-6"><h2 class="text-xl font-bold mb-4">📚 Course Modules</h2><div class="modules-list space-y-3">
               ${modules.map((mod, idx) => { const mp = progress.modules?.find(m => m.moduleId === mod.id); const isCompleted = mp?.completed || false; const isUnlocked = mp?.unlocked || idx === 0; const qs = mp?.quizScore; return `<div class="glass rounded-xl p-4 ${!isUnlocked ? 'module-locked' : ''}"><div class="flex justify-between items-center flex-wrap gap-2"><div><div class="flex items-center gap-2">${isCompleted ? '<i class="fa-solid fa-circle-check text-green-400"></i>' : (isUnlocked ? '<i class="fa-regular fa-circle-play text-cyan-400"></i>' : '<i class="fa-solid fa-lock text-gray-500"></i>')}<h3 class="font-semibold">${escapeHtml(mod.name)}</h3></div><div class="flex gap-3 mt-1 text-xs text-gray-500"><span><i class="fa-regular fa-clock"></i> ${mod.duration || '30 min'}</span><span><i class="fa-regular fa-question-circle"></i> ${mod.quizQuestions || 10} questions</span></div>${qs ? `<div class="mt-1 text-xs ${qs >= 70 ? 'text-green-400' : 'text-yellow-400'}">Module Exam: ${qs}% ${qs >= 70 ? '✅' : '⚠️'}</div>` : ''}</div>${isUnlocked && !isCompleted ? `<button onclick="window.renderModulePage('${courseId}', ${mod.id})" class="bg-cyan-600 px-4 py-2 rounded-xl text-sm">Start Module →</button>` : ''}${isCompleted ? `<span class="text-green-400 text-sm"><i class="fa-regular fa-circle-check mr-1"></i> Completed</span>` : ''}</div></div>`; }).join('')}
-              <div class="glass rounded-xl p-4 ${examUnlocked ? 'final-exam-item-unlocked' : 'final-exam-locked final-exam-item'}"><div class="flex justify-between items-center flex-wrap gap-2"><div><div class="flex items-center gap-2">${examUnlocked ? '<i class="fa-solid fa-trophy text-yellow-400"></i>' : '<i class="fa-solid fa-lock text-yellow-600"></i>'}<h3 class="font-semibold text-yellow-400">🎯 Final Examination</h3></div><div class="flex gap-3 mt-1 text-xs text-gray-500"><span><i class="fa-regular fa-clock"></i> 60 min</span><span><i class="fa-regular fa-question-circle"></i> 25 questions</span><span>📊 70% to pass</span></div><p class="text-xs text-yellow-500/70 mt-1">Certificate code issued upon passing</p></div>${examUnlocked ? `<button id="finalExamBtn" onclick="event.preventDefault();event.stopPropagation();this.textContent='⏳ Loading...';this.disabled=true;this.style.opacity='0.7';window.startExam('${courseId}');" class="bg-gradient-to-r from-yellow-600 to-orange-500 px-5 py-2 rounded-xl text-sm font-bold glow cursor-pointer" style="pointer-events:auto;z-index:10;position:relative;">🚀 Take Final Exam</button>` : `<span class="text-yellow-600/50 text-sm"><i class="fa-solid fa-lock mr-1"></i> Complete all ${totalModules} modules</span>`}</div></div>
+              ${hasPassed ? `
+              <div class="glass rounded-xl p-4 text-center" style="border: 1px solid rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.08);">
+                <div class="flex items-center justify-center gap-2"><i class="fa-solid fa-circle-check text-green-400 text-xl"></i><h3 class="font-semibold text-green-400">🎯 Final Examination — Completed!</h3></div>
+                <p class="text-sm text-green-400/70 mt-1">You passed with ${passedScore}%. No more retakes needed.</p>
+                <button onclick="window.renderPage('certificates')" class="mt-3 bg-green-600/50 hover:bg-green-600 px-4 py-2 rounded-xl text-sm transition">🏅 View Certificates</button>
+              </div>` : `
+              <div class="glass rounded-xl p-4 ${examUnlocked ? 'final-exam-item-unlocked' : 'final-exam-locked final-exam-item'}"><div class="flex justify-between items-center flex-wrap gap-2"><div><div class="flex items-center gap-2">${examUnlocked ? '<i class="fa-solid fa-trophy text-yellow-400"></i>' : '<i class="fa-solid fa-lock text-yellow-600"></i>'}<h3 class="font-semibold text-yellow-400">🎯 Final Examination</h3></div><div class="flex gap-3 mt-1 text-xs text-gray-500"><span><i class="fa-regular fa-clock"></i> 60 min</span><span><i class="fa-regular fa-question-circle"></i> 25 questions</span><span>📊 70% to pass</span></div><p class="text-xs text-yellow-500/70 mt-1">Certificate code issued upon passing</p></div>${examUnlocked ? `<button id="finalExamBtn" onclick="event.preventDefault();event.stopPropagation();this.textContent='⏳ Loading...';this.disabled=true;this.style.opacity='0.7';window.startExam('${courseId}');" class="bg-gradient-to-r from-yellow-600 to-orange-500 px-5 py-2 rounded-xl text-sm font-bold glow cursor-pointer" style="pointer-events:auto;z-index:10;position:relative;">🚀 Take Final Exam</button>` : `<span class="text-yellow-600/50 text-sm"><i class="fa-solid fa-lock mr-1"></i> Complete all ${totalModules} modules</span>`}</div></div>`}
             </div></div>
           </div>
           <div class="space-y-6 hidden lg:block">
@@ -1114,7 +1165,7 @@ async function renderCourseDashboard(courseId) {
   } catch (error) { console.error('Error loading course dashboard:', error); root.innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load course</p><button onclick="renderPage('dashboard')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Go Back</button></div>`; }
 }
 
-// ==================== START EXAM (WITH LOCAL TIMEZONE FIX) ====================
+// ==================== START EXAM (WITH LOCAL TIMEZONE + ALREADY PASSED CHECK) ====================
 window.startExam = async (courseId) => {
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Preparing your final exam...</p></div>';
@@ -1124,6 +1175,25 @@ window.startExam = async (courseId) => {
     const response = await fetch(API_BASE + '/exams/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ courseId: courseId }) });
     const examData = await response.json();
     if (!response.ok) {
+      // Already passed
+      if (examData.error === 'Already passed') {
+        root.innerHTML = `
+          <div class="max-w-lg mx-auto mt-10 fade-in">
+            <div class="glass rounded-3xl p-8 text-center">
+              <div class="text-6xl mb-4">🎉</div>
+              <h2 class="text-2xl font-bold mb-2">Already Passed!</h2>
+              <p class="text-gray-400 mb-2">${examData.message}</p>
+              <p class="text-3xl font-black text-green-400 mb-4">${examData.score || ''}%</p>
+              ${examData.certificateCode ? `<p class="text-sm text-gray-400">Certificate Code: <span class="text-cyan-400 font-mono">${examData.certificateCode}</span></p>` : ''}
+              <div class="flex gap-3 flex-wrap mt-4">
+                <button onclick="window.renderPage('certificates')" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-xl font-bold">🏅 View Certificates</button>
+              </div>
+              <button onclick="window.renderCourseDashboard('${courseId}')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Course</button>
+            </div>
+          </div>`;
+        return;
+      }
+      // Cooldown
       if (examData.error === 'Cooldown') {
         var retakeLocalTime = examData.retakeTime ? new Date(examData.retakeTime) : null;
         var retakeTimeFormatted = retakeLocalTime ? retakeLocalTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Soon';
@@ -1164,79 +1234,8 @@ function renderQuizPage(courseId, moduleId, moduleName) { hideAIWidget(); const 
 window.retryQuiz = function(courseId, moduleId, moduleName) { if (currentQuizQuestions && currentQuizQuestions.length > 0) { currentQuizQuestions = [...currentQuizQuestions].sort(() => Math.random() - 0.5); renderQuizPage(courseId, moduleId, moduleName); } else { renderModulePage(courseId, moduleId); } };
 window.completeModuleAndReturn = async (courseId, moduleId, score) => { try { const result = await completeModule(courseId, moduleId, score); showToast(`Module completed! Score: ${score}%`, 'success'); try { const enrollmentData = await getMyEnrollments(); userEnrollmentsCache = enrollmentData.enrollments || []; } catch (e) {} if (result.examUnlocked) { showToast('🎉 All modules completed! Final Exam unlocked!', 'success'); } renderCourseDashboard(courseId); } catch (error) { showToast('Failed to save progress', 'error'); renderCourseDashboard(courseId); } };
 
-// ==================== FINAL EXAM PAGE (FIXED - Tracks answers by question ID) ====================
-function renderExamPage(courseId, examData) {
-  hideAIWidget();
-  const questions = examData.questions;
-  const questionIds = questions.map(function(q) { return q.id; });
-  let userAnswers = new Array(questions.length).fill(null);
-  let currentIndex = 0;
-  let timeLeft = examData.timeLimit || 3600;
-  let timerInterval;
-  const root = document.getElementById('app-root');
-
-  function renderQuestion() {
-    if (currentIndex >= questions.length) { submitFinalExam(); return; }
-    const q = questions[currentIndex];
-    if (!q || !q.text || !q.options) { currentIndex++; if (currentIndex < questions.length) { renderQuestion(); } else { submitFinalExam(); } return; }
-    const percent = ((currentIndex + 1) / questions.length) * 100;
-    const mins = Math.floor(timeLeft / 60);
-    const secs = timeLeft % 60;
-    root.innerHTML = `<div class="max-w-4xl mx-auto p-4 fade-in"><div class="glass rounded-3xl p-6"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h1 class="text-xl font-bold">Final Certification Exam</h1><div class="exam-timer">${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}</div></div><div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full" style="width: ${percent}%"></div></div><p class="text-lg font-semibold mb-6">${escapeHtml(q.text)}</p><div class="space-y-3 mb-8">${q.options.map((opt, i) => `<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer ${userAnswers[currentIndex] === i ? 'border border-cyan-400' : ''}"><input type="radio" name="examOption" value="${i}" ${userAnswers[currentIndex] === i ? 'checked' : ''}><span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span></label>`).join('')}</div><div class="flex justify-between"><button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button><button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Final Exam' : 'Next →'}</button></div><p class="text-xs text-gray-500 mt-4 text-center">⚠️ Do not refresh the page.</p></div></div>`;
-    document.querySelectorAll('input[name="examOption"]').forEach(function(radio) { radio.addEventListener('change', function(e) { userAnswers[currentIndex] = parseInt(e.target.value); }); });
-    document.getElementById('prevBtn')?.addEventListener('click', function() { if (currentIndex > 0) { currentIndex--; renderQuestion(); } });
-    document.getElementById('nextBtn')?.addEventListener('click', function() { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitFinalExam(); } else { currentIndex++; renderQuestion(); } });
-  }
-
-  function startTimer() {
-    timerInterval = setInterval(function() {
-      if (timeLeft <= 0) { clearInterval(timerInterval); submitFinalExam(); return; }
-      timeLeft--;
-      const timerSpan = document.querySelector('.exam-timer');
-      if (timerSpan) { const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; timerSpan.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; }
-    }, 1000);
-  }
-
-  async function submitFinalExam() {
-    clearInterval(timerInterval);
-    const timeSpent = (examData.timeLimit || 3600) - timeLeft;
-    root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Submitting your exam...</p></div>';
-    try {
-      // Send answers as an array in the same order as the questions were shown
-      const result = await submitExam(examData.sessionId, courseId, userAnswers, timeSpent);
-
-      if (result.passed) {
-        root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">🎉</div><h2 class="text-2xl font-bold mb-2">Congratulations!</h2><p class="text-4xl font-black gradient-text mb-2">${result.score}% - PASSED</p><p class="text-gray-300 mb-4">${result.correctCount}/${result.totalQuestions} correct</p><div class="bg-purple-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30"><p class="text-sm text-gray-400 mb-2">Your Certificate Code:</p><div class="certificate-code-display text-2xl mb-1">${result.certificateCode}</div><button onclick="window.copyToClipboard('${result.certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm">📞 Show this code to the academics team:</p><a href="https://wa.me/${(result.supportWhatsApp || '+263714587259').replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-lg whatsapp-link">${result.supportWhatsApp || '+263714587259'}</a></div><button onclick="window.renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-8 py-3 rounded-xl font-bold">View Certificates →</button></div></div>`;
-        showToast('🎉 PASSED! Certificate code generated!', 'success');
-      } else {
-        var retakeLocalTime = result.retakeTime ? new Date(result.retakeTime) : null;
-        var retakeTimeFormatted = retakeLocalTime ? retakeLocalTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Soon';
-        var retakeDateFormatted = retakeLocalTime ? retakeLocalTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
-        var hoursLeft = result.hoursLeft || 0;
-        var minutesLeft = result.minutesLeft ? Math.round(result.minutesLeft % 60) : 0;
-        const failPercent = result.score || 0;
-        const failBarWidth = failPercent;
-        const reviewTopics = result.reviewTopics || [];
-
-        let reviewTopicsHTML = '';
-        if (reviewTopics.length > 0) {
-          reviewTopicsHTML = '<div class="text-left mb-6"><h3 class="font-bold mb-2">📝 Topics to review:</h3>' + reviewTopics.map(function(t) { return '<div class="glass rounded-lg p-2 mb-1 text-sm">• ' + escapeHtml(t) + '</div>'; }).join('') + '</div>';
-        }
-
-        let wrongAnswersHTML = '';
-        if (result.wrongAnswers && result.wrongAnswers.length > 0) {
-          wrongAnswersHTML = '<div class="text-left mb-6 max-h-40 overflow-y-auto"><h3 class="font-bold mb-2">❌ Questions missed:</h3>' + result.wrongAnswers.map(function(wa) { return '<div class="glass rounded-xl p-3 mb-2"><p class="text-sm font-medium">' + escapeHtml(wa.question) + '</p><p class="text-xs text-green-400">✅ Correct: ' + escapeHtml(wa.correctAnswer) + '</p><p class="text-xs text-red-400">❌ Your answer: ' + escapeHtml(wa.yourAnswer) + '</p></div>'; }).join('') + '</div>';
-        }
-
-        root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">😔</div><h2 class="text-2xl font-bold mb-2">Not Passed</h2><p class="text-4xl font-black text-red-400 mb-2">${failPercent}%</p><p class="text-gray-400 mb-2">${result.correctCount}/${result.totalQuestions} correct • Need 70% to pass</p><div class="w-full bg-gray-700 h-3 rounded-full mb-6"><div class="bg-red-500 h-3 rounded-full transition-all" style="width: ${failBarWidth}%"></div></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm text-gray-400">⏰ Retake available at:</p><p class="text-lg text-yellow-400 font-bold">${retakeTimeFormatted}</p><p class="text-sm text-gray-400">${retakeDateFormatted}</p><p class="text-xs text-gray-500 mt-1">in ${hoursLeft} hour(s) ${minutesLeft} min(s)</p></div>${reviewTopicsHTML}${wrongAnswersHTML}<div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${courseId}')" class="flex-1 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition">📖 Review Course Material</button></div><button onclick="window.renderPage('dashboard')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Dashboard</button></div></div>`;
-        showToast('❌ ' + failPercent + '%. Retake in ' + hoursLeft + 'h ' + minutesLeft + 'm.', 'error');
-      }
-    } catch (error) { showToast('Failed to submit exam', 'error'); renderPage('dashboard'); }
-  }
-
-  renderQuestion();
-  startTimer();
-}
+// ==================== FINAL EXAM PAGE ====================
+function renderExamPage(courseId, examData) { hideAIWidget(); const questions = examData.questions; let userAnswers = new Array(questions.length).fill(null); let currentIndex = 0; let timeLeft = examData.timeLimit || 3600; let timerInterval; const root = document.getElementById('app-root'); function renderQuestion() { if (currentIndex >= questions.length) { submitFinalExam(); return; } const q = questions[currentIndex]; if (!q || !q.text || !q.options) { currentIndex++; if (currentIndex < questions.length) { renderQuestion(); } else { submitFinalExam(); } return; } const percent = ((currentIndex + 1) / questions.length) * 100; const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; root.innerHTML = `<div class="max-w-4xl mx-auto p-4 fade-in"><div class="glass rounded-3xl p-6"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h1 class="text-xl font-bold">Final Certification Exam</h1><div class="exam-timer">${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}</div></div><div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full" style="width: ${percent}%"></div></div><p class="text-lg font-semibold mb-6">${escapeHtml(q.text)}</p><div class="space-y-3 mb-8">${q.options.map((opt, i) => `<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer ${userAnswers[currentIndex] === i ? 'border border-cyan-400' : ''}"><input type="radio" name="examOption" value="${i}" ${userAnswers[currentIndex] === i ? 'checked' : ''}><span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span></label>`).join('')}</div><div class="flex justify-between"><button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button><button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Final Exam' : 'Next →'}</button></div><p class="text-xs text-gray-500 mt-4 text-center">⚠️ Do not refresh the page.</p></div></div>`; document.querySelectorAll('input[name="examOption"]').forEach(function(radio) { radio.addEventListener('change', function(e) { userAnswers[currentIndex] = parseInt(e.target.value); }); }); document.getElementById('prevBtn')?.addEventListener('click', function() { if (currentIndex > 0) { currentIndex--; renderQuestion(); } }); document.getElementById('nextBtn')?.addEventListener('click', function() { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitFinalExam(); } else { currentIndex++; renderQuestion(); } }); } function startTimer() { timerInterval = setInterval(function() { if (timeLeft <= 0) { clearInterval(timerInterval); submitFinalExam(); return; } timeLeft--; const timerSpan = document.querySelector('.exam-timer'); if (timerSpan) { const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; timerSpan.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; } }, 1000); } async function submitFinalExam() { clearInterval(timerInterval); const timeSpent = (examData.timeLimit || 3600) - timeLeft; root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Submitting your exam...</p></div>'; try { const result = await submitExam(examData.sessionId, courseId, userAnswers, timeSpent); if (result.passed) { root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">🎉</div><h2 class="text-2xl font-bold mb-2">Congratulations!</h2><p class="text-4xl font-black gradient-text mb-2">${result.score}% - PASSED</p><p class="text-gray-300 mb-4">${result.correctCount}/${result.totalQuestions} correct</p><div class="bg-purple-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30"><p class="text-sm text-gray-400 mb-2">Your Certificate Code:</p><div class="certificate-code-display text-2xl mb-1">${result.certificateCode}</div><button onclick="window.copyToClipboard('${result.certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm">📞 Show this code to the academics team:</p><a href="https://wa.me/${(result.supportWhatsApp || '+263714587259').replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-lg whatsapp-link">${result.supportWhatsApp || '+263714587259'}</a></div><button onclick="window.renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-8 py-3 rounded-xl font-bold">View Certificates →</button></div></div>`; showToast('🎉 PASSED! Certificate code generated!', 'success'); } else { var retakeLocalTime = result.retakeTime ? new Date(result.retakeTime) : null; var retakeTimeFormatted = retakeLocalTime ? retakeLocalTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Soon'; var retakeDateFormatted = retakeLocalTime ? retakeLocalTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''; var hoursLeft = result.hoursLeft || 0; var minutesLeft = result.minutesLeft ? Math.round(result.minutesLeft % 60) : 0; const failPercent = result.score || 0; const failBarWidth = failPercent; const reviewTopics = result.reviewTopics || []; let reviewTopicsHTML = ''; if (reviewTopics.length > 0) { reviewTopicsHTML = '<div class="text-left mb-6"><h3 class="font-bold mb-2">📝 Topics to review:</h3>' + reviewTopics.map(function(t) { return '<div class="glass rounded-lg p-2 mb-1 text-sm">• ' + escapeHtml(t) + '</div>'; }).join('') + '</div>'; } let wrongAnswersHTML = ''; if (result.wrongAnswers && result.wrongAnswers.length > 0) { wrongAnswersHTML = '<div class="text-left mb-6 max-h-40 overflow-y-auto"><h3 class="font-bold mb-2">❌ Questions missed:</h3>' + result.wrongAnswers.map(function(wa) { return '<div class="glass rounded-xl p-3 mb-2"><p class="text-sm font-medium">' + escapeHtml(wa.question) + '</p><p class="text-xs text-green-400">✅ Correct: ' + escapeHtml(wa.correctAnswer) + '</p><p class="text-xs text-red-400">❌ Your answer: ' + escapeHtml(wa.yourAnswer) + '</p></div>'; }).join('') + '</div>'; } root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">😔</div><h2 class="text-2xl font-bold mb-2">Not Passed</h2><p class="text-4xl font-black text-red-400 mb-2">${failPercent}%</p><p class="text-gray-400 mb-2">${result.correctCount}/${result.totalQuestions} correct • Need 70% to pass</p><div class="w-full bg-gray-700 h-3 rounded-full mb-6"><div class="bg-red-500 h-3 rounded-full transition-all" style="width: ${failBarWidth}%"></div></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm text-gray-400">⏰ Retake available at:</p><p class="text-lg text-yellow-400 font-bold">${retakeTimeFormatted}</p><p class="text-sm text-gray-400">${retakeDateFormatted}</p><p class="text-xs text-gray-500 mt-1">in ${hoursLeft} hour(s) ${minutesLeft} min(s)</p></div>${reviewTopicsHTML}${wrongAnswersHTML}<div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${courseId}')" class="flex-1 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition">📖 Review Course Material</button></div><button onclick="window.renderPage('dashboard')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Dashboard</button></div></div>`; showToast('❌ ' + failPercent + '%. Retake in ' + hoursLeft + 'h ' + minutesLeft + 'm.', 'error'); } } catch (error) { showToast('Failed to submit exam', 'error'); renderPage('dashboard'); } } renderQuestion(); startTimer(); }
 
 // ==================== CHECKOUT ====================
 window.openCheckout = async (courseId) => {
@@ -1297,6 +1296,7 @@ async function renderAdmin() {
     html += '<button id="quickAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button>';
     html += '<button id="quickApproveCerts" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button>';
     html += '</div>';
+
     html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><div class="flex gap-2"><button id="saveCourseOrderBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Order</button><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button></div></div><p class="text-xs text-gray-500 mb-2">Drag rows to reorder courses, then click Save Order.</p><div class="overflow-x-auto"><table class="w-full admin-table" id="adminCourseTable"><thead><tr class="border-b border-white/10"><th class="text-left py-3 w-8"></th><th class="text-left">Course</th><th class="text-left">Fee $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody id="adminCourseTableBody">';
     for (var i = 0; i < currentCourses.length; i++) { var c = currentCourses[i]; var cp = c.price || c.examPrice || 0; html += '<tr class="border-b border-white/10 hover:bg-white/5 course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '"><td class="py-3"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span></td><td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ' + (c.icon || 'fa-certificate') + ' text-purple-400"></i><span class="font-medium">' + escapeHtml(c.name) + '</span></div></td><td>$' + cp + '</td><td>' + (c.enrolledCount || 0) + '</td><td class="space-x-2"><button onclick="window.showEditCourseModal(\'' + c.id + '\')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button><button onclick="window.showManageVideosModal(\'' + c.id + '\')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button></td></tr>'; }
     html += '</tbody></table></div></div>';
@@ -1326,9 +1326,9 @@ async function renderAdmin() {
   }, 300);
 }
 
+// [Admin modals, AI Teacher Chat, AI Widget Chat, Initialization - all unchanged from previous version]
 function initDragAndDrop() { var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row'); var draggedRow = null; rows.forEach(function(row) { row.addEventListener('dragstart', function(e) { draggedRow = this; this.classList.add('course-row-dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', this.dataset.courseId); }); row.addEventListener('dragend', function(e) { this.classList.remove('course-row-dragging'); document.querySelectorAll('.course-drag-row').forEach(function(r) { r.classList.remove('course-row-drag-over'); }); draggedRow = null; }); row.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (this !== draggedRow) { this.classList.add('course-row-drag-over'); } }); row.addEventListener('dragleave', function(e) { this.classList.remove('course-row-drag-over'); }); row.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('course-row-drag-over'); if (this !== draggedRow) { var tbody = document.getElementById('adminCourseTableBody'); var allRows = Array.from(tbody.querySelectorAll('.course-drag-row')); var draggedIndex = allRows.indexOf(draggedRow); var droppedIndex = allRows.indexOf(this); if (draggedIndex < droppedIndex) { tbody.insertBefore(draggedRow, this.nextSibling); } else { tbody.insertBefore(draggedRow, this); } } }); }); }
 
-// ==================== ADMIN MODALS ====================
 function showAddAdminModal() { var m = '<div id="addAdminModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-yellow-600 to-amber-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-crown mr-2"></i> Add Admin</h2><button onclick="closeModal(\'addAdminModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><p class="text-sm text-gray-400 mb-4">Create a new admin account or promote an existing user.</p><div class="mb-6"><h3 class="font-semibold mb-3 text-yellow-400">Option 1: Create New Admin</h3><div class="space-y-3"><input type="text" id="newAdminName" placeholder="Full name" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off"><input type="email" id="newAdminEmail" placeholder="Email address" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off"><input type="password" id="newAdminPassword" placeholder="Password (min 5 chars)" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off"><button onclick="createNewAdminAccount()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-2 rounded-xl font-bold text-sm transition">➕ Create Admin Account</button></div></div><div class="border-t border-white/10 pt-4"><h3 class="font-semibold mb-3 text-cyan-400">Option 2: Promote Existing User</h3><div class="space-y-3"><input type="text" id="promoteUserEmail" placeholder="Enter user email to promote" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off"><button onclick="promoteExistingUser()" class="w-full bg-cyan-600 hover:bg-cyan-500 py-2 rounded-xl font-bold text-sm transition">👑 Promote to Admin</button></div></div><button onclick="closeModal(\'addAdminModal\')" class="w-full glass py-3 rounded-xl font-bold mt-4">Cancel</button></div></div></div>'; document.body.insertAdjacentHTML('beforeend', m); }
 async function createNewAdminAccount() { var n = document.getElementById('newAdminName')?.value; var e = document.getElementById('newAdminEmail')?.value; var p = document.getElementById('newAdminPassword')?.value; if (!n || !e || !p) { showToast('Please fill all fields', 'error'); return; } if (p.length < 5) { showToast('Password must be at least 5 characters', 'error'); return; } try { var r = await apiRequest('/admin/add-admin', { method: 'POST', body: JSON.stringify({ name: n, email: e, password: p }) }); showToast(r.message, 'success'); closeModal('addAdminModal'); renderAdmin(); } catch (err) { showToast('Failed: ' + err.message, 'error'); } }
 async function promoteExistingUser() { var e = document.getElementById('promoteUserEmail')?.value; if (!e) { showToast('Please enter a user email', 'error'); return; } try { var ud = await getAllUsers(); var u = ud.users?.find(function(u2) { return u2.email.toLowerCase() === e.toLowerCase(); }); if (!u) { showToast('User not found', 'error'); return; } if (u.role === 'admin') { showToast('Already an admin', 'info'); return; } var r = await apiRequest('/admin/add-admin', { method: 'POST', body: JSON.stringify({ userId: u.id }) }); showToast(r.message, 'success'); closeModal('addAdminModal'); renderAdmin(); } catch (err) { showToast('Failed: ' + err.message, 'error'); } }
@@ -1418,4 +1418,4 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(async function() { await loadCourses(); await checkAuth(); updateAuthUI(); updateNavbarStyle(); if (loader) { loader.style.transition = 'opacity 0.5s ease-out'; loader.style.opacity = '0'; setTimeout(function() { loader.style.display = 'none'; }, 500); } renderPage(currentUser ? 'dashboard' : 'landing'); console.log('✅ obliXel Academy v10.0 fully initialized'); }, 6000);
 });
 
-console.log('🎉 obliXel Academy v10.0 - COMPLETE - Answer ID Matching Fix Applied');
+console.log('🎉 obliXel Academy v10.0 - COMPLETE - Certificate Section After Passing');
