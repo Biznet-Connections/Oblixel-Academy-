@@ -62,38 +62,43 @@ router.post('/start', authenticate, async (req, res) => {
     const completedCount = await ModuleProgress.countDocuments({ userId, courseId: courseId.toLowerCase(), completed: true });
     if (completedCount < totalModules) return res.status(403).json({ error: 'Not all modules done', completed: completedCount, total: totalModules });
 
-    // Get questions and shuffle them fresh for every attempt
+    // Get questions and shuffle them
     let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
-
-    // If not enough questions in DB, use fallbacks
     if (questions.length < EXAM_TOTAL_QUESTIONS) {
       const fallbackQuestions = getFallbackQuestions(courseId);
-      const combinedQuestions = [...questions, ...fallbackQuestions];
-      questions = combinedQuestions;
+      questions = [...questions, ...fallbackQuestions];
     }
 
-    // Shuffle ALL questions before selecting (ensures different set each attempt)
     const shuffled = questions.sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
 
-    // Send question ID, text, and options to frontend
+    // Build safe questions for frontend (without correct answer)
     const safeQuestions = selected.map(q => ({
       id: q._id.toString(),
       text: q.text,
       options: q.options
     }));
 
-    // Save the question IDs in order for this session so we can match answers later
+    // ===== KEY FIX: Save complete question data in session =====
+    // This ensures we NEVER have to re-fetch questions on submit
+    const savedQuestions = selected.map(q => ({
+      id: q._id.toString(),
+      text: q.text,
+      options: q.options,
+      correct: q.correct
+    }));
+
     const session = await ExamSession.create({
       userId,
       courseId: courseId.toLowerCase(),
       startTime: new Date(),
       status: 'in_progress',
       questionCount: safeQuestions.length,
-      questionOrder: safeQuestions.map(q => q.id) // Store the order of question IDs
+      questionOrder: safeQuestions.map(q => q.id), // Keep for backwards compatibility
+      questions: savedQuestions // NEW: Store full question data in session
     });
 
-    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions`);
+    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions (questions saved in session)`);
 
     res.json({
       sessionId: session._id,
@@ -108,7 +113,7 @@ router.post('/start', authenticate, async (req, res) => {
   }
 });
 
-// ==================== SUBMIT EXAM (FIXED - Matches by Question ID) ====================
+// ==================== SUBMIT EXAM (FIXED - Uses questions from session) ====================
 router.post('/submit', authenticate, async (req, res) => {
   const { sessionId, courseId, answers, timeSpent } = req.body;
   const userId = req.user._id;
@@ -119,74 +124,60 @@ router.post('/submit', authenticate, async (req, res) => {
     if (!session) return res.status(400).json({ error: 'Invalid session' });
     if (session.status === 'completed') return res.status(400).json({ error: 'Already submitted' });
 
-    // Get all questions for this course from DB
-    let allQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
-    if (allQuestions.length === 0) allQuestions = getFallbackQuestions(courseId);
-
-    // Build a map of question ID -> question object for quick lookup
-    const questionMap = {};
-    allQuestions.forEach(q => {
-      questionMap[q._id.toString()] = q;
-    });
-
-    // Also add fallback questions to the map
-    const fallbackQs = getFallbackQuestions(courseId);
-    fallbackQs.forEach(q => {
-      if (!questionMap[q._id]) {
-        questionMap[q._id] = q;
-      }
-    });
-
-    // Get the question order from the session (the order they were shown to the student)
+    // ===== KEY FIX: Use questions directly from session =====
+    // No more re-fetching from DB which could cause ID mismatches
+    let questions = session.questions || [];
     const questionOrder = session.questionOrder || [];
+
+    // If session has no saved questions (old sessions), fall back to DB
+    if (questions.length === 0) {
+      console.log('[EXAM] No questions in session, falling back to DB');
+      let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
+      if (dbQuestions.length === 0) dbQuestions = getFallbackQuestions(courseId);
+
+      // Build questions array matching questionOrder
+      const dbQuestionMap = {};
+      dbQuestions.forEach(q => { dbQuestionMap[q._id.toString()] = q; });
+
+      const fallbackQs = getFallbackQuestions(courseId);
+      fallbackQs.forEach(q => {
+        if (!dbQuestionMap[q._id]) dbQuestionMap[q._id] = q;
+      });
+
+      questions = questionOrder.map(id => {
+        const q = dbQuestionMap[id];
+        return q ? {
+          id: id,
+          text: q.text,
+          options: q.options,
+          correct: q.correct
+        } : null;
+      }).filter(Boolean);
+    }
 
     let correctCount = 0;
     const wrongAnswers = [];
 
-    // If we have the question order from the session, use it to match answers
-    if (questionOrder.length > 0) {
-      for (let i = 0; i < questionOrder.length; i++) {
-        const questionId = questionOrder[i];
-        const userAnswerIndex = (answers[i] !== undefined && answers[i] !== null) ? parseInt(answers[i]) : -1;
-        const question = questionMap[questionId];
+    // Match answers against the questions in order
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      if (!question) continue;
 
-        if (!question) {
-          console.log(`[EXAM] Question not found for ID: ${questionId}`);
-          continue;
-        }
+      const userAnswerIndex = (answers[i] !== undefined && answers[i] !== null) ? parseInt(answers[i]) : -1;
 
-        if (userAnswerIndex === question.correct) {
-          correctCount++;
-        } else {
-          wrongAnswers.push({
-            question: question.text,
-            correctAnswer: question.options[question.correct],
-            yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length ? question.options[userAnswerIndex] : 'Not answered',
-            topic: extractTopic(question.text, courseId)
-          });
-        }
-      }
-    } else {
-      // Fallback: match by index (old method for sessions without questionOrder)
-      for (let i = 0; i < answers.length; i++) {
-        const userAnswerIndex = (answers[i] !== undefined && answers[i] !== null) ? parseInt(answers[i]) : -1;
-        if (i < allQuestions.length) {
-          const question = allQuestions[i];
-          if (userAnswerIndex === question.correct) {
-            correctCount++;
-          } else {
-            wrongAnswers.push({
-              question: question.text,
-              correctAnswer: question.options[question.correct],
-              yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length ? question.options[userAnswerIndex] : 'Not answered',
-              topic: extractTopic(question.text, courseId)
-            });
-          }
-        }
+      if (userAnswerIndex === question.correct) {
+        correctCount++;
+      } else {
+        wrongAnswers.push({
+          question: question.text,
+          correctAnswer: question.options[question.correct],
+          yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length ? question.options[userAnswerIndex] : 'Not answered',
+          topic: extractTopic(question.text, courseId)
+        });
       }
     }
 
-    const totalQuestions = questionOrder.length > 0 ? questionOrder.length : Math.min(answers.length, allQuestions.length);
+    const totalQuestions = questions.length;
     const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
     const passed = score >= EXAM_PASS_SCORE;
 
