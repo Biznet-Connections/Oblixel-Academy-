@@ -727,9 +727,8 @@ function renderPage(page) {
 // ==================== END OF PART 1 ====================
 console.log('✅ Part 1 (Core & Auth) loaded - NCP/CCP ready, AI Widget landing only, Voucher instant auto-enroll, 10 questions per module, 70% pass');
 
-
 // ==================== PART 2: USER FEATURES & PAGES ====================
-console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel, Modal Confirmations, Payment Type Fix, 3hr Cooldown, Beautiful Failure Screen)');
+console.log('🚀 Loading Part 2 (All Pages, AI Teacher, Final Exam Fix, Professor Card Position Fix, Admin Reorder, Add Admin, Like/Dislike, Certificate Codes, Single Price, Fixed Admin Panel, Modal Confirmations, Payment Type Fix, 3hr Cooldown, Beautiful Failure Screen, Local Timezone Fix, Answer ID Matching Fix)');
 
 // ==================== LANDING PAGE ====================
 function renderLandingPage() {
@@ -1115,7 +1114,7 @@ async function renderCourseDashboard(courseId) {
   } catch (error) { console.error('Error loading course dashboard:', error); root.innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load course</p><button onclick="renderPage('dashboard')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Go Back</button></div>`; }
 }
 
-// ==================== START EXAM ====================
+// ==================== START EXAM (WITH LOCAL TIMEZONE FIX) ====================
 window.startExam = async (courseId) => {
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Preparing your final exam...</p></div>';
@@ -1126,6 +1125,12 @@ window.startExam = async (courseId) => {
     const examData = await response.json();
     if (!response.ok) {
       if (examData.error === 'Cooldown') {
+        var retakeLocalTime = examData.retakeTime ? new Date(examData.retakeTime) : null;
+        var retakeTimeFormatted = retakeLocalTime ? retakeLocalTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Soon';
+        var retakeDateFormatted = retakeLocalTime ? retakeLocalTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+        var hoursLeft = examData.hoursLeft || 0;
+        var minutesLeft = examData.minutesLeft ? Math.round(examData.minutesLeft % 60) : 0;
+
         root.innerHTML = `
           <div class="max-w-lg mx-auto mt-10 fade-in">
             <div class="glass rounded-3xl p-8 text-center">
@@ -1133,9 +1138,9 @@ window.startExam = async (courseId) => {
               <h2 class="text-2xl font-bold mb-2">Cooldown Active</h2>
               <p class="text-gray-400 mb-4">${examData.message}</p>
               <div class="glass rounded-xl p-4 mb-6">
-                <p class="text-lg text-yellow-400 font-bold">${examData.retakeTimeFormatted || 'Soon'}</p>
-                <p class="text-sm text-gray-400 mt-1">${examData.retakeDateFormatted || ''}</p>
-                <p class="text-xs text-gray-500 mt-2">in ${examData.hoursLeft || 0} hour(s) ${examData.minutesLeft ? Math.round(examData.minutesLeft % 60) + ' min(s)' : ''}</p>
+                <p class="text-lg text-yellow-400 font-bold">${retakeTimeFormatted}</p>
+                <p class="text-sm text-gray-400 mt-1">${retakeDateFormatted}</p>
+                <p class="text-xs text-gray-500 mt-2">in ${hoursLeft} hour(s) ${minutesLeft} min(s)</p>
               </div>
               <button onclick="window.renderCourseDashboard('${courseId}')" class="bg-purple-600 px-6 py-3 rounded-xl font-bold">📖 Review Course Material</button>
               <button onclick="window.renderPage('dashboard')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Dashboard</button>
@@ -1159,36 +1164,79 @@ function renderQuizPage(courseId, moduleId, moduleName) { hideAIWidget(); const 
 window.retryQuiz = function(courseId, moduleId, moduleName) { if (currentQuizQuestions && currentQuizQuestions.length > 0) { currentQuizQuestions = [...currentQuizQuestions].sort(() => Math.random() - 0.5); renderQuizPage(courseId, moduleId, moduleName); } else { renderModulePage(courseId, moduleId); } };
 window.completeModuleAndReturn = async (courseId, moduleId, score) => { try { const result = await completeModule(courseId, moduleId, score); showToast(`Module completed! Score: ${score}%`, 'success'); try { const enrollmentData = await getMyEnrollments(); userEnrollmentsCache = enrollmentData.enrollments || []; } catch (e) {} if (result.examUnlocked) { showToast('🎉 All modules completed! Final Exam unlocked!', 'success'); } renderCourseDashboard(courseId); } catch (error) { showToast('Failed to save progress', 'error'); renderCourseDashboard(courseId); } };
 
-// ==================== FINAL EXAM PAGE WITH BEAUTIFUL FAILURE SCREEN ====================
-function renderExamPage(courseId, examData) { hideAIWidget(); const questions = examData.questions; let userAnswers = new Array(questions.length).fill(null); let currentIndex = 0; let timeLeft = examData.timeLimit || 3600; let timerInterval; const root = document.getElementById('app-root'); function renderQuestion() { if (currentIndex >= questions.length) { submitFinalExam(); return; } const q = questions[currentIndex]; if (!q || !q.text || !q.options) { currentIndex++; if (currentIndex < questions.length) { renderQuestion(); } else { submitFinalExam(); } return; } const percent = ((currentIndex + 1) / questions.length) * 100; const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; root.innerHTML = `<div class="max-w-4xl mx-auto p-4 fade-in"><div class="glass rounded-3xl p-6"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h1 class="text-xl font-bold">Final Certification Exam</h1><div class="exam-timer">${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}</div></div><div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full" style="width: ${percent}%"></div></div><p class="text-lg font-semibold mb-6">${escapeHtml(q.text)}</p><div class="space-y-3 mb-8">${q.options.map((opt, i) => `<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer ${userAnswers[currentIndex] === i ? 'border border-cyan-400' : ''}"><input type="radio" name="examOption" value="${i}" ${userAnswers[currentIndex] === i ? 'checked' : ''}><span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span></label>`).join('')}</div><div class="flex justify-between"><button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button><button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Final Exam' : 'Next →'}</button></div><p class="text-xs text-gray-500 mt-4 text-center">⚠️ Do not refresh the page.</p></div></div>`; document.querySelectorAll('input[name="examOption"]').forEach(radio => { radio.addEventListener('change', (e) => { userAnswers[currentIndex] = parseInt(e.target.value); }); }); document.getElementById('prevBtn')?.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; renderQuestion(); } }); document.getElementById('nextBtn')?.addEventListener('click', () => { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitFinalExam(); } else { currentIndex++; renderQuestion(); } }); } function startTimer() { timerInterval = setInterval(() => { if (timeLeft <= 0) { clearInterval(timerInterval); submitFinalExam(); return; } timeLeft--; const timerSpan = document.querySelector('.exam-timer'); if (timerSpan) { const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; timerSpan.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; } }, 1000); } async function submitFinalExam() { clearInterval(timerInterval); const timeSpent = (examData.timeLimit || 3600) - timeLeft; root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Submitting your exam...</p></div>'; try { const result = await submitExam(examData.sessionId, courseId, userAnswers, timeSpent);
+// ==================== FINAL EXAM PAGE (FIXED - Tracks answers by question ID) ====================
+function renderExamPage(courseId, examData) {
+  hideAIWidget();
+  const questions = examData.questions;
+  const questionIds = questions.map(function(q) { return q.id; });
+  let userAnswers = new Array(questions.length).fill(null);
+  let currentIndex = 0;
+  let timeLeft = examData.timeLimit || 3600;
+  let timerInterval;
+  const root = document.getElementById('app-root');
 
-    if (result.passed) {
-      root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">🎉</div><h2 class="text-2xl font-bold mb-2">Congratulations!</h2><p class="text-4xl font-black gradient-text mb-2">${result.score}% - PASSED</p><p class="text-gray-300 mb-4">${result.correctCount}/${result.totalQuestions} correct</p><div class="bg-purple-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30"><p class="text-sm text-gray-400 mb-2">Your Certificate Code:</p><div class="certificate-code-display text-2xl mb-1">${result.certificateCode}</div><button onclick="window.copyToClipboard('${result.certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm">📞 Show this code to the academics team:</p><a href="https://wa.me/${(result.supportWhatsApp || '+263714587259').replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-lg whatsapp-link">${result.supportWhatsApp || '+263714587259'}</a></div><button onclick="window.renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-8 py-3 rounded-xl font-bold">View Certificates →</button></div></div>`;
-      showToast('🎉 PASSED! Certificate code generated!', 'success');
-    } else {
-      // Beautiful failure screen
-      const failPercent = result.score || 0;
-      const failBarWidth = failPercent;
-      const reviewTopics = result.reviewTopics || [];
-      const retakeTimeFormatted = result.retakeTimeFormatted || 'Soon';
-      const retakeDateFormatted = result.retakeDateFormatted || '';
-      const hoursLeft = result.hoursLeft || 0;
-      const minutesLeft = result.minutesLeft ? Math.round(result.minutesLeft % 60) : 0;
+  function renderQuestion() {
+    if (currentIndex >= questions.length) { submitFinalExam(); return; }
+    const q = questions[currentIndex];
+    if (!q || !q.text || !q.options) { currentIndex++; if (currentIndex < questions.length) { renderQuestion(); } else { submitFinalExam(); } return; }
+    const percent = ((currentIndex + 1) / questions.length) * 100;
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    root.innerHTML = `<div class="max-w-4xl mx-auto p-4 fade-in"><div class="glass rounded-3xl p-6"><div class="flex justify-between items-center mb-4 flex-wrap gap-2"><h1 class="text-xl font-bold">Final Certification Exam</h1><div class="exam-timer">${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}</div></div><div class="w-full bg-gray-700 h-1 rounded-full mb-6"><div class="bg-purple-600 h-1 rounded-full" style="width: ${percent}%"></div></div><p class="text-lg font-semibold mb-6">${escapeHtml(q.text)}</p><div class="space-y-3 mb-8">${q.options.map((opt, i) => `<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer ${userAnswers[currentIndex] === i ? 'border border-cyan-400' : ''}"><input type="radio" name="examOption" value="${i}" ${userAnswers[currentIndex] === i ? 'checked' : ''}><span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span></label>`).join('')}</div><div class="flex justify-between"><button id="prevBtn" class="glass px-6 py-2 rounded-xl" ${currentIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button><button id="nextBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-2 rounded-xl font-bold">${currentIndex === questions.length - 1 ? 'Submit Final Exam' : 'Next →'}</button></div><p class="text-xs text-gray-500 mt-4 text-center">⚠️ Do not refresh the page.</p></div></div>`;
+    document.querySelectorAll('input[name="examOption"]').forEach(function(radio) { radio.addEventListener('change', function(e) { userAnswers[currentIndex] = parseInt(e.target.value); }); });
+    document.getElementById('prevBtn')?.addEventListener('click', function() { if (currentIndex > 0) { currentIndex--; renderQuestion(); } });
+    document.getElementById('nextBtn')?.addEventListener('click', function() { if (currentIndex === questions.length - 1) { clearInterval(timerInterval); submitFinalExam(); } else { currentIndex++; renderQuestion(); } });
+  }
 
-      let reviewTopicsHTML = '';
-      if (reviewTopics.length > 0) {
-        reviewTopicsHTML = '<div class="text-left mb-6"><h3 class="font-bold mb-2">📝 Topics to review:</h3>' + reviewTopics.map(t => '<div class="glass rounded-lg p-2 mb-1 text-sm">• ' + escapeHtml(t) + '</div>').join('') + '</div>';
+  function startTimer() {
+    timerInterval = setInterval(function() {
+      if (timeLeft <= 0) { clearInterval(timerInterval); submitFinalExam(); return; }
+      timeLeft--;
+      const timerSpan = document.querySelector('.exam-timer');
+      if (timerSpan) { const mins = Math.floor(timeLeft / 60); const secs = timeLeft % 60; timerSpan.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; }
+    }, 1000);
+  }
+
+  async function submitFinalExam() {
+    clearInterval(timerInterval);
+    const timeSpent = (examData.timeLimit || 3600) - timeLeft;
+    root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Submitting your exam...</p></div>';
+    try {
+      // Send answers as an array in the same order as the questions were shown
+      const result = await submitExam(examData.sessionId, courseId, userAnswers, timeSpent);
+
+      if (result.passed) {
+        root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">🎉</div><h2 class="text-2xl font-bold mb-2">Congratulations!</h2><p class="text-4xl font-black gradient-text mb-2">${result.score}% - PASSED</p><p class="text-gray-300 mb-4">${result.correctCount}/${result.totalQuestions} correct</p><div class="bg-purple-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30"><p class="text-sm text-gray-400 mb-2">Your Certificate Code:</p><div class="certificate-code-display text-2xl mb-1">${result.certificateCode}</div><button onclick="window.copyToClipboard('${result.certificateCode}')" class="mt-2 text-xs text-cyan-400 hover:underline"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm">📞 Show this code to the academics team:</p><a href="https://wa.me/${(result.supportWhatsApp || '+263714587259').replace(/\+/g, '')}" target="_blank" class="text-cyan-400 font-bold text-lg whatsapp-link">${result.supportWhatsApp || '+263714587259'}</a></div><button onclick="window.renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-8 py-3 rounded-xl font-bold">View Certificates →</button></div></div>`;
+        showToast('🎉 PASSED! Certificate code generated!', 'success');
+      } else {
+        var retakeLocalTime = result.retakeTime ? new Date(result.retakeTime) : null;
+        var retakeTimeFormatted = retakeLocalTime ? retakeLocalTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Soon';
+        var retakeDateFormatted = retakeLocalTime ? retakeLocalTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+        var hoursLeft = result.hoursLeft || 0;
+        var minutesLeft = result.minutesLeft ? Math.round(result.minutesLeft % 60) : 0;
+        const failPercent = result.score || 0;
+        const failBarWidth = failPercent;
+        const reviewTopics = result.reviewTopics || [];
+
+        let reviewTopicsHTML = '';
+        if (reviewTopics.length > 0) {
+          reviewTopicsHTML = '<div class="text-left mb-6"><h3 class="font-bold mb-2">📝 Topics to review:</h3>' + reviewTopics.map(function(t) { return '<div class="glass rounded-lg p-2 mb-1 text-sm">• ' + escapeHtml(t) + '</div>'; }).join('') + '</div>';
+        }
+
+        let wrongAnswersHTML = '';
+        if (result.wrongAnswers && result.wrongAnswers.length > 0) {
+          wrongAnswersHTML = '<div class="text-left mb-6 max-h-40 overflow-y-auto"><h3 class="font-bold mb-2">❌ Questions missed:</h3>' + result.wrongAnswers.map(function(wa) { return '<div class="glass rounded-xl p-3 mb-2"><p class="text-sm font-medium">' + escapeHtml(wa.question) + '</p><p class="text-xs text-green-400">✅ Correct: ' + escapeHtml(wa.correctAnswer) + '</p><p class="text-xs text-red-400">❌ Your answer: ' + escapeHtml(wa.yourAnswer) + '</p></div>'; }).join('') + '</div>';
+        }
+
+        root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">😔</div><h2 class="text-2xl font-bold mb-2">Not Passed</h2><p class="text-4xl font-black text-red-400 mb-2">${failPercent}%</p><p class="text-gray-400 mb-2">${result.correctCount}/${result.totalQuestions} correct • Need 70% to pass</p><div class="w-full bg-gray-700 h-3 rounded-full mb-6"><div class="bg-red-500 h-3 rounded-full transition-all" style="width: ${failBarWidth}%"></div></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm text-gray-400">⏰ Retake available at:</p><p class="text-lg text-yellow-400 font-bold">${retakeTimeFormatted}</p><p class="text-sm text-gray-400">${retakeDateFormatted}</p><p class="text-xs text-gray-500 mt-1">in ${hoursLeft} hour(s) ${minutesLeft} min(s)</p></div>${reviewTopicsHTML}${wrongAnswersHTML}<div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${courseId}')" class="flex-1 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition">📖 Review Course Material</button></div><button onclick="window.renderPage('dashboard')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Dashboard</button></div></div>`;
+        showToast('❌ ' + failPercent + '%. Retake in ' + hoursLeft + 'h ' + minutesLeft + 'm.', 'error');
       }
+    } catch (error) { showToast('Failed to submit exam', 'error'); renderPage('dashboard'); }
+  }
 
-      let wrongAnswersHTML = '';
-      if (result.wrongAnswers && result.wrongAnswers.length > 0) {
-        wrongAnswersHTML = '<div class="text-left mb-6 max-h-40 overflow-y-auto"><h3 class="font-bold mb-2">❌ Questions missed:</h3>' + result.wrongAnswers.map(wa => '<div class="glass rounded-xl p-3 mb-2"><p class="text-sm font-medium">' + escapeHtml(wa.question) + '</p><p class="text-xs text-green-400">✅ Correct: ' + escapeHtml(wa.correctAnswer) + '</p><p class="text-xs text-red-400">❌ Your answer: ' + escapeHtml(wa.yourAnswer) + '</p></div>').join('') + '</div>';
-      }
-
-      root.innerHTML = `<div class="max-w-2xl mx-auto fade-in"><div class="glass rounded-3xl p-8 text-center"><div class="text-6xl mb-4">😔</div><h2 class="text-2xl font-bold mb-2">Not Passed</h2><p class="text-4xl font-black text-red-400 mb-2">${failPercent}%</p><p class="text-gray-400 mb-2">${result.correctCount}/${result.totalQuestions} correct • Need 70% to pass</p><div class="w-full bg-gray-700 h-3 rounded-full mb-6"><div class="bg-red-500 h-3 rounded-full transition-all" style="width: ${failBarWidth}%"></div></div><div class="glass rounded-xl p-4 mb-6"><p class="text-sm text-gray-400">⏰ Retake available at:</p><p class="text-lg text-yellow-400 font-bold">${retakeTimeFormatted}</p><p class="text-sm text-gray-400">${retakeDateFormatted}</p><p class="text-xs text-gray-500 mt-1">in ${hoursLeft} hour(s) ${minutesLeft} min(s)</p></div>${reviewTopicsHTML}${wrongAnswersHTML}<div class="flex gap-3 flex-wrap"><button onclick="window.renderCourseDashboard('${courseId}')" class="flex-1 bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition">📖 Review Course Material</button></div><button onclick="window.renderPage('dashboard')" class="glass px-6 py-3 rounded-xl font-bold mt-3 w-full">← Back to Dashboard</button></div></div>`;
-      showToast(`❌ ${failPercent}%. Retake in ${hoursLeft}h ${minutesLeft}m.`, 'error');
-    }
-  } catch (error) { showToast('Failed to submit exam', 'error'); renderPage('dashboard'); } } renderQuestion(); startTimer(); }
+  renderQuestion();
+  startTimer();
+}
 
 // ==================== CHECKOUT ====================
 window.openCheckout = async (courseId) => {
@@ -1370,4 +1418,4 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(async function() { await loadCourses(); await checkAuth(); updateAuthUI(); updateNavbarStyle(); if (loader) { loader.style.transition = 'opacity 0.5s ease-out'; loader.style.opacity = '0'; setTimeout(function() { loader.style.display = 'none'; }, 500); } renderPage(currentUser ? 'dashboard' : 'landing'); console.log('✅ obliXel Academy v10.0 fully initialized'); }, 6000);
 });
 
-console.log('🎉 obliXel Academy v10.0 - COMPLETE - 3hr Cooldown + Beautiful Failure Screen');
+console.log('🎉 obliXel Academy v10.0 - COMPLETE - Answer ID Matching Fix Applied');
