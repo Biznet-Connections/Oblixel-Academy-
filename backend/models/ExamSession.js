@@ -6,6 +6,13 @@ const examSessionSchema = new mongoose.Schema({
   startTime: { type: Date, default: Date.now },
   status: { type: String, enum: ['in_progress', 'completed', 'expired'], default: 'in_progress' },
   questionCount: { type: Number, default: 25 },
+  questions: [{ 
+    id: String,
+    text: String,
+    options: [String],
+    correct: Number
+  }],
+  questionOrder: [String],
   score: Number,
   passed: Boolean,
   completedAt: Date
