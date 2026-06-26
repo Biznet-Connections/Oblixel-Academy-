@@ -121,11 +121,11 @@ router.post('/start', authenticate, async (req, res) => {
       startTime: new Date(),
       status: 'in_progress',
       questionCount: safeQuestions.length,
-      questionOrder: safeQuestions.map(q => q.id),
+      questionOrder: savedQuestions.map(q => q.id),
       questions: savedQuestions
     });
 
-    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions`);
+    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions (${savedQuestions.length} saved in session)`);
 
     res.json({
       sessionId: session._id,
@@ -140,7 +140,7 @@ router.post('/start', authenticate, async (req, res) => {
   }
 });
 
-// ==================== SUBMIT EXAM (WITH REAL NAME ON CERTIFICATE) ====================
+// ==================== SUBMIT EXAM (FIXED - QUESTIONS FROM SESSION + DB FALLBACK) ====================
 router.post('/submit', authenticate, async (req, res) => {
   const { sessionId, courseId, answers, timeSpent } = req.body;
   const userId = req.user._id;
@@ -167,34 +167,29 @@ router.post('/submit', authenticate, async (req, res) => {
     let questions = session.questions || [];
     const questionOrder = session.questionOrder || [];
 
+    // FIX: If session has no questions, get ALL from DB directly
     if (questions.length === 0) {
-      console.log('[EXAM] No questions in session, falling back to DB');
+      console.log('[EXAM] No questions in session, fetching all from DB');
+      
       let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
+      
       if (dbQuestions.length === 0) {
+        console.log('[EXAM] No DB questions, using fallback');
         dbQuestions = getFallbackQuestions(courseId);
       }
-
-      const dbQuestionMap = {};
-      dbQuestions.forEach(q => { 
-        dbQuestionMap[q._id.toString()] = q; 
-      });
-
-      const fallbackQs = getFallbackQuestions(courseId);
-      fallbackQs.forEach(q => {
-        if (!dbQuestionMap[q._id]) {
-          dbQuestionMap[q._id] = q;
-        }
-      });
-
-      questions = questionOrder.map(id => {
-        const q = dbQuestionMap[id];
-        return q ? {
-          id: id,
-          text: q.text,
-          options: q.options,
-          correct: q.correct
-        } : null;
-      }).filter(Boolean);
+      
+      // FIX: Shuffle and take 25 questions
+      const shuffled = dbQuestions.sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
+      
+      questions = selected.map(q => ({
+        id: q._id ? q._id.toString() : q.id,
+        text: q.text,
+        options: q.options,
+        correct: q.correct
+      }));
+      
+      console.log(`[EXAM] Fallback loaded ${questions.length} questions from DB`);
     }
 
     let correctCount = 0;
@@ -211,8 +206,8 @@ router.post('/submit', authenticate, async (req, res) => {
       } else {
         wrongAnswers.push({
           question: question.text,
-          correctAnswer: question.options[question.correct],
-          yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length 
+          correctAnswer: question.options ? question.options[question.correct] : 'Unknown',
+          yourAnswer: userAnswerIndex >= 0 && question.options && userAnswerIndex < question.options.length 
             ? question.options[userAnswerIndex] 
             : 'Not answered',
           topic: extractTopic(question.text, courseId)
@@ -237,7 +232,6 @@ router.post('/submit', authenticate, async (req, res) => {
         enrollment.status = 'certified';
         enrollment.cooldownUntil = null;
         
-        // Use the legal name from user profile for certificate
         const studentFullName = user.fullName || user.name || 'Student';
         const studentFirstName = user.firstName || '';
         const studentLastName = user.lastName || '';
@@ -288,6 +282,7 @@ router.post('/submit', authenticate, async (req, res) => {
     session.completedAt = new Date();
     session.score = score;
     session.passed = passed;
+    session.questionCount = totalQuestions;
     await session.save();
 
     let certificateCode = null;
@@ -504,58 +499,58 @@ function extractTopic(questionText, courseId) {
 function getFallbackQuestions(courseId) {
   const fb = {
     ncp: [
-      { text: 'What does OSI stand for?', options: ['Open System Interconnection', 'Open Source Integration', 'Operating System Interface', 'Online Service Integration'], correct: 0, _id: 'fb_ncp_0' },
-      { text: 'Which OSI layer handles routing?', options: ['Layer 1', 'Layer 2', 'Layer 3', 'Layer 4'], correct: 2, _id: 'fb_ncp_1' },
-      { text: 'Reliable delivery protocol?', options: ['UDP', 'TCP', 'IP', 'ICMP'], correct: 1, _id: 'fb_ncp_2' },
-      { text: 'Class C subnet mask?', options: ['255.0.0.0', '255.255.0.0', '255.255.255.0', '255.255.255.255'], correct: 2, _id: 'fb_ncp_3' },
-      { text: 'Link-state routing?', options: ['RIP', 'BGP', 'OSPF', 'EIGRP'], correct: 2, _id: 'fb_ncp_4' },
-      { text: 'Layer 2 device?', options: ['Router', 'Switch', 'Hub', 'Repeater'], correct: 1, _id: 'fb_ncp_5' },
-      { text: 'VLAN purpose?', options: ['Speed', 'Broadcast segmentation', 'Replace routers', 'Encryption'], correct: 1, _id: 'fb_ncp_6' },
-      { text: 'Auto IP?', options: ['DNS', 'DHCP', 'HTTP', 'FTP'], correct: 1, _id: 'fb_ncp_7' },
-      { text: 'Gigabit speed?', options: ['100 Mbps', '500 Mbps', '1000 Mbps', '10000 Mbps'], correct: 2, _id: 'fb_ncp_8' },
-      { text: 'NAT?', options: ['Network Address Translation', 'Network Access Terminal', 'Node Auth Token', 'Network Allocation Table'], correct: 0, _id: 'fb_ncp_9' },
-      { text: 'Firewall?', options: ['Speed', 'Filter traffic', 'Assign IPs', 'Manage users'], correct: 1, _id: 'fb_ncp_10' },
-      { text: '5GHz WiFi?', options: ['802.11b', '802.11g', '802.11n', '802.11a'], correct: 3, _id: 'fb_ncp_11' },
-      { text: 'Ping tests?', options: ['Bandwidth', 'Connectivity', 'Encryption', 'DNS'], correct: 1, _id: 'fb_ncp_12' },
-      { text: 'DNS?', options: ['Assign IPs', 'Resolve names', 'Encrypt', 'Route'], correct: 1, _id: 'fb_ncp_13' },
-      { text: 'BGP?', options: ['LAN', 'Internet routing', 'Wireless', 'Firewall'], correct: 1, _id: 'fb_ncp_14' },
-      { text: 'Ethernet cable?', options: ['Coaxial', 'Fiber', 'Cat5e/Cat6', 'HDMI'], correct: 2, _id: 'fb_ncp_15' },
-      { text: 'Loopback?', options: ['192.168.1.1', '10.0.0.1', '127.0.0.1', '255.255.255.0'], correct: 2, _id: 'fb_ncp_16' },
-      { text: 'Secure remote?', options: ['Telnet', 'SSH', 'FTP', 'HTTP'], correct: 1, _id: 'fb_ncp_17' },
-      { text: 'DDoS?', options: ['Data encryption', 'Distributed Denial of Service', 'Domain deletion', 'Data override'], correct: 1, _id: 'fb_ncp_18' },
-      { text: 'Error detection layer?', options: ['Physical', 'Data Link', 'Network', 'Application'], correct: 1, _id: 'fb_ncp_19' },
-      { text: 'Router?', options: ['Connect networks', 'Amplify', 'Store data', 'Display'], correct: 0, _id: 'fb_ncp_20' },
-      { text: 'VPN?', options: ['Virtual Private Network', 'Very Personal Network', 'Virtual Protocol Node', 'Verified Public Network'], correct: 0, _id: 'fb_ncp_21' },
-      { text: 'QoS?', options: ['Quality of Service', 'Quick OS', 'Query Optimization', 'Quantum Standard'], correct: 0, _id: 'fb_ncp_22' },
-      { text: 'Subnet mask?', options: ['Identify network vs host', 'Encrypt', 'Speed', 'Assign IPs'], correct: 0, _id: 'fb_ncp_23' },
-      { text: 'MPLS?', options: ['Frame Relay', 'ATM', 'MPLS VPN', 'ISDN'], correct: 2, _id: 'fb_ncp_24' }
+      { text: 'What does OSI stand for?', options: ['Open System Interconnection', 'Open Source Integration', 'Operating System Interface', 'Online Service Integration'], correct: 0, id: 'fb_ncp_0' },
+      { text: 'Which OSI layer handles routing?', options: ['Layer 1', 'Layer 2', 'Layer 3', 'Layer 4'], correct: 2, id: 'fb_ncp_1' },
+      { text: 'Reliable delivery protocol?', options: ['UDP', 'TCP', 'IP', 'ICMP'], correct: 1, id: 'fb_ncp_2' },
+      { text: 'Class C subnet mask?', options: ['255.0.0.0', '255.255.0.0', '255.255.255.0', '255.255.255.255'], correct: 2, id: 'fb_ncp_3' },
+      { text: 'Link-state routing?', options: ['RIP', 'BGP', 'OSPF', 'EIGRP'], correct: 2, id: 'fb_ncp_4' },
+      { text: 'Layer 2 device?', options: ['Router', 'Switch', 'Hub', 'Repeater'], correct: 1, id: 'fb_ncp_5' },
+      { text: 'VLAN purpose?', options: ['Speed', 'Broadcast segmentation', 'Replace routers', 'Encryption'], correct: 1, id: 'fb_ncp_6' },
+      { text: 'Auto IP?', options: ['DNS', 'DHCP', 'HTTP', 'FTP'], correct: 1, id: 'fb_ncp_7' },
+      { text: 'Gigabit speed?', options: ['100 Mbps', '500 Mbps', '1000 Mbps', '10000 Mbps'], correct: 2, id: 'fb_ncp_8' },
+      { text: 'NAT?', options: ['Network Address Translation', 'Network Access Terminal', 'Node Auth Token', 'Network Allocation Table'], correct: 0, id: 'fb_ncp_9' },
+      { text: 'Firewall?', options: ['Speed', 'Filter traffic', 'Assign IPs', 'Manage users'], correct: 1, id: 'fb_ncp_10' },
+      { text: '5GHz WiFi?', options: ['802.11b', '802.11g', '802.11n', '802.11a'], correct: 3, id: 'fb_ncp_11' },
+      { text: 'Ping tests?', options: ['Bandwidth', 'Connectivity', 'Encryption', 'DNS'], correct: 1, id: 'fb_ncp_12' },
+      { text: 'DNS function?', options: ['Assign IPs', 'Resolve names to IPs', 'Encrypt data', 'Route packets'], correct: 1, id: 'fb_ncp_13' },
+      { text: 'BGP?', options: ['LAN', 'Internet routing', 'Wireless', 'Firewall'], correct: 1, id: 'fb_ncp_14' },
+      { text: 'Ethernet cable?', options: ['Coaxial', 'Fiber', 'Cat5e/Cat6', 'HDMI'], correct: 2, id: 'fb_ncp_15' },
+      { text: 'Loopback?', options: ['192.168.1.1', '10.0.0.1', '127.0.0.1', '255.255.255.0'], correct: 2, id: 'fb_ncp_16' },
+      { text: 'Secure remote?', options: ['Telnet', 'SSH', 'FTP', 'HTTP'], correct: 1, id: 'fb_ncp_17' },
+      { text: 'DDoS?', options: ['Data encryption', 'Distributed Denial of Service', 'Domain deletion', 'Data override'], correct: 1, id: 'fb_ncp_18' },
+      { text: 'Error detection layer?', options: ['Physical', 'Data Link', 'Network', 'Application'], correct: 1, id: 'fb_ncp_19' },
+      { text: 'Router?', options: ['Connect networks', 'Amplify', 'Store data', 'Display'], correct: 0, id: 'fb_ncp_20' },
+      { text: 'VPN?', options: ['Virtual Private Network', 'Very Personal Network', 'Virtual Protocol Node', 'Verified Public Network'], correct: 0, id: 'fb_ncp_21' },
+      { text: 'QoS?', options: ['Quality of Service', 'Quick OS', 'Query Optimization', 'Quantum Standard'], correct: 0, id: 'fb_ncp_22' },
+      { text: 'Subnet mask?', options: ['Identify network vs host', 'Encrypt', 'Speed', 'Assign IPs'], correct: 0, id: 'fb_ncp_23' },
+      { text: 'MPLS?', options: ['Frame Relay', 'ATM', 'MPLS VPN', 'ISDN'], correct: 2, id: 'fb_ncp_24' }
     ],
     ccp: [
-      { text: 'Brain of computer?', options: ['RAM', 'CPU', 'Hard Drive', 'Power Supply'], correct: 1, _id: 'fb_ccp_0' },
-      { text: 'RAM?', options: ['Random Access Memory', 'Read Always Memory', 'Rapid App Module', 'Remote Access'], correct: 0, _id: 'fb_ccp_1' },
-      { text: 'Input device?', options: ['Monitor', 'Printer', 'Keyboard', 'Speaker'], correct: 2, _id: 'fb_ccp_2' },
-      { text: 'Number system?', options: ['Decimal', 'Octal', 'Binary', 'Hexadecimal'], correct: 2, _id: 'fb_ccp_3' },
-      { text: 'BIOS?', options: ['Basic Input Output System', 'Binary Integrated OS', 'Basic Integrated Software', 'Boot Input Service'], correct: 0, _id: 'fb_ccp_4' },
-      { text: 'Open source OS?', options: ['Windows', 'macOS', 'Linux', 'iOS'], correct: 2, _id: 'fb_ccp_5' },
-      { text: 'GUI?', options: ['Graphical User Interface', 'General Utility Interface', 'Graphical Unified Integration', 'Global User Input'], correct: 0, _id: 'fb_ccp_6' },
-      { text: 'HTTP?', options: ['HyperText Transfer Protocol', 'High Tech Transfer', 'HyperText Transmission', 'Host Transfer Protocol'], correct: 0, _id: 'fb_ccp_7' },
-      { text: 'Web language?', options: ['C++', 'Java', 'JavaScript', 'Assembly'], correct: 2, _id: 'fb_ccp_8' },
-      { text: 'Database?', options: ['Organized data', 'Hardware', 'Network protocol', 'OS'], correct: 0, _id: 'fb_ccp_9' },
-      { text: 'SQL?', options: ['Structured Query Language', 'Simple Question Language', 'System Quality Logic', 'Standard Query Link'], correct: 0, _id: 'fb_ccp_10' },
-      { text: 'Cloud?', options: ['Satellite', 'Internet-based services', 'No electricity', 'Weather'], correct: 1, _id: 'fb_ccp_11' },
-      { text: 'IP address?', options: ['Provider Address', 'Unique network identifier', 'Internal Processing', 'Protocol Application'], correct: 1, _id: 'fb_ccp_12' },
-      { text: 'HTML?', options: ['HyperText Markup Language', 'High Tech Modern Language', 'HyperTransfer Markup', 'Host Technology Language'], correct: 0, _id: 'fb_ccp_13' },
-      { text: 'Malware?', options: ['Malicious software', 'Hardware fault', 'Network error', 'OS bug'], correct: 0, _id: 'fb_ccp_14' },
-      { text: 'OS function?', options: ['Manage HW/SW', 'Only run apps', 'Only store files', 'Only internet'], correct: 0, _id: 'fb_ccp_15' },
-      { text: 'USB?', options: ['Universal Serial Bus', 'United System Bridge', 'Universal Service Buffer', 'Unified Storage Base'], correct: 0, _id: 'fb_ccp_16' },
-      { text: 'Firewall?', options: ['Network security', 'File storage', 'Print', 'Run apps'], correct: 0, _id: 'fb_ccp_17' },
-      { text: 'CSS?', options: ['Cascading Style Sheets', 'Computer Style System', 'Creative Style Software', 'Cascading System Styles'], correct: 0, _id: 'fb_ccp_18' },
-      { text: 'Phishing?', options: ['Fishing', 'Fraud for info', 'Network test', 'Database query'], correct: 1, _id: 'fb_ccp_19' },
-      { text: 'Antivirus?', options: ['Speed PC', 'Detect/remove malware', 'Create docs', 'Manage email'], correct: 1, _id: 'fb_ccp_20' },
-      { text: 'SSD?', options: ['Solid State Drive', 'Super Speed Disk', 'System Storage Device', 'Serial Storage Disk'], correct: 0, _id: 'fb_ccp_21' },
-      { text: 'URL?', options: ['Uniform Resource Locator', 'Universal Reference Link', 'Unified Resource Language', 'User Reference Locator'], correct: 0, _id: 'fb_ccp_22' },
-      { text: 'Encryption?', options: ['Convert to code', 'Delete data', 'Copy data', 'Move data'], correct: 0, _id: 'fb_ccp_23' },
-      { text: 'Router?', options: ['Forward packets', 'Store files', 'Display pages', 'Run apps'], correct: 0, _id: 'fb_ccp_24' }
+      { text: 'Brain of computer?', options: ['RAM', 'CPU', 'Hard Drive', 'Power Supply'], correct: 1, id: 'fb_ccp_0' },
+      { text: 'RAM?', options: ['Random Access Memory', 'Read Always Memory', 'Rapid App Module', 'Remote Access'], correct: 0, id: 'fb_ccp_1' },
+      { text: 'Input device?', options: ['Monitor', 'Printer', 'Keyboard', 'Speaker'], correct: 2, id: 'fb_ccp_2' },
+      { text: 'Number system?', options: ['Decimal', 'Octal', 'Binary', 'Hexadecimal'], correct: 2, id: 'fb_ccp_3' },
+      { text: 'BIOS?', options: ['Basic Input Output System', 'Binary Integrated OS', 'Basic Integrated Software', 'Boot Input Service'], correct: 0, id: 'fb_ccp_4' },
+      { text: 'Open source OS?', options: ['Windows', 'macOS', 'Linux', 'iOS'], correct: 2, id: 'fb_ccp_5' },
+      { text: 'GUI?', options: ['Graphical User Interface', 'General Utility Interface', 'Graphical Unified Integration', 'Global User Input'], correct: 0, id: 'fb_ccp_6' },
+      { text: 'HTTP?', options: ['HyperText Transfer Protocol', 'High Tech Transfer', 'HyperText Transmission', 'Host Transfer Protocol'], correct: 0, id: 'fb_ccp_7' },
+      { text: 'Web language?', options: ['C++', 'Java', 'JavaScript', 'Assembly'], correct: 2, id: 'fb_ccp_8' },
+      { text: 'Database?', options: ['Organized data', 'Hardware', 'Network protocol', 'OS'], correct: 0, id: 'fb_ccp_9' },
+      { text: 'SQL?', options: ['Structured Query Language', 'Simple Question Language', 'System Quality Logic', 'Standard Query Link'], correct: 0, id: 'fb_ccp_10' },
+      { text: 'Cloud?', options: ['Satellite', 'Internet-based services', 'No electricity', 'Weather'], correct: 1, id: 'fb_ccp_11' },
+      { text: 'IP address?', options: ['Provider Address', 'Unique network identifier', 'Internal Processing', 'Protocol Application'], correct: 1, id: 'fb_ccp_12' },
+      { text: 'HTML?', options: ['HyperText Markup Language', 'High Tech Modern Language', 'HyperTransfer Markup', 'Host Technology Language'], correct: 0, id: 'fb_ccp_13' },
+      { text: 'Malware?', options: ['Malicious software', 'Hardware fault', 'Network error', 'OS bug'], correct: 0, id: 'fb_ccp_14' },
+      { text: 'OS function?', options: ['Manage HW/SW', 'Only run apps', 'Only store files', 'Only internet'], correct: 0, id: 'fb_ccp_15' },
+      { text: 'USB?', options: ['Universal Serial Bus', 'United System Bridge', 'Universal Service Buffer', 'Unified Storage Base'], correct: 0, id: 'fb_ccp_16' },
+      { text: 'Firewall?', options: ['Network security', 'File storage', 'Print', 'Run apps'], correct: 0, id: 'fb_ccp_17' },
+      { text: 'CSS?', options: ['Cascading Style Sheets', 'Computer Style System', 'Creative Style Software', 'Cascading System Styles'], correct: 0, id: 'fb_ccp_18' },
+      { text: 'Phishing?', options: ['Fishing', 'Fraud for info', 'Network test', 'Database query'], correct: 1, id: 'fb_ccp_19' },
+      { text: 'Antivirus?', options: ['Speed PC', 'Detect/remove malware', 'Create docs', 'Manage email'], correct: 1, id: 'fb_ccp_20' },
+      { text: 'SSD?', options: ['Solid State Drive', 'Super Speed Disk', 'System Storage Device', 'Serial Storage Disk'], correct: 0, id: 'fb_ccp_21' },
+      { text: 'URL?', options: ['Uniform Resource Locator', 'Universal Reference Link', 'Unified Resource Language', 'User Reference Locator'], correct: 0, id: 'fb_ccp_22' },
+      { text: 'Encryption?', options: ['Convert to code', 'Delete data', 'Copy data', 'Move data'], correct: 0, id: 'fb_ccp_23' },
+      { text: 'Router?', options: ['Forward packets', 'Store files', 'Display pages', 'Run apps'], correct: 0, id: 'fb_ccp_24' }
     ]
   };
   
@@ -565,7 +560,7 @@ function getFallbackQuestions(courseId) {
     text: q.text, 
     options: q.options, 
     correct: q.correct, 
-    _id: q._id 
+    _id: q.id 
   }));
 }
 
