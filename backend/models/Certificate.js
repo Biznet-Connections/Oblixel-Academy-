@@ -5,6 +5,10 @@ const certificateSchema = new mongoose.Schema({
   courseId: { type: String, required: true, lowercase: true },
   courseName: { type: String, default: '' },
   certificateId: { type: String, unique: true, sparse: true },
+  // Student details for certificate display
+  studentName: { type: String, default: '' },
+  studentFirstName: { type: String, default: '' },
+  studentLastName: { type: String, default: '' },
   score: { type: Number, required: true },
   status: { type: String, enum: ['pending', 'issued', 'rejected'], default: 'pending' },
   type: { type: String, enum: ['exam_only', 'learning'], default: 'exam_only' },

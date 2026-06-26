@@ -1,8 +1,7 @@
-// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 1 ====================
-// v12.5 FINAL: Admin privilege system, Reset revenue, Blurred professor when certified,
-//              Legal name banner auto-hide, Main admin controls, Signature pad,
-//              Color presets, Drag-to-position, All features complete
-console.log('🚀 obliXel Academy v12.5 FINAL - Loading Complete App Part 1');
+// ==================== obliXel Academy v12.0 - COMPLETE APP.JS PART 1 ====================
+// v12: Signature drawing pad, drag-to-position signature, gold/silver/navy color presets,
+//      Legal name capture on enrollment, Real names on certificates, Live canvas preview
+console.log('🚀 obliXel Academy v12.0 - Loading Complete App Part 1');
 
 // ==================== GLOBAL VARIABLES ====================
 let currentUser = null;
@@ -17,7 +16,6 @@ let examTimerInterval = null;
 let lastScrollY = 0;
 let navbarVisible = true;
 let userEnrollmentsCache = [];
-let myAdminPrivileges = null;
 
 // Certificate Editor Drag State
 let certDragState = {
@@ -249,7 +247,6 @@ function logout() {
   localStorage.removeItem('auth_token');
   localStorage.removeItem('remember_me');
   currentUser = null;
-  myAdminPrivileges = null;
   userEnrollmentsCache = [];
   aiChatHistory = [{ role: "assistant", content: "Hi! I'm ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓" }];
   aiWidgetActive = false;
@@ -392,14 +389,9 @@ async function deleteAccount(confirm) {
 
 // ==================== ADMIN API CALLS ====================
 async function getAdminStats() { return apiRequest('/admin/stats'); }
-async function getMyAdminPrivileges() { return apiRequest('/admin/my-privileges'); }
 async function getAllUsers() { return apiRequest('/admin/users'); }
-async function makeAdmin(userId, privileges) { return apiRequest('/admin/make-admin', { method: 'POST', body: JSON.stringify({ userId, privileges }) }); }
-async function removeAdminUser(userId) { return apiRequest('/admin/remove-admin', { method: 'POST', body: JSON.stringify({ userId }) }); }
-async function updateAdminPrivileges(userId, privileges) { return apiRequest('/admin/update-admin-privileges', { method: 'POST', body: JSON.stringify({ userId, privileges }) }); }
-async function resetRevenue(confirm) { return apiRequest('/admin/reset-revenue', { method: 'POST', body: JSON.stringify({ confirm }) }); }
-async function resetEnrollments(confirm) { return apiRequest('/admin/reset-enrollments', { method: 'POST', body: JSON.stringify({ confirm }) }); }
-async function resetCertificates(confirm) { return apiRequest('/admin/reset-certificates', { method: 'POST', body: JSON.stringify({ confirm }) }); }
+async function makeAdmin(userId) { return apiRequest('/admin/make-admin', { method: 'POST', body: JSON.stringify({ userId }) }); }
+async function removeAdmin(userId) { return apiRequest('/admin/remove-admin', { method: 'POST', body: JSON.stringify({ userId }) }); }
 async function createCourse(courseData) { return apiRequest('/admin/courses', { method: 'POST', body: JSON.stringify(courseData) }); }
 async function updateCourse(courseId, courseData) { return apiRequest(`/admin/courses/${courseId}`, { method: 'PUT', body: JSON.stringify(courseData) }); }
 async function deleteCourse(courseId) { return apiRequest(`/admin/courses/${courseId}`, { method: 'DELETE' }); }
@@ -481,19 +473,6 @@ async function checkAuth() {
     const data = await getCurrentUser();
     currentUser = data.user || data;
     debugLog('User authenticated', { name: currentUser.name, role: currentUser.role });
-    
-    // Load admin privileges if user is admin
-    if (currentUser.role === 'admin') {
-      try {
-        const privData = await getMyAdminPrivileges();
-        myAdminPrivileges = privData;
-        currentUser.isMainAdmin = privData.isMainAdmin;
-        currentUser.adminPrivileges = privData.privileges;
-      } catch (e) {
-        myAdminPrivileges = null;
-      }
-    }
-    
     try {
       const enrollmentData = await getMyEnrollments();
       userEnrollmentsCache = enrollmentData.enrollments || [];
@@ -504,7 +483,6 @@ async function checkAuth() {
   } catch (e) {
     localStorage.removeItem('auth_token');
     currentUser = null;
-    myAdminPrivileges = null;
     userEnrollmentsCache = [];
     return false;
   }
@@ -516,14 +494,6 @@ function isAlreadyEnrolled(courseId) {
 
 function getEnrollmentForCourse(courseId) {
   return userEnrollmentsCache.find(e => e.courseId === courseId);
-}
-
-// Check if current admin has a specific privilege
-function hasAdminPrivilege(privilege) {
-  if (!currentUser || currentUser.role !== 'admin') return false;
-  if (currentUser.isMainAdmin) return true;
-  if (!currentUser.adminPrivileges) return false;
-  return currentUser.adminPrivileges[privilege] === true;
 }
 
 // ==================== UPDATE NAVIGATION UI ====================
@@ -774,18 +744,6 @@ function renderLogin() {
     try {
       const data = await login(email, password, rememberMe);
       currentUser = data.user;
-      
-      if (currentUser.role === 'admin') {
-        try {
-          const privData = await getMyAdminPrivileges();
-          myAdminPrivileges = privData;
-          currentUser.isMainAdmin = privData.isMainAdmin;
-          currentUser.adminPrivileges = privData.privileges;
-        } catch (e) {
-          myAdminPrivileges = null;
-        }
-      }
-      
       try {
         const enrollmentData = await getMyEnrollments();
         userEnrollmentsCache = enrollmentData.enrollments || [];
@@ -835,15 +793,6 @@ async function renderDashboard() {
     const stats = profileData.stats;
     const enrollmentsData = profileData.enrollments || [];
     userEnrollmentsCache = enrollmentsData;
-    
-    // Sync currentUser with latest profile data for legal name
-    if (user.hasProvidedLegalName !== undefined) {
-      currentUser.hasProvidedLegalName = user.hasProvidedLegalName;
-      currentUser.firstName = user.firstName || '';
-      currentUser.lastName = user.lastName || '';
-      currentUser.fullName = user.fullName || '';
-    }
-    
     const certificatesData = await getMyCertificates();
     const earned = certificatesData.earned || [];
     const streak = user.streak || 7;
@@ -861,7 +810,7 @@ async function renderDashboard() {
             </div>
           </div>
           ${enrollmentsData.length === 0 ? `<div class="mt-3 p-3 bg-purple-500/20 rounded-xl"><p class="text-sm"><i class="fa-regular fa-star text-yellow-400 mr-2"></i>Enroll in your first course to begin your certification journey! 🚀</p></div>` : ''}
-          ${!currentUser.hasProvidedLegalName ? `<div id="legalNameBanner" class="mt-3 p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30"><p class="text-sm text-yellow-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Update your legal name for certificates. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline font-bold">Update Now →</button></p></div>` : ''}
+          ${!user.hasProvidedLegalName ? `<div class="mt-3 p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30"><p class="text-sm text-yellow-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Update your legal name for certificates. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline font-bold">Update Now →</button></p></div>` : ''}
         </div>
         <div class="stats-grid mb-8">
           <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-book-open text-cyan-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">${stats.enrolledCourses || 0}</h3><p class="text-xs text-gray-400">Enrolled</p></div>
@@ -997,7 +946,6 @@ window.saveLegalName = async function() {
       currentUser.country = country;
       closeModal('legalNameModal');
       showToast('Legal name saved! This will appear on your certificates.', 'success');
-      // Re-render dashboard to hide the banner
       renderDashboard();
     }
   } catch (error) {
@@ -1175,7 +1123,7 @@ async function renderProfile() {
             <div class="w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-3xl font-black">${user.avatar || user.name.charAt(0)}</div>
             <div>
               <h1 class="text-2xl font-black">${escapeHtml(user.fullName || user.name)}</h1>
-              <p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? (user.isMainAdmin ? '👑 Main Admin' : 'Admin') : 'Student'}</p>
+              <p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? 'Admin' : 'Student'}</p>
               <p class="text-xs text-cyan-400">Member since ${formatDate(user.createdAt)}</p>
               ${user.hasProvidedLegalName ? `<p class="text-xs text-green-400 mt-1"><i class="fa-solid fa-circle-check mr-1"></i> Legal name: ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>` : `<p class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Legal name not set. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline">Set Now →</button></p>`}
             </div>
@@ -1208,13 +1156,11 @@ async function renderProfile() {
   }
 }
 
-console.log('✅ Part 1 (Core & Auth + Admin Privileges + Legal Name Fix + All Pages) loaded');
-
-// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 2 ====================
-// v12.5 FINAL: Course Dashboard, Exams, Checkout, Signature Pad, Drag Engine,
-//              FULL Admin Console with Privileges, Quick Actions, System Controls,
-//              User Management with Admin Actions, Certificate Settings
-console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel)');
+console.log('✅ Part 1 (Core & Auth) loaded - Signature system ready, Legal name capture ready');
+// ==================== obliXel Academy v12.0 - COMPLETE APP.JS PART 2 ====================
+// v12: Signature drawing pad, drag-to-position signature, gold/silver/navy color presets,
+//      Legal name capture on enrollment, Real names on certificates, Live canvas preview
+console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel with Signature Pad)');
 
 // ==================== COURSE DASHBOARD ====================
 async function renderCourseDashboard(courseId) {
@@ -1295,19 +1241,11 @@ async function renderCourseDashboard(courseId) {
         </div>
         ${hasPassed ? certSectionHTML : ''}
         <div class="professor-card-wrapper mb-6 lg:hidden">
-          ${hasPassed ? `
-            <div class="glass rounded-2xl p-5 text-center ai-teacher-card" style="opacity: 0.6; filter: blur(0.5px);">
-              <div class="flex items-center justify-center gap-4 flex-wrap"><div class="text-4xl">${teacher.avatar}</div><div class="text-left"><h3 class="text-lg font-bold">${teacher.name}</h3><p class="text-gray-400 text-xs">${teacher.title}</p></div></div>
-              <p class="text-sm mt-3 italic">✅ Course Completed! Lectures no longer needed. Great job on your certification! 🎉</p>
-              <button disabled class="mt-4 bg-gray-600/50 px-5 py-2 rounded-xl text-sm w-full font-medium cursor-not-allowed opacity-50">📖 Lectures Complete</button>
-            </div>
-          ` : `
-            <div class="glass rounded-2xl p-5 text-center ai-teacher-card">
-              <div class="flex items-center justify-center gap-4 flex-wrap"><div class="text-4xl">${teacher.avatar}</div><div class="text-left"><h3 class="text-lg font-bold">${teacher.name}</h3><p class="text-gray-400 text-xs">${teacher.title}</p></div></div>
-              <p class="text-sm mt-3 italic">${teacher.message}</p>
-              <button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm w-full hover:opacity-90 transition font-medium">📖 Take Lectures</button>
-            </div>
-          `}
+          <div class="glass rounded-2xl p-5 text-center ai-teacher-card">
+            <div class="flex items-center justify-center gap-4 flex-wrap"><div class="text-4xl">${teacher.avatar}</div><div class="text-left"><h3 class="text-lg font-bold">${teacher.name}</h3><p class="text-gray-400 text-xs">${teacher.title}</p></div></div>
+            <p class="text-sm mt-3 italic">${teacher.message}</p>
+            <button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm w-full hover:opacity-90 transition font-medium">📖 Take Lectures</button>
+          </div>
         </div>
         <div class="course-dashboard-grid">
           <div class="space-y-6">
@@ -1358,23 +1296,13 @@ async function renderCourseDashboard(courseId) {
             </div>
           </div>
           <div class="space-y-6 hidden lg:block">
-            ${hasPassed ? `
-              <div class="glass rounded-2xl p-6 text-center ai-teacher-card" style="opacity: 0.6; filter: blur(0.5px);">
-                <div class="text-5xl mb-3">${teacher.avatar}</div>
-                <h3 class="text-xl font-bold">${teacher.name}</h3>
-                <p class="text-gray-400 text-xs">${teacher.title}</p>
-                <p class="text-sm mt-3 italic">✅ Course Completed! Great job on your certification! 🎉</p>
-                <button disabled class="mt-4 bg-gray-600/50 px-5 py-2 rounded-xl text-sm w-full font-medium cursor-not-allowed opacity-50">📖 Lectures Complete</button>
-              </div>
-            ` : `
-              <div class="glass rounded-2xl p-6 text-center ai-teacher-card">
-                <div class="text-5xl mb-3">${teacher.avatar}</div>
-                <h3 class="text-xl font-bold">${teacher.name}</h3>
-                <p class="text-gray-400 text-xs">${teacher.title}</p>
-                <p class="text-sm mt-3 italic">${teacher.message}</p>
-                <button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm w-full hover:opacity-90 transition font-medium">📖 Take Lectures</button>
-              </div>
-            `}
+            <div class="glass rounded-2xl p-6 text-center ai-teacher-card">
+              <div class="text-5xl mb-3">${teacher.avatar}</div>
+              <h3 class="text-xl font-bold">${teacher.name}</h3>
+              <p class="text-gray-400 text-xs">${teacher.title}</p>
+              <p class="text-sm mt-3 italic">${teacher.message}</p>
+              <button onclick="window.openAITeacherChat('${courseId}')" class="mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm w-full hover:opacity-90 transition font-medium">📖 Take Lectures</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1927,7 +1855,7 @@ async function deleteCertificateTemplate() {
       if (nameEl) nameEl.textContent = '/images/certificate-template.png (default)';
       const statusEl = document.getElementById('certUploadStatus');
       if (statusEl) { statusEl.className = 'text-xs mt-2 p-2 rounded-lg bg-green-500/10 text-green-400'; statusEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Template removed. Using default.'; statusEl.classList.remove('hidden'); }
-      if (window._certTemplate) { window._certTemplate.templateImage = '/images/certificate-template.png'; window._certTemplate.signatureImage = ''; }
+      if (window._certTemplate) { window._certTemplate.templateImage = '/images/certificate-template.png'; }
       redrawCertPreviewCanvas();
       showToast('Template removed! Using default.', 'success');
     }
@@ -1998,6 +1926,7 @@ function openSignaturePadModal() {
     signaturePadState.ctx.fillStyle = '#ffffff';
     signaturePadState.ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // If there's an existing signature, draw it
     if (existingSig) {
       const img = new Image();
       img.onload = function() {
@@ -2256,6 +2185,7 @@ window.redrawCertPreviewCanvas = redrawCertPreviewCanvas;
 window.drawCertPreviewTexts = drawCertPreviewTexts;
 window.drawSignatureOnPreview = drawSignatureOnPreview;
 
+
 // ==================== CERTIFICATE PREVIEW MODAL ====================
 function showCertPreviewModal(imageUrl, positions, styles, testData, signatureImage) {
   var td = testData || { studentName: 'John Doe', courseName: 'Computer Certified Professional (CCP)', issueDate: '24 June 2026', certId: 'OBX-CCP-TEST123' };
@@ -2275,23 +2205,28 @@ function showCertPreviewModal(imageUrl, positions, styles, testData, signatureIm
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       var ff = styles.fontFamily || 'Georgia';
       
+      // Name
       ctx.font = 'bold ' + (styles.nameFontSize || 52) + 'px ' + ff;
       ctx.fillStyle = styles.nameFontColor || '#1a1a1a';
       ctx.textAlign = 'center';
       ctx.fillText(td.studentName, positions.nameX || 800, positions.nameY || 455);
       
+      // Course
       ctx.font = (styles.courseFontSize || 36) + 'px ' + ff;
       ctx.fillStyle = styles.courseFontColor || '#1a1a1a';
       ctx.fillText(td.courseName, positions.courseX || 800, positions.courseY || 620);
       
+      // Date
       ctx.font = (styles.dateFontSize || 28) + 'px ' + ff;
       ctx.fillStyle = styles.dateFontColor || '#1a1a1a';
       ctx.fillText(td.issueDate, positions.dateX || 470, positions.dateY || 885);
       
+      // Cert ID
       ctx.font = (styles.certIdFontSize || 28) + 'px ' + ff;
       ctx.fillStyle = styles.certIdFontColor || '#1a1a1a';
       ctx.fillText(td.certId, positions.certIdX || 1180, positions.certIdY || 885);
       
+      // Signature
       if (sigImg) {
         var sigImgObj = new Image();
         sigImgObj.onload = function() {
@@ -2427,7 +2362,7 @@ function initCertDragEngine() {
 }
 window.initCertDragEngine = initCertDragEngine;
 
-// ==================== ADMIN CONSOLE (FULL - ALL FEATURES) ====================
+// ==================== ADMIN CONSOLE (COMPLETE WITH SIGNATURE PAD + COLOR PRESETS) ====================
 async function renderAdmin() {
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
@@ -2436,15 +2371,6 @@ async function renderAdmin() {
   
   let stats = { totalStudents: 0, totalCourses: 0, totalRevenue: 0, pendingCertificates: 0, activeVouchers: 0, totalEnrollments: 0, totalPayments: 0 };
   let vouchers = []; let pending = []; let users = []; let courses = []; let financeData = { thisMonth: 0, lastMonth: 0, total: 0 }; let certTemplate = null;
-  
-  try {
-    const privData = await getMyAdminPrivileges();
-    myAdminPrivileges = privData;
-    if (currentUser) {
-      currentUser.isMainAdmin = privData.isMainAdmin;
-      currentUser.adminPrivileges = privData.privileges;
-    }
-  } catch(e) {}
   
   try { stats = await getAdminStats(); } catch(e) { console.error('Stats error:', e); }
   try { const vd = await getVouchers(); vouchers = vd.vouchers || []; } catch(e) { console.error('Vouchers error:', e); }
@@ -2458,23 +2384,28 @@ async function renderAdmin() {
     certTemplate = t.template;
   } catch(e) {
     certTemplate = {
-      templateImage: '/images/certificate-template.png', signatureImage: '',
-      positions: { nameX: 800, nameY: 455, courseX: 800, courseY: 620, dateX: 470, dateY: 885, certIdX: 1180, certIdY: 885, signatureX: 800, signatureY: 980, signatureScale: 1.0 },
-      styles: { nameFontSize: 52, nameFontColor: '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a', fontFamily: 'Georgia' }
+      templateImage: '/images/certificate-template.png',
+      signatureImage: '',
+      positions: {
+        nameX: 800, nameY: 455,
+        courseX: 800, courseY: 620,
+        dateX: 470, dateY: 885,
+        certIdX: 1180, certIdY: 885,
+        signatureX: 800, signatureY: 980,
+        signatureScale: 1.0
+      },
+      styles: {
+        nameFontSize: 52, nameFontColor: '#1a1a1a',
+        courseFontSize: 36, courseFontColor: '#1a1a1a',
+        dateFontSize: 28, dateFontColor: '#1a1a1a',
+        certIdFontSize: 28, certIdFontColor: '#1a1a1a',
+        fontFamily: 'Georgia'
+      }
     };
   }
   
   window._adminCoursesData = courses;
   window._certTemplate = certTemplate;
-  
-  const isMain = !!(currentUser.isMainAdmin === true);
-  const priv = currentUser.adminPrivileges || {};
-  const canManageCourses = isMain || priv.manageCourses === true;
-  const canManageVouchers = isMain || priv.manageVouchers === true;
-  const canManageUsers = isMain || priv.manageUsers === true;
-  const canManageAdmins = isMain || priv.manageAdmins === true;
-  const canApproveCerts = isMain || priv.approveCertificates === true;
-  const canViewFinance = isMain || priv.viewFinance === true;
 
   function renderAdminContent() {
     var currentCourses = window._adminCoursesData || courses;
@@ -2486,245 +2417,391 @@ async function renderAdmin() {
     
     var html = '';
     html += '<div class="max-w-7xl mx-auto fade-in">';
-    
-    // Header
-    html += '<div class="flex justify-between items-center mb-6 flex-wrap gap-3"><div><button onclick="window.renderPage(\'dashboard\')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button><h1 class="text-3xl sm:text-5xl font-black text-purple-400">' + (isMain ? '👑 ' : '') + 'Admin Console</h1>' + (isMain ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full ml-2">Main Admin</span>' : '<span class="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full ml-2">Admin</span>') + '</div>';
-    
-    // Add Admin + System Controls buttons in header
-    html += '<div class="flex gap-2">';
-    if (isMain || canManageAdmins) {
-      html += '<button id="quickAddAdminBtn" class="bg-yellow-600/50 hover:bg-yellow-600 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-crown mr-1"></i> Add Admin</button>';
-    }
-    if (isMain) {
-      html += '<div class="relative">';
-      html += '<button id="systemControlsBtn" class="bg-red-600/30 hover:bg-red-600/50 px-4 py-2 rounded-xl text-sm font-bold transition border border-red-500/30"><i class="fa-solid fa-triangle-exclamation mr-1"></i> System Controls</button>';
-      html += '<div id="systemControlsDropdown" class="hidden absolute right-0 mt-2 w-72 glass rounded-2xl p-4 z-50 shadow-2xl border border-white/10">';
-      html += '<p class="text-xs text-gray-400 mb-3 font-bold">⚠️ Dangerous Actions</p>';
-      html += '<button onclick="window.showResetRevenueModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition mb-1"><i class="fa-solid fa-dollar-sign mr-2"></i> Reset Revenue</button>';
-      html += '<button onclick="window.showResetEnrollmentsModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition mb-1"><i class="fa-solid fa-users-slash mr-2"></i> Reset Enrollments</button>';
-      html += '<button onclick="window.showResetCertificatesModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition"><i class="fa-solid fa-certificate mr-2"></i> Reset Certificates</button>';
-      html += '</div></div>';
-    }
-    html += '</div></div>';
+    html += '<div class="flex justify-between items-center mb-6 flex-wrap gap-3"><div><button onclick="window.renderPage(\'dashboard\')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button><h1 class="text-3xl sm:text-5xl font-black text-purple-400">👑 Admin Console</h1></div></div>';
     
     // Stats
-    html += '<div class="stats-grid mb-8">';
-    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-cyan-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">' + (stats.totalStudents || 0) + '</h3><p class="text-xs">Students</p></div>';
-    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-book-open text-green-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-green-400">' + (stats.totalCourses || currentCourses.length) + '</h3><p class="text-xs">Courses</p></div>';
-    if (canViewFinance) {
-      html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-dollar-sign text-yellow-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">$' + formatMoney(financeData.total || stats.totalRevenue || 0) + '</h3><p class="text-xs">Revenue</p></div>';
-    }
-    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-purple-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">' + pending.length + '</h3><p class="text-xs">Pending</p></div>';
-    html += '</div>';
+    html += '<div class="stats-grid mb-8"><div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-cyan-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">' + (stats.totalStudents || 0) + '</h3><p class="text-xs">Students</p></div><div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-book-open text-green-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-green-400">' + (stats.totalCourses || currentCourses.length) + '</h3><p class="text-xs">Courses</p></div><div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-dollar-sign text-yellow-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">$' + formatMoney(financeData.total || stats.totalRevenue || 0) + '</h3><p class="text-xs">Revenue</p></div><div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-purple-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">' + pending.length + '</h3><p class="text-xs">Pending</p></div></div>';
     
-    // Quick Action Panels
-    html += '<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">';
-    if (canManageCourses) {
-      html += '<div class="relative"><button id="qaAddCourse" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-plus-circle text-green-400 text-2xl"></i><p class="text-xs mt-1">Add Course</p></button><div id="qaAddCourseInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + currentCourses.length + ' courses active</p><button onclick="showAddCourseModal()" class="mt-1 text-green-400 hover:underline">+ Add New Course</button></div></div>';
-    }
-    if (canManageVouchers) {
-      html += '<div class="relative"><button id="qaVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Vouchers</p></button><div id="qaVoucherInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + vouchers.length + ' vouchers active</p><button onclick="showCreateVoucherModal()" class="mt-1 text-purple-400 hover:underline">+ Create Voucher</button></div></div>';
-    }
-    if (canManageUsers) {
-      html += '<div class="relative"><button id="qaUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button><div id="qaUsersInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + users.length + ' users total</p><p class="text-gray-400">' + (stats.totalStudents || 0) + ' students</p></div></div>';
-    }
-    if (isMain || canManageAdmins) {
-      html += '<div class="relative"><button id="qaAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button><div id="qaAddAdminInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">Manage admin team</p><button onclick="showAddAdminModal()" class="mt-1 text-yellow-400 hover:underline">+ Add Admin</button></div></div>';
-    }
-    if (canApproveCerts) {
-      html += '<div class="relative"><button id="qaApprove" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button><div id="qaApproveInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + pending.length + ' pending certificates</p></div></div>';
-    }
-    html += '</div>';
+    // Quick Actions
+    html += '<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8"><button id="quickAddCourse" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-plus-circle text-green-400 text-2xl"></i><p class="text-xs mt-1">Add Course</p></button><button id="quickCreateVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Voucher</p></button><button id="quickManageUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button><button id="quickAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button><button id="quickApproveCerts" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button></div>';
 
     // Course Management Table
-    if (canManageCourses) {
-      html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><div class="flex gap-2"><button id="saveCourseOrderBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Order</button><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button></div></div><p class="text-xs text-gray-500 mb-2">Drag rows to reorder courses, then click Save Order.</p><div class="overflow-x-auto"><table class="w-full admin-table" id="adminCourseTable"><thead><tr class="border-b border-white/10"><th class="text-left py-3 w-8"></th><th class="text-left">Course</th><th class="text-left">Fee $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody id="adminCourseTableBody">';
-      for (var i = 0; i < currentCourses.length; i++) {
-        var c = currentCourses[i]; var cp = c.price || c.examPrice || 0;
-        html += '<tr class="border-b border-white/10 hover:bg-white/5 course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '"><td class="py-3"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span></td><td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ' + (c.icon || 'fa-certificate') + ' text-purple-400"></i><span class="font-medium">' + escapeHtml(c.name) + '</span></div></td><td>$' + cp + '</td><td>' + (c.enrolledCount || 0) + '</td><td class="space-x-2"><button onclick="window.showEditCourseModal(\'' + c.id + '\')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button><button onclick="window.showManageVideosModal(\'' + c.id + '\')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button></td></tr>';
+    html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><div class="flex gap-2"><button id="saveCourseOrderBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Order</button><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button></div></div><p class="text-xs text-gray-500 mb-2">Drag rows to reorder courses, then click Save Order.</p><div class="overflow-x-auto"><table class="w-full admin-table" id="adminCourseTable"><thead><tr class="border-b border-white/10"><th class="text-left py-3 w-8"></th><th class="text-left">Course</th><th class="text-left">Fee $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody id="adminCourseTableBody">';
+    
+    for (var i = 0; i < currentCourses.length; i++) {
+      var c = currentCourses[i];
+      var cp = c.price || c.examPrice || 0;
+      html += '<tr class="border-b border-white/10 hover:bg-white/5 course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '"><td class="py-3"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span></td><td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ' + (c.icon || 'fa-certificate') + ' text-purple-400"></i><span class="font-medium">' + escapeHtml(c.name) + '</span></div></td><td>$' + cp + '</td><td>' + (c.enrolledCount || 0) + '</td><td class="space-x-2"><button onclick="window.showEditCourseModal(\'' + c.id + '\')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button><button onclick="window.showManageVideosModal(\'' + c.id + '\')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button></td></tr>';
+    }
+    html += '</tbody></table></div></div>';
+
+    // 🎓 CERTIFICATE SETTINGS WITH SIGNATURE PAD + COLOR PRESETS + DRAG
+    html += '<div class="glass rounded-3xl p-6 mb-8" style="border: 1px solid rgba(139, 92, 246, 0.3);">';
+    html += '<h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-certificate text-purple-400 mr-2"></i> 🎓 Certificate Settings</h2>';
+    html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
+    
+    // LEFT COLUMN: Upload + Live Canvas + Test Data + Signature
+    html += '<div>';
+    
+    // Template Image Upload
+    html += '<h3 class="font-semibold mb-2">Certificate Template Image</h3>';
+    html += '<div class="mb-3 p-4 bg-purple-600/10 rounded-xl border border-purple-500/20 text-center">';
+    html += '<img id="certTemplatePreview" src="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" alt="Template Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto;" onerror="this.style.display=\'none\'">';
+    html += '<p id="certTemplateName" class="text-xs text-gray-400 mt-2">' + (ct.templateImage || 'No template selected') + '</p>';
+    html += '</div>';
+    html += '<div class="flex gap-2 mb-3"><label for="certFileInput" class="flex-1 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold text-center cursor-pointer transition"><i class="fa-solid fa-folder-open mr-1"></i> Choose from Gallery</label><input type="file" id="certFileInput" accept="image/*" style="display:none;" onchange="window.handleCertFileSelect(event)"><button onclick="window.deleteCertificateTemplate()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash mr-1"></i> Remove</button></div>';
+    html += '<div class="relative mb-2"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">or URL:</span><input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" placeholder="/images/certificate-template.png" class="w-full bg-transparent border border-white/20 rounded-xl pl-16 pr-4 py-2 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+    html += '<div id="certUploadStatus" class="hidden text-xs mt-2 p-2 rounded-lg"></div>';
+    
+    // Live Canvas
+    html += '<h3 class="font-semibold mt-4 mb-2">🖼️ Live Preview (Click & Drag Elements)</h3>';
+    html += '<div class="canvas-wrapper mb-4" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="certPreviewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto; cursor: default; border-radius: 8px;"></canvas></div>';
+    html += '<p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-hand-pointer mr-1"></i> <strong>Click and drag</strong> any element directly on the canvas above to position it. Works for text AND the signature.</p>';
+    
+    // Signature Box
+    html += '<h3 class="font-semibold mt-4 mb-2">✍️ Official Signature</h3>';
+    html += '<div class="p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 mb-4">';
+    html += '<div class="flex items-center gap-3 mb-3">';
+    html += '<div class="w-16 h-16 rounded-xl bg-white/90 flex items-center justify-center overflow-hidden" style="min-width: 64px;">';
+    if (hasSignature) {
+      html += '<img id="signaturePreviewImg" src="' + sigImg + '" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;">';
+      html += '<span id="signaturePlaceholder" style="display:none;"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>';
+    } else {
+      html += '<img id="signaturePreviewImg" src="" alt="Signature" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;">';
+      html += '<span id="signaturePlaceholder"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>';
+    }
+    html += '</div>';
+    html += '<div><p class="text-sm font-medium">' + (hasSignature ? 'Signature Ready' : 'No Signature Yet') + '</p><p class="text-xs text-gray-400">' + (hasSignature ? 'Drag on canvas to position' : 'Click below to draw') + '</p></div>';
+    html += '</div>';
+    html += '<div class="flex gap-2">';
+    html += '<button onclick="window.openSignaturePadModal()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-900 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-pen-to-square mr-1"></i> ' + (hasSignature ? 'Redraw Signature' : 'Draw Signature') + '</button>';
+    if (hasSignature) {
+      html += '<button onclick="window.clearSavedSignature()" class="bg-red-600/50 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash"></i></button>';
+    }
+    html += '</div>';
+    html += '</div>';
+    
+    // Test Data
+    html += '<h3 class="font-semibold mt-4 mb-2">📝 Test Data (for preview)</h3>';
+    html += '<div class="space-y-2">';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Student Name</label><input type="text" id="testStudentName" value="John Doe" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Course Name</label><input type="text" id="testCourseName" value="Computer Certified Professional (CCP)" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Issue Date</label><input type="text" id="testIssueDate" value="24 June 2026" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Certificate ID</label><input type="text" id="testCertId" value="OBX-CCP-TEST123" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+    html += '</div>';
+    html += '</div>';
+    
+    // RIGHT COLUMN: Position Settings + Font Settings + Color Presets
+    html += '<div>';
+    html += '<h3 class="font-semibold mb-2">📍 Text Positions (auto-updates when you drag)</h3>';
+    html += '<div class="grid grid-cols-2 gap-2">';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Name X</label><input type="number" id="posNameX" value="' + (pos.nameX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Name Y</label><input type="number" id="posNameY" value="' + (pos.nameY || 455) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Course X</label><input type="number" id="posCourseX" value="' + (pos.courseX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Course Y</label><input type="number" id="posCourseY" value="' + (pos.courseY || 620) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Date X</label><input type="number" id="posDateX" value="' + (pos.dateX || 470) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Date Y</label><input type="number" id="posDateY" value="' + (pos.dateY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID X</label><input type="number" id="posCertIdX" value="' + (pos.certIdX || 1180) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID Y</label><input type="number" id="posCertIdY" value="' + (pos.certIdY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Signature X</label><input type="number" id="posSignatureX" value="' + (pos.signatureX || 800) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Signature Y</label><input type="number" id="posSignatureY" value="' + (pos.signatureY || 980) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Sig Scale</label><input type="number" id="posSignatureScale" value="' + (pos.signatureScale || 1.0) + '" step="0.1" min="0.1" max="3.0" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
+    html += '</div>';
+    
+    // Font Settings
+    html += '<h3 class="font-semibold mt-4 mb-2">🎨 Font Settings</h3>';
+    html += '<div class="grid grid-cols-2 gap-2">';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Font Family</label><select id="fontFamily" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"><option value="Georgia"' + (sty.fontFamily === 'Georgia' ? ' selected' : '') + '>Georgia</option><option value="Times New Roman"' + (sty.fontFamily === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option><option value="Arial"' + (sty.fontFamily === 'Arial' ? ' selected' : '') + '>Arial</option><option value="Helvetica"' + (sty.fontFamily === 'Helvetica' ? ' selected' : '') + '>Helvetica</option><option value="Montserrat"' + (sty.fontFamily === 'Montserrat' ? ' selected' : '') + '>Montserrat</option><option value="Playfair Display"' + (sty.fontFamily === 'Playfair Display' ? ' selected' : '') + '>Playfair Display</option><option value="Roboto"' + (sty.fontFamily === 'Roboto' ? ' selected' : '') + '>Roboto</option><option value="Open Sans"' + (sty.fontFamily === 'Open Sans' ? ' selected' : '') + '>Open Sans</option><option value="Merriweather"' + (sty.fontFamily === 'Merriweather' ? ' selected' : '') + '>Merriweather</option><option value="Lora"' + (sty.fontFamily === 'Lora' ? ' selected' : '') + '>Lora</option><option value="Poppins"' + (sty.fontFamily === 'Poppins' ? ' selected' : '') + '>Poppins</option></select></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Name Size</label><input type="range" id="fontNameSize" min="20" max="100" value="' + (sty.nameFontSize || 52) + '" class="w-full"><span class="text-xs text-gray-400" id="fontNameSizeVal">' + (sty.nameFontSize || 52) + 'px</span></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Name Color</label><div class="flex gap-2 items-center"><input type="color" id="fontNameColor" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontNameColorText" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Course Size</label><input type="range" id="fontCourseSize" min="16" max="72" value="' + (sty.courseFontSize || 36) + '" class="w-full"><span class="text-xs text-gray-400" id="fontCourseSizeVal">' + (sty.courseFontSize || 36) + 'px</span></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Course Color</label><div class="flex gap-2 items-center"><input type="color" id="fontCourseColor" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontCourseColorText" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Date Size</label><input type="range" id="fontDateSize" min="12" max="60" value="' + (sty.dateFontSize || 28) + '" class="w-full"><span class="text-xs text-gray-400" id="fontDateSizeVal">' + (sty.dateFontSize || 28) + 'px</span></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Date Color</label><div class="flex gap-2 items-center"><input type="color" id="fontDateColor" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontDateColorText" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID Size</label><input type="range" id="fontCertIdSize" min="12" max="60" value="' + (sty.certIdFontSize || 28) + '" class="w-full"><span class="text-xs text-gray-400" id="fontCertIdSizeVal">' + (sty.certIdFontSize || 28) + 'px</span></div>';
+    html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID Color</label><div class="flex gap-2 items-center"><input type="color" id="fontCertIdColor" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontCertIdColorText" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
+    html += '</div>';
+    
+    // QUICK COLOR PRESETS
+    html += '<h3 class="font-semibold mt-4 mb-2">🎨 Quick Color Presets</h3>';
+    html += '<p class="text-xs text-gray-500 mb-2">Click a preset to set the color of the currently focused element.</p>';
+    html += '<div class="flex flex-wrap gap-2 mb-4">';
+    var presets = [
+      { name: 'GOLD', color: '#D4AF37' },
+      { name: 'SILVER', color: '#C0C0C0' },
+      { name: 'NAVY', color: '#1B2A4A' },
+      { name: 'BLACK', color: '#1A1A1A' },
+      { name: 'WHITE', color: '#FFFFFF' },
+      { name: 'RED', color: '#8B0000' },
+      { name: 'GREEN', color: '#006400' },
+      { name: 'ROYAL', color: '#4169E1' }
+    ];
+    for (var pidx = 0; pidx < presets.length; pidx++) {
+      var preset = presets[pidx];
+      html += '<button onclick="window.applyColorPreset(\'' + preset.color + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition hover:scale-105 border-2 border-white/10" style="background:' + preset.color + '; color:' + (preset.color === '#FFFFFF' || preset.color === '#C0C0C0' ? '#1a1a1a' : '#ffffff') + ';" title="' + preset.name + '">' + preset.name + '</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    
+    // Buttons
+    html += '<div class="flex gap-3 mt-4"><button id="saveCertSettingsBtn" class="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Settings</button><button id="testCertPreviewBtn" class="bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-eye mr-1"></i> Test Preview</button></div>';
+    html += '</div>';
+
+    // Vouchers Section
+    html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Vouchers</h2><div class="flex gap-2"><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm">+ Create</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm">📦 Batch</button></div></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used/Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>';
+    
+    if (vouchers.length > 0) {
+      for (var j = 0; j < vouchers.length; j++) {
+        var v = vouchers[j];
+        html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><span class="font-mono text-cyan-400">' + escapeHtml(v.code) + '</span><button onclick="window.copyToClipboard(\'' + v.code + '\')" class="ml-2 text-gray-400 hover:text-cyan-400"><i class="fa-regular fa-copy"></i></button></td><td>' + (v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')) + '</td><td>' + (v.courseId === 'all' ? 'All Courses' : (currentCourses.find(function(c2) { return c2.id === v.courseId; })?.name || v.courseId)) + '</td><td>' + (v.usedCount || 0) + '/' + (v.maxUses || 1) + '</td><td>' + (v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never') + '</td><td><button onclick="window.deleteVoucherItem(\'' + v._id + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>';
       }
-      html += '</tbody></table></div></div>';
+    } else {
+      html += '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>';
     }
-
-    // Certificate Settings
-    if (canManageCourses) {
-      html += '<div class="glass rounded-3xl p-6 mb-8" style="border: 1px solid rgba(139, 92, 246, 0.3);">';
-      html += '<h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-certificate text-purple-400 mr-2"></i> 🎓 Certificate Settings</h2>';
-      html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
-      html += '<div>';
-      html += '<h3 class="font-semibold mb-2">Certificate Template Image</h3>';
-      html += '<div class="mb-3 p-4 bg-purple-600/10 rounded-xl border border-purple-500/20 text-center">';
-      html += '<img id="certTemplatePreview" src="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" alt="Template Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto;" onerror="this.style.display=\'none\'">';
-      html += '<p id="certTemplateName" class="text-xs text-gray-400 mt-2">' + (ct.templateImage || 'No template selected') + '</p></div>';
-      html += '<div class="flex gap-2 mb-3"><label for="certFileInput" class="flex-1 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold text-center cursor-pointer transition"><i class="fa-solid fa-folder-open mr-1"></i> Choose from Gallery</label><input type="file" id="certFileInput" accept="image/*" style="display:none;" onchange="window.handleCertFileSelect(event)"><button onclick="window.deleteCertificateTemplate()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash mr-1"></i> Remove</button></div>';
-      html += '<div class="relative mb-2"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">or URL:</span><input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" class="w-full bg-transparent border border-white/20 rounded-xl pl-16 pr-4 py-2 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
-      html += '<div id="certUploadStatus" class="hidden text-xs mt-2 p-2 rounded-lg"></div>';
-      html += '<h3 class="font-semibold mt-4 mb-2">🖼️ Live Preview (Click & Drag Elements)</h3>';
-      html += '<div class="canvas-wrapper mb-4" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="certPreviewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto; cursor: default; border-radius: 8px;"></canvas></div>';
-      html += '<p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-hand-pointer mr-1"></i> <strong>Click and drag</strong> any element directly on the canvas.</p>';
-      html += '<h3 class="font-semibold mt-4 mb-2">✍️ Official Signature</h3>';
-      html += '<div class="p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 mb-4"><div class="flex items-center gap-3 mb-3"><div class="w-16 h-16 rounded-xl bg-white/90 flex items-center justify-center overflow-hidden" style="min-width: 64px;">';
-      if (hasSignature) { html += '<img id="signaturePreviewImg" src="' + sigImg + '" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder" style="display:none;"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
-      else { html += '<img id="signaturePreviewImg" src="" alt="Signature" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
-      html += '</div><div><p class="text-sm font-medium">' + (hasSignature ? 'Signature Ready' : 'No Signature Yet') + '</p><p class="text-xs text-gray-400">' + (hasSignature ? 'Drag on canvas to position' : 'Click below to draw') + '</p></div></div>';
-      html += '<div class="flex gap-2"><button onclick="window.openSignaturePadModal()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-900 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-pen-to-square mr-1"></i> ' + (hasSignature ? 'Redraw Signature' : 'Draw Signature') + '</button>';
-      if (hasSignature) { html += '<button onclick="window.clearSavedSignature()" class="bg-red-600/50 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash"></i></button>'; }
-      html += '</div></div>';
-      html += '<h3 class="font-semibold mt-4 mb-2">📝 Test Data</h3><div class="space-y-2">';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Student Name</label><input type="text" id="testStudentName" value="John Doe" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Course Name</label><input type="text" id="testCourseName" value="Computer Certified Professional (CCP)" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Issue Date</label><input type="text" id="testIssueDate" value="24 June 2026" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Certificate ID</label><input type="text" id="testCertId" value="OBX-CCP-TEST123" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
-      html += '</div></div>';
-      html += '<div><h3 class="font-semibold mb-2">📍 Text Positions</h3><div class="grid grid-cols-2 gap-2">';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Name X</label><input type="number" id="posNameX" value="' + (pos.nameX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Y</label><input type="number" id="posNameY" value="' + (pos.nameY || 455) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Course X</label><input type="number" id="posCourseX" value="' + (pos.courseX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Course Y</label><input type="number" id="posCourseY" value="' + (pos.courseY || 620) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Date X</label><input type="number" id="posDateX" value="' + (pos.dateX || 470) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Date Y</label><input type="number" id="posDateY" value="' + (pos.dateY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID X</label><input type="number" id="posCertIdX" value="' + (pos.certIdX || 1180) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID Y</label><input type="number" id="posCertIdY" value="' + (pos.certIdY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig X</label><input type="number" id="posSignatureX" value="' + (pos.signatureX || 800) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig Y</label><input type="number" id="posSignatureY" value="' + (pos.signatureY || 980) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig Scale</label><input type="number" id="posSignatureScale" value="' + (pos.signatureScale || 1.0) + '" step="0.1" min="0.1" max="3.0" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
-      html += '</div>';
-      html += '<h3 class="font-semibold mt-4 mb-2">🎨 Font Settings</h3><div class="grid grid-cols-2 gap-2">';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Font</label><select id="fontFamily" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"><option value="Georgia"' + (sty.fontFamily === 'Georgia' ? ' selected' : '') + '>Georgia</option><option value="Times New Roman"' + (sty.fontFamily === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option><option value="Arial"' + (sty.fontFamily === 'Arial' ? ' selected' : '') + '>Arial</option><option value="Playfair Display"' + (sty.fontFamily === 'Playfair Display' ? ' selected' : '') + '>Playfair Display</option><option value="Montserrat"' + (sty.fontFamily === 'Montserrat' ? ' selected' : '') + '>Montserrat</option></select></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Size</label><input type="range" id="fontNameSize" min="20" max="100" value="' + (sty.nameFontSize || 52) + '" class="w-full"><span class="text-xs text-gray-400" id="fontNameSizeVal">' + (sty.nameFontSize || 52) + 'px</span></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Color</label><div class="flex gap-2"><input type="color" id="fontNameColor" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontNameColorText" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
-      html += '</div>';
-      html += '<div class="flex flex-wrap gap-2 mt-3">';
-      var presets = [{ name: 'GOLD', color: '#D4AF37' }, { name: 'SILVER', color: '#C0C0C0' }, { name: 'NAVY', color: '#1B2A4A' }, { name: 'BLACK', color: '#1A1A1A' }];
-      for (var pidx = 0; pidx < presets.length; pidx++) { var preset = presets[pidx]; html += '<button onclick="window.applyColorPreset(\'' + preset.color + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border-2 border-white/10" style="background:' + preset.color + '; color:' + (preset.color === '#FFFFFF' || preset.color === '#C0C0C0' ? '#1a1a1a' : '#ffffff') + ';">' + preset.name + '</button>'; }
-      html += '</div></div></div>';
-      html += '<div class="flex gap-3 mt-4"><button id="saveCertSettingsBtn" class="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Settings</button><button id="testCertPreviewBtn" class="bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-eye mr-1"></i> Test Preview</button></div>';
-      html += '</div>';
-    }
-
-    // Vouchers
-    if (canManageVouchers) {
-      html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Vouchers</h2><div class="flex gap-2"><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm">+ Create</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm">📦 Batch</button></div></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used/Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>';
-      if (vouchers.length > 0) { for (var j = 0; j < vouchers.length; j++) { var v = vouchers[j]; html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><span class="font-mono text-cyan-400">' + escapeHtml(v.code) + '</span><button onclick="window.copyToClipboard(\'' + v.code + '\')" class="ml-2 text-gray-400 hover:text-cyan-400"><i class="fa-regular fa-copy"></i></button></td><td>' + (v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')) + '</td><td>' + (v.courseId === 'all' ? 'All Courses' : (currentCourses.find(function(c2){return c2.id===v.courseId;})?.name||v.courseId)) + '</td><td>' + (v.usedCount||0) + '/' + (v.maxUses||1) + '</td><td>' + (v.expiresAt?new Date(v.expiresAt).toLocaleDateString():'Never') + '</td><td><button onclick="window.deleteVoucherItem(\'' + v._id + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>'; } }
-      else { html += '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>'; }
-      html += '</tbody></table></div></div>';
-    }
+    html += '</tbody></table></div></div>';
 
     // Pending Certificates
-    if (canApproveCerts) {
-      html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (' + pending.length + ')</h2><div class="space-y-3">';
-      if (pending.length > 0) { for (var k = 0; k < pending.length; k++) { var p = pending[k]; html += '<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div><p class="font-medium">' + escapeHtml(p.userName||p.userEmail) + '</p><p class="text-sm text-gray-400">' + escapeHtml(p.courseName) + ' • Score: ' + p.score + '% • Code: ' + (p.certificateId||'N/A') + '</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem(\'' + p.id + '\')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm">✅ Approve</button><button onclick="window.rejectCertificateItem(\'' + p.id + '\')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm">❌ Reject</button></div></div>'; } }
-      else { html += '<div class="text-center py-8 text-gray-400">✅ No pending certificates</div>'; }
-      html += '</div></div>';
+    html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (' + pending.length + ')</h2><div class="space-y-3">';
+    if (pending.length > 0) {
+      for (var k = 0; k < pending.length; k++) {
+        var p = pending[k];
+        html += '<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div><p class="font-medium">' + escapeHtml(p.userName || p.userEmail) + '</p><p class="text-sm text-gray-400">' + escapeHtml(p.courseName) + ' • Score: ' + p.score + '% • Code: ' + (p.certificateId || 'N/A') + '</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem(\'' + p.id + '\')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm">✅ Approve</button><button onclick="window.rejectCertificateItem(\'' + p.id + '\')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm">❌ Reject</button></div></div>';
+      }
+    } else {
+      html += '<div class="text-center py-8 text-gray-400">✅ No pending certificates</div>';
     }
+    html += '</div></div>';
 
-    // User Management with FULL admin actions
-    if (canManageUsers) {
-      html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>';
-      if (users.length > 0) {
-        for (var m = 0; m < users.length; m++) {
-          var u = users[m];
-          var isAdminUser = u.role === 'admin';
-          var isMainAdminUser = u.isMainAdmin === true;
-          var roleBadge = '';
-          if (isMainAdminUser) { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">👑 Main Admin</span>'; }
-          else if (isAdminUser) { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">Admin</span>'; }
-          else { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20">Student</span>'; }
-          
-          var actionsHtml = '';
-          // Edit privileges for existing admins (except main admin)
-          if (!isMainAdminUser && isAdminUser && (isMain || canManageAdmins)) {
-            actionsHtml += '<button onclick="window.showEditAdminPrivilegesModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\', \'' + escapeHtml(u.email).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-gear"></i> Edit</button>';
-          }
-          // Remove admin (main admin only)
-          if (!isMainAdminUser && isAdminUser && isMain) {
-            actionsHtml += '<button onclick="window.showRemoveAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-user-slash"></i> Remove Admin</button>';
-          }
-          // Make admin for students
-          if (!isAdminUser && !isMainAdminUser && (isMain || canManageAdmins)) {
-            actionsHtml += '<button onclick="window.showMakeAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-crown"></i> Make Admin</button>';
-          }
-          // Delete user
-          if (u.email !== currentUser.email && !isMainAdminUser) {
-            actionsHtml += '<button onclick="window.showDeleteUserModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-trash"></i></button>';
-          }
-          
-          html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div><p class="font-medium">' + escapeHtml(u.name) + '</p><p class="text-xs text-gray-400">' + escapeHtml(u.email) + '</p></div></td><td>' + roleBadge + '</td><td>' + (u.enrolledCourses||0) + '</td><td>$' + formatMoney(u.totalSpent||0) + '</td><td class="space-x-1">' + (actionsHtml || '<span class="text-xs text-gray-500">-</span>') + '</td></tr>';
-        }
-      } else { html += '<tr><td colspan="5" class="text-center py-8 text-gray-400">No users found.</td></tr>'; }
-      html += '</tbody></table></div></div>';
+    // User Management
+    html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>';
+    if (users.length > 0) {
+      for (var m = 0; m < users.length; m++) {
+        var u = users[m];
+        html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div><p class="font-medium">' + escapeHtml(u.name) + '</p><p class="text-xs text-gray-400">' + escapeHtml(u.email) + '</p></div></td><td><span class="px-2 py-1 rounded-full text-xs ' + (u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20') + '">' + u.role + '</span></td><td>' + (u.enrolledCourses || 0) + '</td><td>$' + formatMoney(u.totalSpent || 0) + '</td><td class="space-x-2">' + (u.role !== 'admin' ? '<button onclick="window.makeUserAdminItem(\'' + u.id + '\')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-crown"></i> Make Admin</button>' : '') + (u.email !== currentUser.email ? '<button onclick="window.showDeleteUserModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2"><i class="fa-solid fa-trash"></i></button>' : '') + '</td></tr>';
+      }
+    } else {
+      html += '<tr><td colspan="5" class="text-center py-8 text-gray-400">No users found.</td></tr>';
     }
-    
+    html += '</tbody></table></div></div>';
     html += '</div>';
     return html;
   }
 
   root.innerHTML = renderAdminContent();
 
+  // Initialize everything after DOM renders
   setTimeout(function() {
-    // System Controls dropdown
-    var sysBtn = document.getElementById('systemControlsBtn');
-    var sysDropdown = document.getElementById('systemControlsDropdown');
-    if (sysBtn && sysDropdown) {
-      sysBtn.addEventListener('click', function(e) { e.stopPropagation(); sysDropdown.classList.toggle('hidden'); });
-      document.addEventListener('click', function(e) { if (!sysDropdown.classList.contains('hidden') && !sysDropdown.contains(e.target) && e.target !== sysBtn) { sysDropdown.classList.add('hidden'); } });
-    }
+    // Initialize drag-and-drop for course rows
+    initDragAndDrop();
     
-    // Quick Action panel toggles
-    var qaPanels = ['qaAddCourse', 'qaVoucher', 'qaUsers', 'qaAddAdmin', 'qaApprove'];
-    for (var qpi = 0; qpi < qaPanels.length; qpi++) {
-      (function(panelId) {
-        var btn = document.getElementById(panelId);
-        var info = document.getElementById(panelId + 'Info');
-        if (btn && info) {
-          btn.addEventListener('click', function(e) { e.stopPropagation();
-            var allInfos = document.querySelectorAll('[id$="Info"]');
-            for (var ai = 0; ai < allInfos.length; ai++) { if (allInfos[ai] !== info) allInfos[ai].classList.add('hidden'); }
-            info.classList.toggle('hidden');
-          });
+    // Initialize certificate drag engine (with signature)
+    initCertDragEngine();
+    
+    // Draw initial certificate preview (with signature)
+    redrawCertPreviewCanvas();
+
+    // Save Course Order button
+    var saveBtn = document.getElementById('saveCourseOrderBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function() {
+        var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row');
+        var orderData = [];
+        rows.forEach(function(row, index) {
+          orderData.push({ courseId: row.dataset.courseId, displayOrder: index });
+        });
+        try {
+          await apiRequest('/admin/courses/reorder', { method: 'PUT', body: JSON.stringify({ courses: orderData }) });
+          showToast('Course order saved!', 'success');
+          await loadCourses();
+          window._adminCoursesData = coursesData.slice();
+        } catch (error) {
+          showToast('Failed: ' + error.message, 'error');
         }
-      })(qaPanels[qpi]);
+      });
     }
-    document.addEventListener('click', function() { var allInfos = document.querySelectorAll('[id$="Info"]'); for (var ai2 = 0; ai2 < allInfos.length; ai2++) { allInfos[ai2].classList.add('hidden'); } });
-    
-    // Add Admin header button
-    var qaAdminBtn = document.getElementById('quickAddAdminBtn');
-    if (qaAdminBtn) { qaAdminBtn.addEventListener('click', function() { showAddAdminModal(); }); }
-    
-    // Course management initialization
-    if (canManageCourses) {
-      initDragAndDrop();
-      var saveBtn = document.getElementById('saveCourseOrderBtn');
-      if (saveBtn) { saveBtn.addEventListener('click', async function() { var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row'); var orderData = []; rows.forEach(function(row, index) { orderData.push({ courseId: row.dataset.courseId, displayOrder: index }); }); try { await apiRequest('/admin/courses/reorder', { method: 'PUT', body: JSON.stringify({ courses: orderData }) }); showToast('Course order saved!', 'success'); await loadCourses(); window._adminCoursesData = coursesData.slice(); } catch (error) { showToast('Failed: ' + error.message, 'error'); } }); }
-      
-      initCertDragEngine();
-      redrawCertPreviewCanvas();
-      
-      var saveCertBtn = document.getElementById('saveCertSettingsBtn');
-      if (saveCertBtn) { saveCertBtn.addEventListener('click', async function() { var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png'; var positions = { nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455, courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620, dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885, certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885, signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980, signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0 }; var styles = { fontFamily: document.getElementById('fontFamily')?.value || 'Georgia', nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52, nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a' }; var signatureImage = window._certTemplate?.signatureImage || ''; try { await updateCertificateTemplateImage(imageUrl); await updateCertificateTemplateSettings(positions, styles, signatureImage); showToast('Certificate settings saved!', 'success'); } catch (error) { showToast('Failed: ' + error.message, 'error'); } }); }
-      
-      var testBtn = document.getElementById('testCertPreviewBtn');
-      if (testBtn) { testBtn.addEventListener('click', function() { var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png'; var positions = { nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455, courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620, dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885, certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885, signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980, signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0 }; var styles = { fontFamily: document.getElementById('fontFamily')?.value || 'Georgia', nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52, nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a' }; var testData = { studentName: document.getElementById('testStudentName')?.value || 'John Doe', courseName: document.getElementById('testCourseName')?.value || 'Computer Certified Professional (CCP)', issueDate: document.getElementById('testIssueDate')?.value || '24 June 2026', certId: document.getElementById('testCertId')?.value || 'OBX-CCP-TEST123' }; var sigImg = window._certTemplate?.signatureImage || ''; showCertPreviewModal(imageUrl, positions, styles, testData, sigImg); }); }
-      
-      var allInputs = document.querySelectorAll('#posNameX, #posNameY, #posCourseX, #posCourseY, #posDateX, #posDateY, #posCertIdX, #posCertIdY, #posSignatureX, #posSignatureY, #posSignatureScale, #fontFamily, #fontNameSize, #fontNameColor, #fontNameColorText, #testStudentName, #testCourseName, #testIssueDate, #testCertId, #certTemplateImage');
-      allInputs.forEach(function(input) { input.addEventListener('input', function() { if (input.id === 'fontNameColor') { var t = document.getElementById('fontNameColorText'); if (t) t.value = input.value; } if (input.id === 'fontNameColorText') { var c = document.getElementById('fontNameColor'); if (c) c.value = input.value; } var s = document.getElementById('fontNameSize'); var sv = document.getElementById('fontNameSizeVal'); if (s && sv) sv.textContent = s.value + 'px'; if (input.id === 'certTemplateImage') { var p = document.getElementById('certTemplatePreview'); if (p) p.src = input.value; var n = document.getElementById('certTemplateName'); if (n) n.textContent = input.value; } redrawCertPreviewCanvas(); }); input.addEventListener('change', function() { redrawCertPreviewCanvas(); }); });
-      
-      var addCourseBtn = document.getElementById('addCourseTableBtn'); if (addCourseBtn) addCourseBtn.addEventListener('click', function() { showAddCourseModal(); });
+
+    // Save Certificate Settings button
+    var saveCertBtn = document.getElementById('saveCertSettingsBtn');
+    if (saveCertBtn) {
+      saveCertBtn.addEventListener('click', async function() {
+        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
+        var positions = {
+          nameX: parseInt(document.getElementById('posNameX')?.value) || 800,
+          nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
+          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800,
+          courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
+          dateX: parseInt(document.getElementById('posDateX')?.value) || 470,
+          dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
+          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180,
+          certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
+          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800,
+          signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
+          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
+        };
+        var styles = {
+          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
+          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
+          nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a',
+          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
+          courseFontColor: document.getElementById('fontCourseColorText')?.value || document.getElementById('fontCourseColor')?.value || '#1a1a1a',
+          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
+          dateFontColor: document.getElementById('fontDateColorText')?.value || document.getElementById('fontDateColor')?.value || '#1a1a1a',
+          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
+          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || document.getElementById('fontCertIdColor')?.value || '#1a1a1a'
+        };
+        var signatureImage = window._certTemplate?.signatureImage || '';
+        
+        try {
+          await updateCertificateTemplateImage(imageUrl);
+          await updateCertificateTemplateSettings(positions, styles, signatureImage);
+          showToast('Certificate settings saved!', 'success');
+        } catch (error) {
+          showToast('Failed: ' + error.message, 'error');
+        }
+      });
     }
+
+    // Test Preview button
+    var testBtn = document.getElementById('testCertPreviewBtn');
+    if (testBtn) {
+      testBtn.addEventListener('click', function() {
+        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
+        var positions = {
+          nameX: parseInt(document.getElementById('posNameX')?.value) || 800,
+          nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
+          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800,
+          courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
+          dateX: parseInt(document.getElementById('posDateX')?.value) || 470,
+          dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
+          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180,
+          certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
+          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800,
+          signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
+          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
+        };
+        var styles = {
+          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
+          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
+          nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a',
+          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
+          courseFontColor: document.getElementById('fontCourseColorText')?.value || document.getElementById('fontCourseColor')?.value || '#1a1a1a',
+          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
+          dateFontColor: document.getElementById('fontDateColorText')?.value || document.getElementById('fontDateColor')?.value || '#1a1a1a',
+          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
+          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || document.getElementById('fontCertIdColor')?.value || '#1a1a1a'
+        };
+        var testData = {
+          studentName: document.getElementById('testStudentName')?.value || 'John Doe',
+          courseName: document.getElementById('testCourseName')?.value || 'Computer Certified Professional (CCP)',
+          issueDate: document.getElementById('testIssueDate')?.value || '24 June 2026',
+          certId: document.getElementById('testCertId')?.value || 'OBX-CCP-TEST123'
+        };
+        var sigImg = window._certTemplate?.signatureImage || '';
+        showCertPreviewModal(imageUrl, positions, styles, testData, sigImg);
+      });
+    }
+
+    // Live update handlers for all inputs
+    var allInputs = document.querySelectorAll('#posNameX, #posNameY, #posCourseX, #posCourseY, #posDateX, #posDateY, #posCertIdX, #posCertIdY, #posSignatureX, #posSignatureY, #posSignatureScale, #fontFamily, #fontNameSize, #fontNameColor, #fontNameColorText, #fontCourseSize, #fontCourseColor, #fontCourseColorText, #fontDateSize, #fontDateColor, #fontDateColorText, #fontCertIdSize, #fontCertIdColor, #fontCertIdColorText, #testStudentName, #testCourseName, #testIssueDate, #testCertId, #certTemplateImage');
     
-    var cvBtn = document.getElementById('createVoucherTableBtn'); if (cvBtn && canManageVouchers) cvBtn.addEventListener('click', function() { showCreateVoucherModal(); });
-    var bvBtn = document.getElementById('batchVoucherBtn'); if (bvBtn && canManageVouchers) bvBtn.addEventListener('click', function() { showBatchVoucherModal(); });
-    
+    allInputs.forEach(function(input) {
+      input.addEventListener('input', function() {
+        // Sync color picker with text field
+        if (input.id === 'fontNameColor') {
+          var textEl = document.getElementById('fontNameColorText');
+          if (textEl) textEl.value = input.value;
+        }
+        if (input.id === 'fontNameColorText') {
+          var colorEl = document.getElementById('fontNameColor');
+          if (colorEl) colorEl.value = input.value;
+        }
+        if (input.id === 'fontCourseColor') {
+          var textEl = document.getElementById('fontCourseColorText');
+          if (textEl) textEl.value = input.value;
+        }
+        if (input.id === 'fontCourseColorText') {
+          var colorEl = document.getElementById('fontCourseColor');
+          if (colorEl) colorEl.value = input.value;
+        }
+        if (input.id === 'fontDateColor') {
+          var textEl = document.getElementById('fontDateColorText');
+          if (textEl) textEl.value = input.value;
+        }
+        if (input.id === 'fontDateColorText') {
+          var colorEl = document.getElementById('fontDateColor');
+          if (colorEl) colorEl.value = input.value;
+        }
+        if (input.id === 'fontCertIdColor') {
+          var textEl = document.getElementById('fontCertIdColorText');
+          if (textEl) textEl.value = input.value;
+        }
+        if (input.id === 'fontCertIdColorText') {
+          var colorEl = document.getElementById('fontCertIdColor');
+          if (colorEl) colorEl.value = input.value;
+        }
+        // Update size display values
+        var sizeEl = document.getElementById('fontNameSize');
+        var sizeVal = document.getElementById('fontNameSizeVal');
+        if (sizeEl && sizeVal) sizeVal.textContent = sizeEl.value + 'px';
+        var sizeEl2 = document.getElementById('fontCourseSize');
+        var sizeVal2 = document.getElementById('fontCourseSizeVal');
+        if (sizeEl2 && sizeVal2) sizeVal2.textContent = sizeEl2.value + 'px';
+        var sizeEl3 = document.getElementById('fontDateSize');
+        var sizeVal3 = document.getElementById('fontDateSizeVal');
+        if (sizeEl3 && sizeVal3) sizeVal3.textContent = sizeEl3.value + 'px';
+        var sizeEl4 = document.getElementById('fontCertIdSize');
+        var sizeVal4 = document.getElementById('fontCertIdSizeVal');
+        if (sizeEl4 && sizeVal4) sizeVal4.textContent = sizeEl4.value + 'px';
+        // Update template preview image if URL changed
+        if (input.id === 'certTemplateImage') {
+          var preview = document.getElementById('certTemplatePreview');
+          if (preview) { preview.src = input.value; }
+          var nameEl = document.getElementById('certTemplateName');
+          if (nameEl) nameEl.textContent = input.value;
+        }
+        // Redraw canvas
+        redrawCertPreviewCanvas();
+      });
+      input.addEventListener('change', function() {
+        redrawCertPreviewCanvas();
+      });
+    });
+
+    // Quick action buttons
+    var qa = document.getElementById('quickAddAdmin');
+    if (qa) qa.addEventListener('click', function() { showAddAdminModal(); });
+    var qc = document.getElementById('quickAddCourse');
+    if (qc) qc.addEventListener('click', function() { showAddCourseModal(); });
+    var at = document.getElementById('addCourseTableBtn');
+    if (at) at.addEventListener('click', function() { showAddCourseModal(); });
+    var qv = document.getElementById('quickCreateVoucher');
+    if (qv) qv.addEventListener('click', function() { showCreateVoucherModal(); });
+    var cv = document.getElementById('createVoucherTableBtn');
+    if (cv) cv.addEventListener('click', function() { showCreateVoucherModal(); });
+    var bv = document.getElementById('batchVoucherBtn');
+    if (bv) bv.addEventListener('click', function() { showBatchVoucherModal(); });
   }, 400);
 }
 
 // ==================== APPLY COLOR PRESET ====================
 window.applyColorPreset = function(color) {
+  // Find which color field was last focused, or apply to all
   var focusedEl = document.activeElement;
   if (focusedEl && (focusedEl.id === 'fontNameColorText' || focusedEl.id === 'fontNameColor')) {
     document.getElementById('fontNameColorText').value = color;
     document.getElementById('fontNameColor').value = color;
+  } else if (focusedEl && (focusedEl.id === 'fontCourseColorText' || focusedEl.id === 'fontCourseColor')) {
+    document.getElementById('fontCourseColorText').value = color;
+    document.getElementById('fontCourseColor').value = color;
+  } else if (focusedEl && (focusedEl.id === 'fontDateColorText' || focusedEl.id === 'fontDateColor')) {
+    document.getElementById('fontDateColorText').value = color;
+    document.getElementById('fontDateColor').value = color;
+  } else if (focusedEl && (focusedEl.id === 'fontCertIdColorText' || focusedEl.id === 'fontCertIdColor')) {
+    document.getElementById('fontCertIdColorText').value = color;
+    document.getElementById('fontCertIdColor').value = color;
   } else {
+    // Apply to name by default
     document.getElementById('fontNameColorText').value = color;
     document.getElementById('fontNameColor').value = color;
   }
@@ -2732,11 +2809,11 @@ window.applyColorPreset = function(color) {
   showToast('Color applied: ' + color, 'info');
 };
 
-console.log('✅ Part 2 (Course Dashboard + Admin Console with ALL features) loaded');
+console.log('✅ Part 2 (Admin Panel + Signature Pad + Color Presets + Drag Engine) loaded');
 
-// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 3 ====================
-// v12.5 FINAL: All Admin Modals, Reset Modals, Edit Privileges, Make/Remove Admin,
-//              AI Teacher Chat, AI Widget Chat, Global Exports, Initialization
+
+// ==================== obliXel Academy v12.0 - COMPLETE APP.JS PART 3 ====================
+// v12: Admin modals, AI Teacher Chat, AI Widget Chat, Global exports, Initialization
 console.log('🚀 Loading Part 3 (Admin Modals, AI Chats, Initialization)');
 
 // ==================== DRAG AND DROP FOR COURSE TABLE ====================
@@ -2955,6 +3032,13 @@ window.copyToClipboard = function(text) { navigator.clipboard.writeText(text); s
 window.approveCertificateItem = async function(id) { try { await approveCertificate(id); showToast('Approved!', 'success'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } };
 window.rejectCertificateItem = async function(id) { try { await rejectCertificate(id); showToast('Rejected', 'info'); renderAdmin(); } catch(e) { showToast('Failed', 'error'); } };
 
+window.makeUserAdminItem = function(id) {
+  var m = '<div id="makeAdminModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-yellow-600 to-amber-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">👑 Make Admin</h2><button onclick="closeModal(\'makeAdminModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-crown text-5xl text-yellow-400 mb-3"></i><p>Promote this user to <strong class="text-yellow-400">Admin</strong>?</p><p class="text-sm text-gray-400 mt-2">They will have full access to the admin panel.</p></div><div class="flex gap-3"><button onclick="confirmMakeAdmin(\'' + id + '\')" class="flex-1 bg-yellow-600 py-3 rounded-xl font-bold">👑 Make Admin</button><button onclick="closeModal(\'makeAdminModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', m);
+};
+
+window.confirmMakeAdmin = async function(id) { closeModal('makeAdminModal'); try { await makeAdmin(id); showToast('Admin granted!', 'success'); renderAdmin(); } catch(e) { showToast('Failed: ' + e.message, 'error'); } };
+
 window.deleteVoucherItem = function(id) {
   var m = '<div id="deleteVoucherModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">🗑️ Delete Voucher</h2><button onclick="closeModal(\'deleteVoucherModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-ticket text-5xl text-red-400 mb-3"></i><p>Delete this voucher?</p><p class="text-sm text-gray-400 mt-2">This cannot be undone.</p></div><div class="flex gap-3"><button onclick="confirmDeleteVoucher(\'' + id + '\')" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Delete</button><button onclick="closeModal(\'deleteVoucherModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
   document.body.insertAdjacentHTML('beforeend', m);
@@ -2974,144 +3058,6 @@ window.confirmDeleteUser = async function(userId) {
 };
 
 function closeModal(modalId) { var modal = document.getElementById(modalId); if (modal) modal.remove(); }
-
-// ==================== SYSTEM RESET MODALS ====================
-window.showResetRevenueModal = function() {
-  var m = '<div id="resetRevenueModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold text-white">⚠️ Reset Revenue</h2><button onclick="closeModal(\'resetRevenueModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-dollar-sign text-5xl text-red-400 mb-3"></i><p>This will <strong class="text-red-400">permanently delete</strong> all payment records and reset revenue to $0.</p><p class="text-sm text-gray-400 mt-2">This cannot be undone!</p></div><div class="mb-4"><label class="block text-sm mb-2">Type <span class="text-red-400 font-bold">RESET</span> to confirm:</label><input type="text" id="resetRevenueInput" placeholder="RESET" class="w-full bg-transparent border border-red-500/50 rounded-xl px-4 py-2 focus:border-red-400 transition" autocomplete="off"></div><div class="flex gap-3"><button onclick="window.confirmResetRevenue()" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Reset Revenue</button><button onclick="closeModal(\'resetRevenueModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.confirmResetRevenue = async function() {
-  var input = document.getElementById('resetRevenueInput')?.value;
-  if (input !== 'RESET') { showToast('Type RESET to confirm', 'error'); return; }
-  try { var result = await resetRevenue('RESET'); showToast(result.message, 'success'); closeModal('resetRevenueModal'); renderAdmin(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
-
-window.showResetEnrollmentsModal = function() {
-  var m = '<div id="resetEnrollmentsModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold text-white">⚠️ Reset Enrollments</h2><button onclick="closeModal(\'resetEnrollmentsModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-users-slash text-5xl text-red-400 mb-3"></i><p>This will <strong class="text-red-400">delete all enrollments</strong> and progress for all users.</p><p class="text-sm text-gray-400 mt-2">This cannot be undone!</p></div><div class="mb-4"><label class="block text-sm mb-2">Type <span class="text-red-400 font-bold">RESET</span> to confirm:</label><input type="text" id="resetEnrollmentsInput" placeholder="RESET" class="w-full bg-transparent border border-red-500/50 rounded-xl px-4 py-2 focus:border-red-400 transition" autocomplete="off"></div><div class="flex gap-3"><button onclick="window.confirmResetEnrollments()" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Reset Enrollments</button><button onclick="closeModal(\'resetEnrollmentsModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.confirmResetEnrollments = async function() {
-  var input = document.getElementById('resetEnrollmentsInput')?.value;
-  if (input !== 'RESET') { showToast('Type RESET to confirm', 'error'); return; }
-  try { var result = await resetEnrollments('RESET'); showToast(result.message, 'success'); closeModal('resetEnrollmentsModal'); renderAdmin(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
-
-window.showResetCertificatesModal = function() {
-  var m = '<div id="resetCertificatesModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold text-white">⚠️ Reset Certificates</h2><button onclick="closeModal(\'resetCertificatesModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-certificate text-5xl text-red-400 mb-3"></i><p>This will <strong class="text-red-400">delete all certificates</strong> issued to students.</p><p class="text-sm text-gray-400 mt-2">This cannot be undone!</p></div><div class="mb-4"><label class="block text-sm mb-2">Type <span class="text-red-400 font-bold">RESET</span> to confirm:</label><input type="text" id="resetCertificatesInput" placeholder="RESET" class="w-full bg-transparent border border-red-500/50 rounded-xl px-4 py-2 focus:border-red-400 transition" autocomplete="off"></div><div class="flex gap-3"><button onclick="window.confirmResetCertificates()" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Reset Certificates</button><button onclick="closeModal(\'resetCertificatesModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.confirmResetCertificates = async function() {
-  var input = document.getElementById('resetCertificatesInput')?.value;
-  if (input !== 'RESET') { showToast('Type RESET to confirm', 'error'); return; }
-  try { var result = await resetCertificates('RESET'); showToast(result.message, 'success'); closeModal('resetCertificatesModal'); renderAdmin(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
-
-// ==================== EDIT ADMIN PRIVILEGES MODAL ====================
-window.showEditAdminPrivilegesModal = function(userId, userName, userEmail) {
-  var m = '<div id="editPrivilegesModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold">⚙️ Edit Admin Privileges</h2><button onclick="closeModal(\'editPrivilegesModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><p class="text-sm text-gray-400 mb-2">Admin: <strong>' + escapeHtml(userName) + '</strong> (' + escapeHtml(userEmail) + ')</p><p class="text-xs text-gray-500 mb-4">Select which permissions this admin has.</p><div class="space-y-3">';
-  
-  var privList = [
-    { key: 'manageCourses', label: 'Manage Courses', desc: 'Add, edit, delete courses' },
-    { key: 'manageVouchers', label: 'Manage Vouchers', desc: 'Create and delete vouchers' },
-    { key: 'manageUsers', label: 'Manage Users', desc: 'View and delete users' },
-    { key: 'manageAdmins', label: 'Manage Admins', desc: 'Add and remove other admins' },
-    { key: 'approveCertificates', label: 'Approve Certificates', desc: 'Approve or reject pending certs' },
-    { key: 'resetRevenue', label: 'Reset Revenue', desc: 'Delete all payment records' },
-    { key: 'systemSettings', label: 'System Settings', desc: 'Change platform settings' },
-    { key: 'viewFinance', label: 'View Finance', desc: 'See revenue and financial data' }
-  ];
-  
-  for (var pi = 0; pi < privList.length; pi++) {
-    var p = privList[pi];
-    m += '<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer hover:bg-white/5 transition"><input type="checkbox" id="priv_' + p.key + '" checked class="w-4 h-4"><div><p class="text-sm font-medium">' + p.label + '</p><p class="text-xs text-gray-400">' + p.desc + '</p></div></label>';
-  }
-  
-  m += '</div><div class="pt-4 flex gap-3"><button onclick="window.saveAdminPrivileges(\'' + userId + '\')" class="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold transition">💾 Save Privileges</button><button onclick="closeModal(\'editPrivilegesModal\')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.saveAdminPrivileges = async function(userId) {
-  var privileges = {
-    manageCourses: document.getElementById('priv_manageCourses')?.checked || false,
-    manageVouchers: document.getElementById('priv_manageVouchers')?.checked || false,
-    manageUsers: document.getElementById('priv_manageUsers')?.checked || false,
-    manageAdmins: document.getElementById('priv_manageAdmins')?.checked || false,
-    approveCertificates: document.getElementById('priv_approveCertificates')?.checked || false,
-    resetRevenue: document.getElementById('priv_resetRevenue')?.checked || false,
-    systemSettings: document.getElementById('priv_systemSettings')?.checked || false,
-    viewFinance: document.getElementById('priv_viewFinance')?.checked || false
-  };
-  
-  try {
-    await updateAdminPrivileges(userId, privileges);
-    showToast('Admin privileges updated!', 'success');
-    closeModal('editPrivilegesModal');
-    renderAdmin();
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
-
-// ==================== REMOVE ADMIN MODAL ====================
-window.showRemoveAdminModal = function(userId, userName) {
-  var m = '<div id="removeAdminModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-md"><div class="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold text-white">⚠️ Remove Admin</h2><button onclick="closeModal(\'removeAdminModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="text-center mb-4"><i class="fa-solid fa-user-slash text-5xl text-red-400 mb-3"></i><p>Remove admin status from <strong class="text-red-400">' + escapeHtml(userName) + '</strong>?</p><p class="text-sm text-gray-400 mt-2">They will become a regular student.</p></div><div class="flex gap-3"><button onclick="window.confirmRemoveAdmin(\'' + userId + '\')" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">🗑️ Remove Admin</button><button onclick="closeModal(\'removeAdminModal\')" class="flex-1 glass py-3 rounded-xl">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.confirmRemoveAdmin = async function(userId) {
-  try {
-    await removeAdminUser(userId);
-    showToast('Admin removed successfully', 'success');
-    closeModal('removeAdminModal');
-    renderAdmin();
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
-
-// ==================== MAKE ADMIN MODAL (WITH PRIVILEGES) ====================
-window.showMakeAdminModal = function(userId, userName) {
-  var m = '<div id="makeAdminPrivModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-yellow-600 to-amber-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold text-gray-900">👑 Make Admin: ' + escapeHtml(userName) + '</h2><button onclick="closeModal(\'makeAdminPrivModal\')" class="text-gray-900/80 hover:text-gray-900 text-2xl">&times;</button></div><div class="p-6"><p class="text-sm text-gray-400 mb-4">Select which privileges this admin should have.</p><div class="space-y-3">';
-  
-  var privList2 = [
-    { key: 'manageCourses', label: 'Manage Courses', desc: 'Add, edit, delete courses' },
-    { key: 'manageVouchers', label: 'Manage Vouchers', desc: 'Create and delete vouchers' },
-    { key: 'manageUsers', label: 'Manage Users', desc: 'View and delete users' },
-    { key: 'manageAdmins', label: 'Manage Admins', desc: 'Add and remove other admins' },
-    { key: 'approveCertificates', label: 'Approve Certificates', desc: 'Approve or reject pending certs' },
-    { key: 'resetRevenue', label: 'Reset Revenue', desc: 'Delete all payment records' },
-    { key: 'systemSettings', label: 'System Settings', desc: 'Change platform settings' },
-    { key: 'viewFinance', label: 'View Finance', desc: 'See revenue and financial data' }
-  ];
-  
-  for (var pj = 0; pj < privList2.length; pj++) {
-    var p2 = privList2[pj];
-    var defaultChecked = (p2.key === 'manageAdmins' || p2.key === 'resetRevenue' || p2.key === 'systemSettings') ? '' : ' checked';
-    m += '<label class="flex items-center gap-3 glass p-3 rounded-xl cursor-pointer hover:bg-white/5 transition"><input type="checkbox" id="makePriv_' + p2.key + '"' + defaultChecked + ' class="w-4 h-4"><div><p class="text-sm font-medium">' + p2.label + '</p><p class="text-xs text-gray-400">' + p2.desc + '</p></div></label>';
-  }
-  
-  m += '</div><div class="pt-4 flex gap-3"><button onclick="window.confirmMakeAdminWithPrivileges(\'' + userId + '\')" class="flex-1 bg-yellow-600 hover:bg-yellow-500 py-3 rounded-xl font-bold text-gray-900 transition">👑 Make Admin</button><button onclick="closeModal(\'makeAdminPrivModal\')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', m);
-};
-
-window.confirmMakeAdminWithPrivileges = async function(userId) {
-  var privileges = {
-    manageCourses: document.getElementById('makePriv_manageCourses')?.checked || false,
-    manageVouchers: document.getElementById('makePriv_manageVouchers')?.checked || false,
-    manageUsers: document.getElementById('makePriv_manageUsers')?.checked || false,
-    manageAdmins: document.getElementById('makePriv_manageAdmins')?.checked || false,
-    approveCertificates: document.getElementById('makePriv_approveCertificates')?.checked || false,
-    resetRevenue: document.getElementById('makePriv_resetRevenue')?.checked || false,
-    systemSettings: document.getElementById('makePriv_systemSettings')?.checked || false,
-    viewFinance: document.getElementById('makePriv_viewFinance')?.checked || false
-  };
-  
-  try {
-    await makeAdmin(userId, privileges);
-    showToast('Admin created with selected privileges!', 'success');
-    closeModal('makeAdminPrivModal');
-    renderAdmin();
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-};
 
 // ==================== AI TEACHER CHAT ====================
 var teacherChatHistory = {};
@@ -3322,6 +3268,8 @@ window.showDeleteUserModal = showDeleteUserModal;
 window.confirmDeleteUser = confirmDeleteUser;
 window.approveCertificateItem = approveCertificateItem;
 window.rejectCertificateItem = rejectCertificateItem;
+window.makeUserAdminItem = makeUserAdminItem;
+window.confirmMakeAdmin = confirmMakeAdmin;
 window.deleteVoucherItem = deleteVoucherItem;
 window.confirmDeleteVoucher = confirmDeleteVoucher;
 window.copyToClipboard = copyToClipboard;
@@ -3339,24 +3287,12 @@ window.saveSignatureFromPad = saveSignatureFromPad;
 window.clearSavedSignature = clearSavedSignature;
 window.closeSignaturePadModal = closeSignaturePadModal;
 window.applyColorPreset = applyColorPreset;
-window.showResetRevenueModal = showResetRevenueModal;
-window.confirmResetRevenue = confirmResetRevenue;
-window.showResetEnrollmentsModal = showResetEnrollmentsModal;
-window.confirmResetEnrollments = confirmResetEnrollments;
-window.showResetCertificatesModal = showResetCertificatesModal;
-window.confirmResetCertificates = confirmResetCertificates;
-window.showEditAdminPrivilegesModal = showEditAdminPrivilegesModal;
-window.saveAdminPrivileges = saveAdminPrivileges;
-window.showRemoveAdminModal = showRemoveAdminModal;
-window.confirmRemoveAdmin = confirmRemoveAdmin;
-window.showMakeAdminModal = showMakeAdminModal;
-window.confirmMakeAdminWithPrivileges = confirmMakeAdminWithPrivileges;
 window.shareToLinkedIn = function(id) { window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.origin + '/verify/' + id), '_blank'); };
 window.verifyCertificate = function(id) { window.open('/verify/' + id, '_blank'); };
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async function() {
-  console.log('🚀 obliXel Academy v12.5 FINAL - DOM loaded');
+  console.log('🚀 obliXel Academy v12.0 - DOM loaded');
   
   initNavbarAutoHide();
   
@@ -3426,22 +3362,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateNavbarStyle();
     if (loader) { loader.style.transition = 'opacity 0.5s ease-out'; loader.style.opacity = '0'; setTimeout(function() { loader.style.display = 'none'; }, 500); }
     renderPage(currentUser ? 'dashboard' : 'landing');
-    console.log('✅ obliXel Academy v12.5 FINAL fully initialized');
-    console.log('🎉 ALL FEATURES READY');
+    console.log('✅ obliXel Academy v12.0 fully initialized');
+    console.log('🎉 Signature Pad + Color Presets + Drag-to-Position ALL READY');
   }, 6000);
 });
 
-console.log('🎉 obliXel Academy v12.5 FINAL - COMPLETE - All 3 Parts Loaded');
-console.log('✅ Main Admin: mutaurijoe@gmail.com');
-console.log('✅ Privilege-based UI rendering');
-console.log('✅ Sub-admin restricted access');
-console.log('✅ System reset controls (Revenue, Enrollments, Certificates)');
-console.log('✅ Edit Admin Privileges');
-console.log('✅ Remove Admin (demote to student)');
-console.log('✅ Make Admin with privilege selection');
-console.log('✅ Legal name banner auto-hide');
-console.log('✅ Blurred professor when certified');
-console.log('✅ Quick action panels with dropdown info');
-console.log('✅ Signature drawing pad with drag-to-position');
-console.log('✅ Gold/Silver/Navy/Black color presets');
-console.log('✅ All previous features intact');
+console.log('🎉 obliXel Academy v12.0 - COMPLETE - All 3 Parts Loaded');
+console.log('✅ Signature Drawing Pad Ready');
+console.log('✅ Drag-to-Position for ALL Elements Including Signature');
+console.log('✅ Gold/Silver/Navy/Black/White/Red/Green/Royal Color Presets Ready');
+console.log('✅ Legal Name Capture on Enrollment Ready');
+console.log('✅ Real Names on Certificates Ready');
+console.log('✅ Live Canvas Preview with Signature Ready');

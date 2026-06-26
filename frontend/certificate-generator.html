@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>obliXel Academy - Certificate</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #050816;
+      color: white;
+      font-family: 'Inter', 'Georgia', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 900px;
+      width: 100%;
+    }
+    
+    h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .canvas-wrapper {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(18px);
+    }
+    
+    canvas {
+      max-width: 100%;
+      height: auto !important;
+      border-radius: 8px;
+    }
+    
+    .student-name-display {
+      font-size: 18px;
+      font-weight: 600;
+      color: #06b6d4;
+      margin-bottom: 16px;
+      padding: 10px 20px;
+      background: rgba(6, 182, 212, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      display: inline-block;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    
+    button {
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .btn-download {
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      color: white;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+    }
+    
+    .btn-download:hover {
+      transform: scale(1.03);
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+    }
+    
+    .btn-share {
+      background: rgba(10, 102, 194, 0.3);
+      color: white;
+      border: 1px solid rgba(10, 102, 194, 0.5);
+    }
+    
+    .btn-share:hover {
+      background: rgba(10, 102, 194, 0.5);
+    }
+    
+    .btn-back {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .btn-back:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .loading {
+      font-size: 16px;
+      color: #06b6d4;
+      margin: 40px 0;
+    }
+    
+    .thinking-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      background-color: #06b6d4;
+      border-radius: 50%;
+      animation: dotPulse 1.4s infinite ease-in-out;
+    }
+    
+    .thinking-dots span:nth-child(1) { animation-delay: 0s; }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes dotPulse {
+      0%, 60%, 100% { transform: scale(0.6); opacity: 0.4; }
+      30% { transform: scale(1.2); opacity: 1; }
+    }
+    
+    .error {
+      color: #ef4444;
+      font-size: 16px;
+      margin: 40px 0;
+      padding: 20px;
+      background: rgba(239,68,68,0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+    
+    .success-toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #1e293b;
+      border-left: 4px solid #22c55e;
+      padding: 12px 24px;
+      border-radius: 16px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease-out;
+      font-size: 14px;
+      z-index: 9999;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .cert-info {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    
+    .cert-info-badge {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #a0aec0;
+    }
+    
+    .cert-info-badge strong {
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎓 obliXel Academy Certificate</h2>
+    
+    <div id="studentNameDisplay" class="student-name-display" style="display:none;"></div>
+    
+    <div class="canvas-wrapper">
+      <canvas id="certificateCanvas" width="1600" height="1131"></canvas>
+    </div>
+    
+    <div id="loadingMessage" class="loading">
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+      <p style="margin-top: 10px;">Generating your certificate...</p>
+    </div>
+    
+    <div id="errorMessage" class="error" style="display:none;"></div>
+    
+    <div id="certInfo" class="cert-info" style="display:none;">
+      <div class="cert-info-badge">📊 Score: <strong id="infoScore">-</strong></div>
+      <div class="cert-info-badge">📅 Issued: <strong id="infoDate">-</strong></div>
+      <div class="cert-info-badge">🔑 ID: <strong id="infoId">-</strong></div>
+    </div>
+    
+    <div class="button-group" id="buttonGroup" style="display:none;">
+      <button class="btn-download" onclick="downloadCertificate()">📥 Download Certificate (PNG)</button>
+      <button class="btn-share" onclick="shareToLinkedIn()"><i class="fa-brands fa-linkedin"></i> Share to LinkedIn</button>
+      <button class="btn-back" onclick="goBack()">← Back to Dashboard</button>
+    </div>
+  </div>
+
+  <script>
+    // Get certificate ID from URL
+    var urlParams = new URLSearchParams(window.location.search);
+    var certificateId = urlParams.get('id');
+    var token = localStorage.getItem('auth_token');
+
+    if (!certificateId || !token) {
+      document.getElementById('loadingMessage').style.display = 'none';
+      document.getElementById('errorMessage').style.display = 'block';
+      document.getElementById('errorMessage').textContent = 'Missing certificate ID or authentication. Please login and try again.';
+    } else {
+      loadCertificate();
+    }
+
+    function showToast(message) {
+      var toast = document.createElement('div');
+      toast.className = 'success-toast';
+      toast.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #22c55e; margin-right: 8px;"></i>' + message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 3000);
+    }
+
+    async function loadCertificate() {
+      try {
+        var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+          ? 'http://localhost:5001/api' 
+          : '/api';
+
+        var response = await fetch(API_BASE + '/certificates/' + certificateId + '/download', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+          var errorData = await response.json().catch(function() { return {}; });
+          throw new Error(errorData.error || 'Failed to load certificate data');
+        }
+
+        var data = await response.json();
+        var cert = data.certificate;
+        var template = data.template;
+
+        // Display student name
+        var nameDisplay = document.getElementById('studentNameDisplay');
+        nameDisplay.textContent = '🏅 ' + cert.studentName;
+        nameDisplay.style.display = 'inline-block';
+        
+        // Display cert info
+        document.getElementById('infoScore').textContent = cert.score + '%';
+        document.getElementById('infoDate').textContent = cert.issueDate;
+        document.getElementById('infoId').textContent = cert.certificateId;
+        document.getElementById('certInfo').style.display = 'flex';
+
+        // Draw certificate
+        var canvas = document.getElementById('certificateCanvas');
+        var ctx = canvas.getContext('2d');
+
+        // Load template image
+        var templateImage = new Image();
+        templateImage.crossOrigin = 'anonymous';
+        templateImage.src = template.imageUrl;
+
+        templateImage.onload = function() {
+          // Draw template background
+          ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height);
+
+          var pos = template.positions;
+          var styles = template.styles;
+          var fontFamily = styles.fontFamily || 'Georgia';
+
+          // Student Name
+          ctx.font = 'bold ' + (styles.nameFontSize || 52) + 'px ' + fontFamily;
+          ctx.fillStyle = styles.nameFontColor || '#1a1a1a';
+          ctx.textAlign = 'center';
+          ctx.fillText(cert.studentName, pos.nameX || 800, pos.nameY || 455);
+
+          // Course Name
+          ctx.font = (styles.courseFontSize || 36) + 'px ' + fontFamily;
+          ctx.fillStyle = styles.courseFontColor || '#1a1a1a';
+          ctx.fillText(cert.courseName, pos.courseX || 800, pos.courseY || 620);
+
+          // Issue Date
+          ctx.font = (styles.dateFontSize || 28) + 'px ' + fontFamily;
+          ctx.fillStyle = styles.dateFontColor || '#1a1a1a';
+          ctx.fillText(cert.issueDate, pos.dateX || 470, pos.dateY || 885);
+
+          // Certificate ID
+          ctx.font = (styles.certIdFontSize || 28) + 'px ' + fontFamily;
+          ctx.fillStyle = styles.certIdFontColor || '#1a1a1a';
+          ctx.fillText(cert.certificateId, pos.certIdX || 1180, pos.certIdY || 885);
+
+          // Signature Image (if exists)
+          if (template.signatureImage && template.signatureImage.length > 10) {
+            var sigImg = new Image();
+            sigImg.crossOrigin = 'anonymous';
+            sigImg.onload = function() {
+              var sigScale = pos.signatureScale || 1.0;
+              var w = sigImg.width * sigScale;
+              var h = sigImg.height * sigScale;
+              var sx = (pos.signatureX || 800) - w / 2;
+              var sy = (pos.signatureY || 980) - h / 2;
+              ctx.drawImage(sigImg, sx, sy, w, h);
+              
+              // All drawing complete
+              finishLoading();
+            };
+            sigImg.onerror = function() {
+              // Signature failed to load, but certificate is still valid
+              console.log('Signature image failed to load, showing certificate without signature');
+              finishLoading();
+            };
+            sigImg.src = template.signatureImage;
+          } else {
+            // No signature, certificate is complete
+            finishLoading();
+          }
+        };
+
+        templateImage.onerror = function() {
+          document.getElementById('loadingMessage').style.display = 'none';
+          document.getElementById('errorMessage').style.display = 'block';
+          document.getElementById('errorMessage').textContent = 'Failed to load certificate template image. Please contact support.';
+        };
+        
+        function finishLoading() {
+          // Hide loading, show buttons
+          document.getElementById('loadingMessage').style.display = 'none';
+          document.getElementById('buttonGroup').style.display = 'flex';
+        }
+
+      } catch (error) {
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('errorMessage').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    function downloadCertificate() {
+      var canvas = document.getElementById('certificateCanvas');
+      var link = document.createElement('a');
+      link.download = certificateId + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Certificate downloaded successfully! 🎉');
+    }
+    
+    function shareToLinkedIn() {
+      var shareUrl = window.location.origin + '/verify/' + certificateId;
+      window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl), '_blank');
+      showToast('Opening LinkedIn share...');
+    }
+
+    function goBack() {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

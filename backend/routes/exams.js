@@ -8,6 +8,7 @@ const Enrollment = require('../models/Enrollment');
 const Certificate = require('../models/Certificate');
 const Course = require('../models/Course');
 const ModuleProgress = require('../models/ModuleProgress');
+const User = require('../models/User');
 
 const EXAM_PASS_SCORE = 70;
 const EXAM_COOLDOWN_HOURS = 3;
@@ -17,7 +18,9 @@ const EXAM_TOTAL_QUESTIONS = 25;
 function generateCertificateCode(courseId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
-  for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
   return `OBX-${courseId.toUpperCase()}-${code}`;
 }
 
@@ -25,19 +28,36 @@ function generateCertificateCode(courseId) {
 router.post('/start', authenticate, async (req, res) => {
   const { courseId } = req.body;
   const userId = req.user._id;
-  if (!courseId) return res.status(400).json({ error: 'Course ID required' });
+  
+  if (!courseId) {
+    return res.status(400).json({ error: 'Course ID required' });
+  }
 
   try {
     const enrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
-    if (!enrollment) return res.status(403).json({ error: 'Enroll first' });
+    
+    if (!enrollment) {
+      return res.status(403).json({ error: 'Enroll first' });
+    }
+
+    // Check if user has provided legal name before taking exam
+    const user = await User.findById(userId);
+    if (!user.hasProvidedLegalName || !user.firstName || !user.lastName) {
+      return res.status(403).json({
+        error: 'Legal name required',
+        message: 'You must provide your legal full name before taking the exam. This name will appear on your certificate.',
+        requireLegalName: true
+      });
+    }
 
     // BLOCK if already passed
     if (enrollment.status === 'passed_waiting' || enrollment.status === 'certified') {
+      const cert = await Certificate.findOne({ userId, courseId: courseId.toLowerCase(), status: 'issued' }).sort({ issuedAt: -1 });
       return res.status(403).json({
         error: 'Already passed',
         message: '🎉 You have already passed this certification exam! No more retakes needed.',
         score: enrollment.score,
-        certificateCode: enrollment.certificateId || null
+        certificateCode: cert ? cert.certificateId : enrollment.certificateId || null
       });
     }
 
@@ -59,10 +79,20 @@ router.post('/start', authenticate, async (req, res) => {
 
     const course = await Course.findOne({ courseId: courseId.toLowerCase() });
     const totalModules = course ? course.totalModules : 8;
-    const completedCount = await ModuleProgress.countDocuments({ userId, courseId: courseId.toLowerCase(), completed: true });
-    if (completedCount < totalModules) return res.status(403).json({ error: 'Not all modules done', completed: completedCount, total: totalModules });
+    const completedCount = await ModuleProgress.countDocuments({ 
+      userId, 
+      courseId: courseId.toLowerCase(), 
+      completed: true 
+    });
+    
+    if (completedCount < totalModules) {
+      return res.status(403).json({ 
+        error: 'Not all modules done', 
+        completed: completedCount, 
+        total: totalModules 
+      });
+    }
 
-    // Get questions and shuffle them
     let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
     if (questions.length < EXAM_TOTAL_QUESTIONS) {
       const fallbackQuestions = getFallbackQuestions(courseId);
@@ -72,15 +102,12 @@ router.post('/start', authenticate, async (req, res) => {
     const shuffled = questions.sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
 
-    // Build safe questions for frontend (without correct answer)
     const safeQuestions = selected.map(q => ({
       id: q._id.toString(),
       text: q.text,
       options: q.options
     }));
 
-    // ===== KEY FIX: Save complete question data in session =====
-    // This ensures we NEVER have to re-fetch questions on submit
     const savedQuestions = selected.map(q => ({
       id: q._id.toString(),
       text: q.text,
@@ -94,11 +121,11 @@ router.post('/start', authenticate, async (req, res) => {
       startTime: new Date(),
       status: 'in_progress',
       questionCount: safeQuestions.length,
-      questionOrder: safeQuestions.map(q => q.id), // Keep for backwards compatibility
-      questions: savedQuestions // NEW: Store full question data in session
+      questionOrder: safeQuestions.map(q => q.id),
+      questions: savedQuestions
     });
 
-    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions (questions saved in session)`);
+    console.log(`[EXAM] Exam started for ${req.user.email} - ${courseId} - ${safeQuestions.length} questions`);
 
     res.json({
       sessionId: session._id,
@@ -113,35 +140,50 @@ router.post('/start', authenticate, async (req, res) => {
   }
 });
 
-// ==================== SUBMIT EXAM (FIXED - Uses questions from session) ====================
+// ==================== SUBMIT EXAM (WITH REAL NAME ON CERTIFICATE) ====================
 router.post('/submit', authenticate, async (req, res) => {
   const { sessionId, courseId, answers, timeSpent } = req.body;
   const userId = req.user._id;
-  if (!sessionId || !courseId || !answers) return res.status(400).json({ error: 'Missing fields' });
+  
+  if (!sessionId || !courseId || !answers) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
 
   try {
-    const session = await ExamSession.findOne({ _id: sessionId, userId, courseId: courseId.toLowerCase() });
-    if (!session) return res.status(400).json({ error: 'Invalid session' });
-    if (session.status === 'completed') return res.status(400).json({ error: 'Already submitted' });
+    const session = await ExamSession.findOne({ 
+      _id: sessionId, 
+      userId, 
+      courseId: courseId.toLowerCase() 
+    });
+    
+    if (!session) {
+      return res.status(400).json({ error: 'Invalid session' });
+    }
+    if (session.status === 'completed') {
+      return res.status(400).json({ error: 'Already submitted' });
+    }
 
-    // ===== KEY FIX: Use questions directly from session =====
-    // No more re-fetching from DB which could cause ID mismatches
+    const user = await User.findById(userId);
     let questions = session.questions || [];
     const questionOrder = session.questionOrder || [];
 
-    // If session has no saved questions (old sessions), fall back to DB
     if (questions.length === 0) {
       console.log('[EXAM] No questions in session, falling back to DB');
       let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
-      if (dbQuestions.length === 0) dbQuestions = getFallbackQuestions(courseId);
+      if (dbQuestions.length === 0) {
+        dbQuestions = getFallbackQuestions(courseId);
+      }
 
-      // Build questions array matching questionOrder
       const dbQuestionMap = {};
-      dbQuestions.forEach(q => { dbQuestionMap[q._id.toString()] = q; });
+      dbQuestions.forEach(q => { 
+        dbQuestionMap[q._id.toString()] = q; 
+      });
 
       const fallbackQs = getFallbackQuestions(courseId);
       fallbackQs.forEach(q => {
-        if (!dbQuestionMap[q._id]) dbQuestionMap[q._id] = q;
+        if (!dbQuestionMap[q._id]) {
+          dbQuestionMap[q._id] = q;
+        }
       });
 
       questions = questionOrder.map(id => {
@@ -158,7 +200,6 @@ router.post('/submit', authenticate, async (req, res) => {
     let correctCount = 0;
     const wrongAnswers = [];
 
-    // Match answers against the questions in order
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       if (!question) continue;
@@ -171,7 +212,9 @@ router.post('/submit', authenticate, async (req, res) => {
         wrongAnswers.push({
           question: question.text,
           correctAnswer: question.options[question.correct],
-          yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length ? question.options[userAnswerIndex] : 'Not answered',
+          yourAnswer: userAnswerIndex >= 0 && userAnswerIndex < question.options.length 
+            ? question.options[userAnswerIndex] 
+            : 'Not answered',
           topic: extractTopic(question.text, courseId)
         });
       }
@@ -184,26 +227,41 @@ router.post('/submit', authenticate, async (req, res) => {
     console.log(`[EXAM] Score: ${score}% (${correctCount}/${totalQuestions}) - ${passed ? 'PASSED' : 'FAILED'}`);
 
     const enrollment = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
+    
     if (enrollment) {
       enrollment.examAttempts = (enrollment.examAttempts || 0) + 1;
       enrollment.lastExamDate = new Date();
       enrollment.score = score;
 
       if (passed) {
-        enrollment.status = 'passed_waiting';
+        enrollment.status = 'certified';
         enrollment.cooldownUntil = null;
+        
+        // Use the legal name from user profile for certificate
+        const studentFullName = user.fullName || user.name || 'Student';
+        const studentFirstName = user.firstName || '';
+        const studentLastName = user.lastName || '';
+        
         const certificateCode = generateCertificateCode(courseId);
+        
         await Certificate.create({
           userId,
           courseId: courseId.toLowerCase(),
           courseName: enrollment.courseName,
           certificateId: certificateCode,
+          studentName: studentFullName,
+          studentFirstName: studentFirstName,
+          studentLastName: studentLastName,
           score,
-          status: 'pending',
+          status: 'issued',
           type: enrollment.type,
-          submittedAt: new Date()
+          submittedAt: new Date(),
+          issuedAt: new Date()
         });
-        console.log(`[EXAM] ✅ Certificate code generated: ${certificateCode} for ${req.user.email}`);
+        
+        enrollment.certificateId = certificateCode;
+        
+        console.log(`[EXAM] ✅ Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
       } else {
         const cd = new Date();
         cd.setHours(cd.getHours() + EXAM_COOLDOWN_HOURS);
@@ -214,7 +272,6 @@ router.post('/submit', authenticate, async (req, res) => {
       await enrollment.save();
     }
 
-    // Save attempt
     await ExamAttempt.create({
       userId,
       courseId: courseId.toLowerCase(),
@@ -233,16 +290,20 @@ router.post('/submit', authenticate, async (req, res) => {
     session.passed = passed;
     await session.save();
 
-    // Get certificate code if passed
     let certificateCode = null;
     if (passed) {
-      const cert = await Certificate.findOne({ userId, courseId: courseId.toLowerCase(), status: 'pending' }).sort({ submittedAt: -1 });
-      if (cert) certificateCode = cert.certificateId;
+      const cert = await Certificate.findOne({ 
+        userId, 
+        courseId: courseId.toLowerCase(), 
+        status: 'issued' 
+      }).sort({ issuedAt: -1 });
+      if (cert) {
+        certificateCode = cert.certificateId;
+      }
     }
 
     const supportWhatsApp = process.env.SUPPORT_WHATSAPP || '+263714587259';
 
-    // Get retake time if failed
     let retakeTime = null;
     let retakeTimeFormatted = null;
     let retakeDateFormatted = null;
@@ -251,13 +312,20 @@ router.post('/submit', authenticate, async (req, res) => {
 
     if (!passed && enrollment && enrollment.cooldownUntil) {
       retakeTime = enrollment.cooldownUntil.toISOString();
-      retakeTimeFormatted = enrollment.cooldownUntil.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      retakeDateFormatted = enrollment.cooldownUntil.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      retakeTimeFormatted = enrollment.cooldownUntil.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      retakeDateFormatted = enrollment.cooldownUntil.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      });
       hoursLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60 * 60));
       minutesLeft = Math.ceil((enrollment.cooldownUntil - new Date()) / (1000 * 60));
     }
 
-    // Get unique review topics from wrong answers
     const reviewTopics = [...new Set(wrongAnswers.map(wa => wa.topic).filter(Boolean))];
 
     res.json({
@@ -267,6 +335,7 @@ router.post('/submit', authenticate, async (req, res) => {
       correctCount,
       totalQuestions,
       certificateCode,
+      studentName: user.fullName || user.name,
       supportWhatsApp,
       wrongAnswers,
       reviewTopics,
@@ -277,7 +346,7 @@ router.post('/submit', authenticate, async (req, res) => {
       minutesLeft,
       cooldownHours: EXAM_COOLDOWN_HOURS,
       message: passed
-        ? `🎉 Congratulations! You passed with ${score}%! Your certificate code is: ${certificateCode}. Show this code to the academics team to claim your certificate.`
+        ? `🎉 Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
         : `❌ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
     });
   } catch (error) {
@@ -288,26 +357,108 @@ router.post('/submit', authenticate, async (req, res) => {
 
 // ==================== GET EXAM RESULTS ====================
 router.get('/results/:courseId', authenticate, async (req, res) => {
-  const attempts = await ExamAttempt.find({ userId: req.user._id, courseId: req.params.courseId.toLowerCase() }).sort({ completedAt: -1 });
-  res.json({ attempts });
+  try {
+    const attempts = await ExamAttempt.find({ 
+      userId: req.user._id, 
+      courseId: req.params.courseId.toLowerCase() 
+    }).sort({ completedAt: -1 });
+    res.json({ attempts });
+  } catch (error) {
+    console.error('[EXAM] Results error:', error.message);
+    res.status(500).json({ error: 'Failed to load results' });
+  }
 });
 
 // ==================== GET EXAM HISTORY ====================
 router.get('/history', authenticate, async (req, res) => {
-  const attempts = await ExamAttempt.find({ userId: req.user._id }).sort({ completedAt: -1 });
-  const history = await Promise.all(attempts.map(async (a) => {
-    const c = await Course.findOne({ courseId: a.courseId });
-    return {
-      id: a._id,
-      courseId: a.courseId,
-      courseName: c ? c.name : 'Unknown',
-      courseIcon: c ? c.icon : 'fa-certificate',
-      score: a.score,
-      passed: a.passed,
-      completedAt: a.completedAt
-    };
-  }));
-  res.json({ history });
+  try {
+    const attempts = await ExamAttempt.find({ userId: req.user._id }).sort({ completedAt: -1 });
+    const history = await Promise.all(attempts.map(async (a) => {
+      const c = await Course.findOne({ courseId: a.courseId });
+      return {
+        id: a._id,
+        courseId: a.courseId,
+        courseName: c ? c.name : 'Unknown',
+        courseIcon: c ? c.icon : 'fa-certificate',
+        score: a.score,
+        passed: a.passed,
+        completedAt: a.completedAt
+      };
+    }));
+    res.json({ history });
+  } catch (error) {
+    console.error('[EXAM] History error:', error.message);
+    res.status(500).json({ error: 'Failed to load history' });
+  }
+});
+
+// ==================== UPDATE LEGAL NAME BEFORE EXAM ====================
+router.post('/update-legal-name', authenticate, async (req, res) => {
+  const { firstName, lastName, idNumber, phone, country } = req.body;
+  const userId = req.user._id;
+
+  if (!firstName || !lastName) {
+    return res.status(400).json({ error: 'First name and last name are required' });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        fullName: `${firstName.trim()} ${lastName.trim()}`,
+        idNumber: idNumber || '',
+        phone: phone || '',
+        country: country || '',
+        hasProvidedLegalName: true
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`[EXAM] Legal name updated for ${user.email}: ${user.fullName}`);
+
+    res.json({
+      success: true,
+      message: 'Legal name updated successfully',
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        hasProvidedLegalName: user.hasProvidedLegalName
+      }
+    });
+  } catch (error) {
+    console.error('[EXAM] Legal name update error:', error.message);
+    res.status(500).json({ error: 'Failed to update legal name' });
+  }
+});
+
+// ==================== CHECK LEGAL NAME STATUS ====================
+router.get('/check-legal-name', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      hasProvidedLegalName: user.hasProvidedLegalName,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      fullName: user.fullName || user.name || '',
+      idNumber: user.idNumber || '',
+      phone: user.phone || '',
+      country: user.country || ''
+    });
+  } catch (error) {
+    console.error('[EXAM] Check legal name error:', error.message);
+    res.status(500).json({ error: 'Failed to check legal name status' });
+  }
 });
 
 // ==================== HELPER: EXTRACT TOPIC FROM QUESTION ====================
@@ -407,8 +558,15 @@ function getFallbackQuestions(courseId) {
       { text: 'Router?', options: ['Forward packets', 'Store files', 'Display pages', 'Run apps'], correct: 0, _id: 'fb_ccp_24' }
     ]
   };
+  
   const qs = fb[courseId] || fb['ncp'];
-  return qs.map(q => ({ courseId, text: q.text, options: q.options, correct: q.correct, _id: q._id }));
+  return qs.map(q => ({ 
+    courseId, 
+    text: q.text, 
+    options: q.options, 
+    correct: q.correct, 
+    _id: q._id 
+  }));
 }
 
 module.exports = router;
