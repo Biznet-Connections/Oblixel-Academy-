@@ -1,8 +1,8 @@
-// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 1 ====================
-// v13.0: Two-column Certificate Settings, Position Sliders, Expiry Date, Verify URL,
-//        Custom Text Fields, Live Canvas, Drag-to-Position, Signature Pad, Color Presets,
-//        FULL Font Controls for ALL Elements (Name, Course, Date, Expiry, Cert ID, Verify)
-console.log('🚀 obliXel Academy v13.0 - Loading Complete App Part 1');
+// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 1 ====================
+// v12.5 FINAL: Admin privilege system, Reset revenue, Blurred professor when certified,
+//              Legal name banner auto-hide, Main admin controls, Signature pad,
+//              Color presets, Drag-to-position, All features complete
+console.log('🚀 obliXel Academy v12.5 FINAL - Loading Complete App Part 1');
 
 // ==================== GLOBAL VARIABLES ====================
 let currentUser = null;
@@ -40,9 +40,6 @@ let signaturePadState = {
   penColor: '#1a1a1a',
   penWidth: 3
 };
-
-// Custom Text Fields State
-let customTextFields = [];
 
 // AI Chat History
 let aiChatHistory = [
@@ -254,7 +251,6 @@ function logout() {
   currentUser = null;
   myAdminPrivileges = null;
   userEnrollmentsCache = [];
-  customTextFields = [];
   aiChatHistory = [{ role: "assistant", content: "Hi! I'm ObliXel AI, your study assistant. Ask me anything about our 25+ certifications, courses, exam prep, or vouchers! 🎓" }];
   aiWidgetActive = false;
   updateAuthUI();
@@ -319,13 +315,9 @@ async function updateCertificateTemplateImage(imageUrl) {
   return apiRequest('/admin/certificate-template/image', { method: 'PUT', body: JSON.stringify({ imageUrl }) });
 }
 
-async function updateCertificateTemplateSettings(positions, styles, signatureImage, expiryDateText, expiryPeriod, verifyUrlBase, customTexts) {
+async function updateCertificateTemplateSettings(positions, styles, signatureImage) {
   const body = { positions, styles };
   if (signatureImage !== undefined) body.signatureImage = signatureImage;
-  if (expiryDateText !== undefined) body.expiryDateText = expiryDateText;
-  if (expiryPeriod !== undefined) body.expiryPeriod = expiryPeriod;
-  if (verifyUrlBase !== undefined) body.verifyUrlBase = verifyUrlBase;
-  if (customTexts !== undefined) body.customTexts = customTexts;
   return apiRequest('/admin/certificate-template/settings', { method: 'PUT', body: JSON.stringify(body) });
 }
 
@@ -1216,13 +1208,13 @@ async function renderProfile() {
   }
 }
 
-console.log('✅ Part 1 (Core & Auth + All Pages + v13.0 Prepped) loaded');
+console.log('✅ Part 1 (Core & Auth + Admin Privileges + Legal Name Fix + All Pages) loaded');
 
-// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 2 ====================
-// v13.0: Two-column Certificate Settings, Position Sliders, AUTO-CALCULATE Expiry Date (Clean),
-//        Verify URL with Render default, Custom Text Fields, Live Canvas, Drag-to-Position,
-//        Signature Pad, Color Presets, FULL Font Controls for ALL Elements
-console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel v13.0)');
+// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 2 ====================
+// v12.5 FINAL: Course Dashboard, Exams, Checkout, Signature Pad, Drag Engine,
+//              FULL Admin Console with Privileges, Quick Actions, System Controls,
+//              User Management with Admin Actions, Certificate Settings
+console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel)');
 
 // ==================== COURSE DASHBOARD ====================
 async function renderCourseDashboard(courseId) {
@@ -2164,128 +2156,7 @@ window.saveSignatureFromPad = saveSignatureFromPad;
 window.clearSavedSignature = clearSavedSignature;
 window.closeSignaturePadModal = closeSignaturePadModal;
 
-// ==================== CUSTOM TEXT FIELDS MANAGEMENT ====================
-function addCustomTextField() {
-  if (!customTextFields) customTextFields = [];
-  const newField = {
-    id: 'custom_' + Date.now(),
-    text: 'New Text',
-    x: 800,
-    y: 700 + (customTextFields.length * 60),
-    fontSize: 28,
-    fontColor: '#1a1a1a',
-    fontFamily: 'Georgia'
-  };
-  customTextFields.push(newField);
-  renderCustomTextFieldsList();
-  redrawCertPreviewCanvas();
-  showToast('Custom text field added! Drag it on the canvas.', 'info');
-}
-
-function removeCustomTextField(fieldId) {
-  if (!customTextFields) return;
-  customTextFields = customTextFields.filter(f => f.id !== fieldId);
-  renderCustomTextFieldsList();
-  redrawCertPreviewCanvas();
-  showToast('Custom text field removed.', 'info');
-}
-
-function updateCustomTextField(fieldId, property, value) {
-  if (!customTextFields) return;
-  const field = customTextFields.find(f => f.id === fieldId);
-  if (field) {
-    if (property === 'fontSize' || property === 'x' || property === 'y') {
-      field[property] = parseInt(value) || 0;
-    } else {
-      field[property] = value;
-    }
-    redrawCertPreviewCanvas();
-  }
-}
-
-function renderCustomTextFieldsList() {
-  const container = document.getElementById('customTextFieldsContainer');
-  if (!container) return;
-  if (!customTextFields || customTextFields.length === 0) {
-    container.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">No custom text fields. Click "+ Add Custom Text Field" below.</p>';
-    return;
-  }
-  container.innerHTML = customTextFields.map(field => `
-    <div class="glass rounded-xl p-3 mb-3 border border-white/5">
-      <div class="flex justify-between items-center mb-2">
-        <span class="text-xs font-medium text-purple-400">Custom Text</span>
-        <button onclick="removeCustomTextField('${field.id}')" class="text-red-400 hover:text-red-300 text-xs">
-          <i class="fa-solid fa-trash mr-1"></i> Remove
-        </button>
-      </div>
-      <div class="space-y-2">
-        <input type="text" value="${escapeHtml(field.text)}" 
-          oninput="updateCustomTextField('${field.id}', 'text', this.value)" 
-          class="w-full bg-transparent border border-white/20 rounded-lg px-3 py-1.5 text-sm focus:border-purple-400 transition" 
-          placeholder="Type custom text..." autocomplete="off">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Size</label>
-            <input type="range" min="12" max="80" value="${field.fontSize}" 
-              oninput="updateCustomTextField('${field.id}', 'fontSize', this.value); document.getElementById('ctSize_${field.id}').textContent = this.value + 'px';" 
-              class="w-full">
-            <span id="ctSize_${field.id}" class="text-xs text-gray-400">${field.fontSize}px</span>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Color</label>
-            <input type="color" value="${field.fontColor}" 
-              oninput="updateCustomTextField('${field.id}', 'fontColor', this.value)" 
-              class="w-full h-8 rounded-lg border-0 cursor-pointer">
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">X: ${field.x}</label>
-            <input type="range" min="0" max="1600" value="${field.x}" 
-              oninput="updateCustomTextField('${field.id}', 'x', this.value); this.previousElementSibling.innerHTML = 'X: ' + this.value;" 
-              class="w-full">
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Y: ${field.y}</label>
-            <input type="range" min="0" max="1131" value="${field.y}" 
-              oninput="updateCustomTextField('${field.id}', 'y', this.value); this.previousElementSibling.innerHTML = 'Y: ' + this.value;" 
-              class="w-full">
-          </div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-window.addCustomTextField = addCustomTextField;
-window.removeCustomTextField = removeCustomTextField;
-window.updateCustomTextField = updateCustomTextField;
-
-// ==================== AUTO-CALCULATE EXPIRY DATE (CLEAN - NO PREFIX) ====================
-function getAutoCalculatedExpiry() {
-  const issueDateStr = document.getElementById('testIssueDate')?.value || '24 June 2026';
-  const expiryPeriod = document.getElementById('expiryPeriod')?.value || window._certTemplate?.expiryPeriod || 'never';
-  
-  if (expiryPeriod === 'never' || !expiryPeriod) return '';
-  
-  try {
-    const issueDate = new Date(issueDateStr);
-    if (isNaN(issueDate.getTime())) return '';
-    
-    const yearsToAdd = parseInt(expiryPeriod.replace('year', '').replace('s', '').trim()) || 0;
-    if (yearsToAdd <= 0) return '';
-    
-    const expiryDate = new Date(issueDate);
-    expiryDate.setFullYear(expiryDate.getFullYear() + yearsToAdd);
-    
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return expiryDate.toLocaleDateString('en-US', options);
-  } catch(e) {
-    return '';
-  }
-}
-
-// ==================== REDRAW CERTIFICATE PREVIEW CANVAS (v13.0 - CLEAN EXPIRY) ====================
+// ==================== REDRAW CERTIFICATE PREVIEW CANVAS ====================
 function redrawCertPreviewCanvas() {
   const canvas = document.getElementById('certPreviewCanvas');
   if (!canvas) return;
@@ -2297,7 +2168,8 @@ function redrawCertPreviewCanvas() {
   img.onload = function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    drawAllCertPreviewElements(ctx);
+    drawCertPreviewTexts(ctx);
+    drawSignatureOnPreview(ctx);
   };
   img.onerror = function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2306,115 +2178,54 @@ function redrawCertPreviewCanvas() {
     ctx.textAlign = 'center';
     ctx.fillText('Failed to load template image', 800, 500);
     ctx.fillText('URL: ' + imageUrl, 800, 540);
-    drawAllCertPreviewElements(ctx);
+    drawCertPreviewTexts(ctx);
+    drawSignatureOnPreview(ctx);
   };
 }
 
-function drawAllCertPreviewElements(ctx) {
+function drawCertPreviewTexts(ctx) {
   const getVal = (id, fallback) => {
     const el = document.getElementById(id);
     return el ? el.value : fallback;
   };
-  
   const ff = getVal('fontFamily', window._certTemplate?.styles?.fontFamily || 'Georgia');
-  
-  // Student Name
   const studentName = getVal('testStudentName', 'John Doe');
+  const courseName = getVal('testCourseName', 'Computer Certified Professional (CCP)');
+  const issueDate = getVal('testIssueDate', '24 June 2026');
+  const certId = getVal('testCertId', 'OBX-CCP-TEST123');
   const posNameX = parseInt(getVal('posNameX', '800'));
   const posNameY = parseInt(getVal('posNameY', '455'));
+  const posCourseX = parseInt(getVal('posCourseX', '800'));
+  const posCourseY = parseInt(getVal('posCourseY', '620'));
+  const posDateX = parseInt(getVal('posDateX', '470'));
+  const posDateY = parseInt(getVal('posDateY', '885'));
+  const posCertIdX = parseInt(getVal('posCertIdX', '1180'));
+  const posCertIdY = parseInt(getVal('posCertIdY', '885'));
   const nameSize = parseInt(getVal('fontNameSize', '52'));
   const nameColor = getVal('fontNameColorText') || getVal('fontNameColor', '#1a1a1a');
+  const courseSize = parseInt(getVal('fontCourseSize', '36'));
+  const courseColor = getVal('fontCourseColorText') || getVal('fontCourseColor', '#1a1a1a');
+  const dateSize = parseInt(getVal('fontDateSize', '28'));
+  const dateColor = getVal('fontDateColorText') || getVal('fontDateColor', '#1a1a1a');
+  const certIdSize = parseInt(getVal('fontCertIdSize', '28'));
+  const certIdColor = getVal('fontCertIdColorText') || getVal('fontCertIdColor', '#1a1a1a');
   
   ctx.font = 'bold ' + nameSize + 'px ' + ff;
   ctx.fillStyle = nameColor;
   ctx.textAlign = 'center';
   ctx.fillText(studentName, posNameX, posNameY);
   
-  // Course Name
-  const courseName = getVal('testCourseName', 'Computer Certified Professional (CCP)');
-  const posCourseX = parseInt(getVal('posCourseX', '800'));
-  const posCourseY = parseInt(getVal('posCourseY', '620'));
-  const courseSize = parseInt(getVal('fontCourseSize', '36'));
-  const courseColor = getVal('fontCourseColorText') || getVal('fontCourseColor', '#1a1a1a');
-  
   ctx.font = courseSize + 'px ' + ff;
   ctx.fillStyle = courseColor;
   ctx.fillText(courseName, posCourseX, posCourseY);
-  
-  // Issue Date
-  const issueDate = getVal('testIssueDate', '24 June 2026');
-  const posDateX = parseInt(getVal('posDateX', '470'));
-  const posDateY = parseInt(getVal('posDateY', '885'));
-  const dateSize = parseInt(getVal('fontDateSize', '28'));
-  const dateColor = getVal('fontDateColorText') || getVal('fontDateColor', '#1a1a1a');
   
   ctx.font = dateSize + 'px ' + ff;
   ctx.fillStyle = dateColor;
   ctx.fillText(issueDate, posDateX, posDateY);
   
-  // Expiry Date - AUTO-CALCULATED, CLEAN (NO PREFIX)
-  const autoExpiryText = getAutoCalculatedExpiry();
-  if (autoExpiryText) {
-    const posExpiryX = parseInt(getVal('posExpiryDateX', '470'));
-    const posExpiryY = parseInt(getVal('posExpiryDateY', '920'));
-    const expirySize = parseInt(getVal('fontExpiryDateSize', '24'));
-    const expiryColor = getVal('fontExpiryDateColorText') || getVal('fontExpiryDateColor', '#1a1a1a');
-    
-    ctx.font = expirySize + 'px ' + ff;
-    ctx.fillStyle = expiryColor;
-    ctx.fillText(autoExpiryText, posExpiryX, posExpiryY);
-  }
-  
-  // Cert ID
-  const certId = getVal('testCertId', 'OBX-CCP-TEST123');
-  const posCertIdX = parseInt(getVal('posCertIdX', '1180'));
-  const posCertIdY = parseInt(getVal('posCertIdY', '885'));
-  const certIdSize = parseInt(getVal('fontCertIdSize', '28'));
-  const certIdColor = getVal('fontCertIdColorText') || getVal('fontCertIdColor', '#1a1a1a');
-  
   ctx.font = certIdSize + 'px ' + ff;
   ctx.fillStyle = certIdColor;
   ctx.fillText(certId, posCertIdX, posCertIdY);
-  
-  // Verify URL
-  const verifyBase = document.getElementById('verifyUrlBase')?.value || window._certTemplate?.verifyUrlBase || '';
-  if (verifyBase) {
-    const posVerifyX = parseInt(getVal('posVerifyUrlX', '1180'));
-    const posVerifyY = parseInt(getVal('posVerifyUrlY', '920'));
-    const verifySize = parseInt(getVal('fontVerifyUrlSize', '20'));
-    const verifyColor = getVal('fontVerifyUrlColorText') || getVal('fontVerifyUrlColor', '#1a1a1a');
-    const fullVerifyUrl = verifyBase + certId;
-    
-    ctx.font = verifySize + 'px ' + ff;
-    ctx.fillStyle = verifyColor;
-    ctx.fillText(fullVerifyUrl, posVerifyX, posVerifyY);
-  }
-  
-  // Custom Text Fields
-  if (customTextFields && customTextFields.length > 0) {
-    customTextFields.forEach(field => {
-      if (field.text && field.text.trim()) {
-        ctx.font = (field.fontSize || 28) + 'px ' + (field.fontFamily || ff);
-        ctx.fillStyle = field.fontColor || '#1a1a1a';
-        ctx.fillText(field.text, field.x || 800, field.y || 700);
-      }
-    });
-  }
-  
-  // Signature
-  drawSignatureOnPreview(ctx);
-  
-  // Update the auto-calculated preview text in the UI
-  const expiryPreviewEl = document.getElementById('expiryAutoPreview');
-  if (expiryPreviewEl) {
-    if (autoExpiryText) {
-      expiryPreviewEl.innerHTML = '<i class="fa-solid fa-calculator mr-1"></i> ' + escapeHtml(autoExpiryText);
-      expiryPreviewEl.className = 'text-sm text-green-400 font-semibold';
-    } else {
-      expiryPreviewEl.innerHTML = '<i class="fa-solid fa-circle-info mr-1"></i> No expiry (Never Expires selected)';
-      expiryPreviewEl.className = 'text-xs text-gray-500';
-    }
-  }
 }
 
 function drawSignatureOnPreview(ctx) {
@@ -2442,36 +2253,15 @@ function drawSignatureOnPreview(ctx) {
 }
 
 window.redrawCertPreviewCanvas = redrawCertPreviewCanvas;
-window.drawAllCertPreviewElements = drawAllCertPreviewElements;
+window.drawCertPreviewTexts = drawCertPreviewTexts;
 window.drawSignatureOnPreview = drawSignatureOnPreview;
-window.getAutoCalculatedExpiry = getAutoCalculatedExpiry;
 
-// ==================== CERTIFICATE PREVIEW MODAL (v13.0 - CLEAN EXPIRY) ====================
-function showCertPreviewModal(imageUrl, positions, styles, testData, signatureImage, expiryPeriod, verifyUrlBase, customTexts) {
+// ==================== CERTIFICATE PREVIEW MODAL ====================
+function showCertPreviewModal(imageUrl, positions, styles, testData, signatureImage) {
   var td = testData || { studentName: 'John Doe', courseName: 'Computer Certified Professional (CCP)', issueDate: '24 June 2026', certId: 'OBX-CCP-TEST123' };
   var sigImg = signatureImage || window._certTemplate?.signatureImage || '';
-  var expPeriod = expiryPeriod || window._certTemplate?.expiryPeriod || 'never';
-  var vrfBase = verifyUrlBase || window._certTemplate?.verifyUrlBase || '';
-  var ct = customTexts || customTextFields || [];
   
-  // Auto-calculate expiry for preview - CLEAN, NO PREFIX
-  var autoExpiryText = '';
-  if (expPeriod !== 'never' && expPeriod) {
-    try {
-      var issueDate = new Date(td.issueDate);
-      if (!isNaN(issueDate.getTime())) {
-        var yearsToAdd = parseInt(expPeriod.replace('year', '').replace('s', '').trim()) || 0;
-        if (yearsToAdd > 0) {
-          var expiryDate = new Date(issueDate);
-          expiryDate.setFullYear(expiryDate.getFullYear() + yearsToAdd);
-          var options = { year: 'numeric', month: 'long', day: 'numeric' };
-          autoExpiryText = expiryDate.toLocaleDateString('en-US', options);
-        }
-      }
-    } catch(e) {}
-  }
-  
-  var m = '<div id="certPreviewModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-3xl max-h-[95vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-eye mr-2"></i> Certificate Preview</h2><button onclick="closeModal(\'certPreviewModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6 text-center"><div class="canvas-wrapper" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="previewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto;"></canvas></div><p class="text-xs text-gray-500 mt-3">Test preview with: <strong>' + escapeHtml(td.studentName) + '</strong></p><button onclick="closeModal(\'certPreviewModal\')" class="glass px-6 py-3 rounded-xl font-bold mt-4">Close Preview</button></div></div></div>';
+  var m = '<div id="certPreviewModal" class="fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-3xl max-h-[95vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-eye mr-2"></i> Certificate Preview</h2><button onclick="closeModal(\'certPreviewModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6 text-center"><div class="canvas-wrapper" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="previewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto;"></canvas></div><p class="text-xs text-gray-500 mt-3">Test preview with: <strong>' + escapeHtml(td.studentName) + '</strong> — Adjust positions if text is misaligned.</p><button onclick="closeModal(\'certPreviewModal\')" class="glass px-6 py-3 rounded-xl font-bold mt-4">Close Preview</button></div></div></div>';
   document.body.insertAdjacentHTML('beforeend', m);
   
   setTimeout(function() {
@@ -2483,76 +2273,58 @@ function showCertPreviewModal(imageUrl, positions, styles, testData, signatureIm
     img.src = imageUrl;
     img.onload = function() {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      var ff = (styles && styles.fontFamily) || 'Georgia';
+      var ff = styles.fontFamily || 'Georgia';
       
-      // Name
-      ctx.font = 'bold ' + ((styles && styles.nameFontSize) || 52) + 'px ' + ff;
-      ctx.fillStyle = (styles && styles.nameFontColor) || '#1a1a1a';
+      ctx.font = 'bold ' + (styles.nameFontSize || 52) + 'px ' + ff;
+      ctx.fillStyle = styles.nameFontColor || '#1a1a1a';
       ctx.textAlign = 'center';
-      ctx.fillText(td.studentName, (positions && positions.nameX) || 800, (positions && positions.nameY) || 455);
+      ctx.fillText(td.studentName, positions.nameX || 800, positions.nameY || 455);
       
-      // Course
-      ctx.font = ((styles && styles.courseFontSize) || 36) + 'px ' + ff;
-      ctx.fillStyle = (styles && styles.courseFontColor) || '#1a1a1a';
-      ctx.fillText(td.courseName, (positions && positions.courseX) || 800, (positions && positions.courseY) || 620);
+      ctx.font = (styles.courseFontSize || 36) + 'px ' + ff;
+      ctx.fillStyle = styles.courseFontColor || '#1a1a1a';
+      ctx.fillText(td.courseName, positions.courseX || 800, positions.courseY || 620);
       
-      // Date
-      ctx.font = ((styles && styles.dateFontSize) || 28) + 'px ' + ff;
-      ctx.fillStyle = (styles && styles.dateFontColor) || '#1a1a1a';
-      ctx.fillText(td.issueDate, (positions && positions.dateX) || 470, (positions && positions.dateY) || 885);
+      ctx.font = (styles.dateFontSize || 28) + 'px ' + ff;
+      ctx.fillStyle = styles.dateFontColor || '#1a1a1a';
+      ctx.fillText(td.issueDate, positions.dateX || 470, positions.dateY || 885);
       
-      // Expiry - AUTO-CALCULATED, CLEAN
-      if (autoExpiryText) {
-        ctx.font = ((styles && styles.expiryDateFontSize) || 24) + 'px ' + ff;
-        ctx.fillStyle = (styles && styles.expiryDateFontColor) || '#1a1a1a';
-        ctx.fillText(autoExpiryText, (positions && positions.expiryDateX) || 470, (positions && positions.expiryDateY) || 920);
-      }
+      ctx.font = (styles.certIdFontSize || 28) + 'px ' + ff;
+      ctx.fillStyle = styles.certIdFontColor || '#1a1a1a';
+      ctx.fillText(td.certId, positions.certIdX || 1180, positions.certIdY || 885);
       
-      // Cert ID
-      ctx.font = ((styles && styles.certIdFontSize) || 28) + 'px ' + ff;
-      ctx.fillStyle = (styles && styles.certIdFontColor) || '#1a1a1a';
-      ctx.fillText(td.certId, (positions && positions.certIdX) || 1180, (positions && positions.certIdY) || 885);
-      
-      // Verify URL
-      if (vrfBase) {
-        ctx.font = ((styles && styles.verifyUrlFontSize) || 20) + 'px ' + ff;
-        ctx.fillStyle = (styles && styles.verifyUrlFontColor) || '#1a1a1a';
-        ctx.fillText(vrfBase + td.certId, (positions && positions.verifyUrlX) || 1180, (positions && positions.verifyUrlY) || 920);
-      }
-      
-      // Custom texts
-      if (ct && ct.length > 0) {
-        ct.forEach(function(ctField) {
-          if (ctField.text && ctField.text.trim()) {
-            ctx.font = (ctField.fontSize || 28) + 'px ' + (ctField.fontFamily || ff);
-            ctx.fillStyle = ctField.fontColor || '#1a1a1a';
-            ctx.fillText(ctField.text, ctField.x || 800, ctField.y || 700);
-          }
-        });
-      }
-      
-      // Signature
       if (sigImg) {
         var sigImgObj = new Image();
         sigImgObj.onload = function() {
-          var sigScale = (positions && positions.signatureScale) || 1.0;
+          var sigScale = positions.signatureScale || 1.0;
           var w = sigImgObj.width * sigScale;
           var h = sigImgObj.height * sigScale;
-          var sx = ((positions && positions.signatureX) || 800) - w / 2;
-          var sy = ((positions && positions.signatureY) || 980) - h / 2;
+          var sx = (positions.signatureX || 800) - w / 2;
+          var sy = (positions.signatureY || 980) - h / 2;
           ctx.drawImage(sigImgObj, sx, sy, w, h);
         };
         sigImgObj.src = sigImg;
       }
     };
+    img.onerror = function() {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '24px Georgia';
+      ctx.textAlign = 'center';
+      ctx.fillText('Failed to load template image', 800, 500);
+      ctx.fillText('URL: ' + imageUrl, 800, 540);
+    };
   }, 200);
 }
 window.showCertPreviewModal = showCertPreviewModal;
 
-// ==================== DRAG ENGINE FOR CERTIFICATE EDITOR (v13.0 - WITH ALL ELEMENTS) ====================
+// ==================== DRAG ENGINE FOR CERTIFICATE EDITOR (WITH SIGNATURE) ====================
 function initCertDragEngine() {
   const canvas = document.getElementById('certPreviewCanvas');
   if (!canvas) return;
+  
+  const getVal = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.value : fallback;
+  };
   
   const getPosVal = (id, fallback) => {
     const el = document.getElementById(id);
@@ -2565,25 +2337,9 @@ function initCertDragEngine() {
       { name: 'name', x: getPosVal('posNameX', 800), y: getPosVal('posNameY', 455), inputX: 'posNameX', inputY: 'posNameY', type: 'text' },
       { name: 'course', x: getPosVal('posCourseX', 800), y: getPosVal('posCourseY', 620), inputX: 'posCourseX', inputY: 'posCourseY', type: 'text' },
       { name: 'date', x: getPosVal('posDateX', 470), y: getPosVal('posDateY', 885), inputX: 'posDateX', inputY: 'posDateY', type: 'text' },
-      { name: 'expiry', x: getPosVal('posExpiryDateX', 470), y: getPosVal('posExpiryDateY', 920), inputX: 'posExpiryDateX', inputY: 'posExpiryDateY', type: 'text' },
       { name: 'certId', x: getPosVal('posCertIdX', 1180), y: getPosVal('posCertIdY', 885), inputX: 'posCertIdX', inputY: 'posCertIdY', type: 'text' },
-      { name: 'verifyUrl', x: getPosVal('posVerifyUrlX', 1180), y: getPosVal('posVerifyUrlY', 920), inputX: 'posVerifyUrlX', inputY: 'posVerifyUrlY', type: 'text' },
       { name: 'signature', x: getPosVal('posSignatureX', 800), y: getPosVal('posSignatureY', 980), inputX: 'posSignatureX', inputY: 'posSignatureY', type: 'image' }
     ];
-    
-    if (customTextFields && customTextFields.length > 0) {
-      customTextFields.forEach(field => {
-        elements.push({
-          name: 'custom_' + field.id,
-          x: field.x || 800,
-          y: field.y || 700,
-          inputX: null,
-          inputY: null,
-          type: 'custom',
-          customId: field.id
-        });
-      });
-    }
     
     for (const el of elements) {
       const dx = Math.abs(mx - el.x);
@@ -2644,18 +2400,10 @@ function initCertDragEngine() {
     const clampedX = Math.max(0, Math.min(canvas.width, newX));
     const clampedY = Math.max(0, Math.min(canvas.height, newY));
     
-    if (certDragState.draggedElement.type === 'custom') {
-      updateCustomTextField(certDragState.draggedElement.customId, 'x', clampedX);
-      updateCustomTextField(certDragState.draggedElement.customId, 'y', clampedY);
-      renderCustomTextFieldsList();
-    } else {
-      const inputX = document.getElementById(certDragState.draggedElement.inputX);
-      const inputY = document.getElementById(certDragState.draggedElement.inputY);
-      if (inputX) inputX.value = clampedX;
-      if (inputY) inputY.value = clampedY;
-      if (inputX) inputX.dispatchEvent(new Event('input', { bubbles: true }));
-      if (inputY) inputY.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    const inputX = document.getElementById(certDragState.draggedElement.inputX);
+    const inputY = document.getElementById(certDragState.draggedElement.inputY);
+    if (inputX) inputX.value = clampedX;
+    if (inputY) inputY.value = clampedY;
     
     redrawCertPreviewCanvas();
   }
@@ -2679,36 +2427,7 @@ function initCertDragEngine() {
 }
 window.initCertDragEngine = initCertDragEngine;
 
-// ==================== APPLY COLOR PRESET (v13.0 - ALL FIELDS) ====================
-window.applyColorPreset = function(color) {
-  var focusedEl = document.activeElement;
-  if (focusedEl && focusedEl.id === 'fontNameColorText') {
-    document.getElementById('fontNameColorText').value = color;
-    document.getElementById('fontNameColor').value = color;
-  } else if (focusedEl && focusedEl.id === 'fontCourseColorText') {
-    document.getElementById('fontCourseColorText').value = color;
-    document.getElementById('fontCourseColor').value = color;
-  } else if (focusedEl && focusedEl.id === 'fontDateColorText') {
-    document.getElementById('fontDateColorText').value = color;
-    document.getElementById('fontDateColor').value = color;
-  } else if (focusedEl && focusedEl.id === 'fontExpiryDateColorText') {
-    document.getElementById('fontExpiryDateColorText').value = color;
-    document.getElementById('fontExpiryDateColor').value = color;
-  } else if (focusedEl && focusedEl.id === 'fontCertIdColorText') {
-    document.getElementById('fontCertIdColorText').value = color;
-    document.getElementById('fontCertIdColor').value = color;
-  } else if (focusedEl && focusedEl.id === 'fontVerifyUrlColorText') {
-    document.getElementById('fontVerifyUrlColorText').value = color;
-    document.getElementById('fontVerifyUrlColor').value = color;
-  } else {
-    document.getElementById('fontNameColorText').value = color;
-    document.getElementById('fontNameColor').value = color;
-  }
-  redrawCertPreviewCanvas();
-  showToast('Color applied: ' + color, 'info');
-};
-
-// ==================== ADMIN CONSOLE (v13.0 - CLEAN EXPIRY + VERIFY URL WITH RENDER DEFAULT) ====================
+// ==================== ADMIN CONSOLE (FULL - ALL FEATURES) ====================
 async function renderAdmin() {
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
@@ -2737,20 +2456,12 @@ async function renderAdmin() {
   try {
     const t = await getCertificateTemplate();
     certTemplate = t.template;
-    if (certTemplate && certTemplate.customTexts && certTemplate.customTexts.length > 0) {
-      customTextFields = [...certTemplate.customTexts];
-    } else {
-      customTextFields = [];
-    }
   } catch(e) {
     certTemplate = {
       templateImage: '/images/certificate-template.png', signatureImage: '',
-      expiryPeriod: 'never', verifyUrlBase: '',
-      customTexts: [],
-      positions: { nameX: 800, nameY: 455, courseX: 800, courseY: 620, dateX: 470, dateY: 885, expiryDateX: 470, expiryDateY: 920, certIdX: 1180, certIdY: 885, verifyUrlX: 1180, verifyUrlY: 920, signatureX: 800, signatureY: 980, signatureScale: 1.0 },
-      styles: { nameFontSize: 52, nameFontColor: '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', expiryDateFontSize: 24, expiryDateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a', verifyUrlFontSize: 20, verifyUrlFontColor: '#1a1a1a', fontFamily: 'Georgia' }
+      positions: { nameX: 800, nameY: 455, courseX: 800, courseY: 620, dateX: 470, dateY: 885, certIdX: 1180, certIdY: 885, signatureX: 800, signatureY: 980, signatureScale: 1.0 },
+      styles: { nameFontSize: 52, nameFontColor: '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a', fontFamily: 'Georgia' }
     };
-    customTextFields = [];
   }
   
   window._adminCoursesData = courses;
@@ -2772,9 +2483,6 @@ async function renderAdmin() {
     var sty = ct.styles || {};
     var sigImg = ct.signatureImage || '';
     var hasSignature = !!(sigImg && sigImg.length > 10);
-    var expPeriod = ct.expiryPeriod || 'never';
-    // Default verify URL to Render URL if empty
-    var vrfBase = ct.verifyUrlBase || 'oblixel-academy.onrender.com/verify/';
     
     var html = '';
     html += '<div class="max-w-7xl mx-auto fade-in">';
@@ -2782,6 +2490,7 @@ async function renderAdmin() {
     // Header
     html += '<div class="flex justify-between items-center mb-6 flex-wrap gap-3"><div><button onclick="window.renderPage(\'dashboard\')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button><h1 class="text-3xl sm:text-5xl font-black text-purple-400">' + (isMain ? '👑 ' : '') + 'Admin Console</h1>' + (isMain ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full ml-2">Main Admin</span>' : '<span class="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full ml-2">Admin</span>') + '</div>';
     
+    // Add Admin + System Controls buttons in header
     html += '<div class="flex gap-2">';
     if (isMain || canManageAdmins) {
       html += '<button id="quickAddAdminBtn" class="bg-yellow-600/50 hover:bg-yellow-600 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-crown mr-1"></i> Add Admin</button>';
@@ -2817,7 +2526,7 @@ async function renderAdmin() {
       html += '<div class="relative"><button id="qaVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Vouchers</p></button><div id="qaVoucherInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + vouchers.length + ' vouchers active</p><button onclick="showCreateVoucherModal()" class="mt-1 text-purple-400 hover:underline">+ Create Voucher</button></div></div>';
     }
     if (canManageUsers) {
-      html += '<div class="relative"><button id="qaUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button><div id="qaUsersInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + users.length + ' users total</p></div></div>';
+      html += '<div class="relative"><button id="qaUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button><div id="qaUsersInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + users.length + ' users total</p><p class="text-gray-400">' + (stats.totalStudents || 0) + ' students</p></div></div>';
     }
     if (isMain || canManageAdmins) {
       html += '<div class="relative"><button id="qaAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button><div id="qaAddAdminInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">Manage admin team</p><button onclick="showAddAdminModal()" class="mt-1 text-yellow-400 hover:underline">+ Add Admin</button></div></div>';
@@ -2837,32 +2546,23 @@ async function renderAdmin() {
       html += '</tbody></table></div></div>';
     }
 
-    // ========== v13.0 CERTIFICATE SETTINGS - TWO COLUMN LAYOUT WITH CLEAN EXPIRY + VERIFY URL ==========
+    // Certificate Settings
     if (canManageCourses) {
       html += '<div class="glass rounded-3xl p-6 mb-8" style="border: 1px solid rgba(139, 92, 246, 0.3);">';
       html += '<h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-certificate text-purple-400 mr-2"></i> 🎓 Certificate Settings</h2>';
-      
       html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
-      
-      // ===== LEFT COLUMN =====
       html += '<div>';
-      
-      // Template Image
-      html += '<h3 class="font-semibold mb-2 text-purple-400">🖼️ Template Image</h3>';
+      html += '<h3 class="font-semibold mb-2">Certificate Template Image</h3>';
       html += '<div class="mb-3 p-4 bg-purple-600/10 rounded-xl border border-purple-500/20 text-center">';
       html += '<img id="certTemplatePreview" src="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" alt="Template Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto;" onerror="this.style.display=\'none\'">';
       html += '<p id="certTemplateName" class="text-xs text-gray-400 mt-2">' + (ct.templateImage || 'No template selected') + '</p></div>';
       html += '<div class="flex gap-2 mb-3"><label for="certFileInput" class="flex-1 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold text-center cursor-pointer transition"><i class="fa-solid fa-folder-open mr-1"></i> Choose from Gallery</label><input type="file" id="certFileInput" accept="image/*" style="display:none;" onchange="window.handleCertFileSelect(event)"><button onclick="window.deleteCertificateTemplate()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash mr-1"></i> Remove</button></div>';
-      html += '<div class="relative mb-4"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">or URL:</span><input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" class="w-full bg-transparent border border-white/20 rounded-xl pl-16 pr-4 py-2 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '<div class="relative mb-2"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">or URL:</span><input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" class="w-full bg-transparent border border-white/20 rounded-xl pl-16 pr-4 py-2 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
       html += '<div id="certUploadStatus" class="hidden text-xs mt-2 p-2 rounded-lg"></div>';
-      
-      // Live Canvas Preview
-      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">🖼️ Live Preview <span class="text-xs text-gray-500 font-normal">(Click & Drag Elements)</span></h3>';
+      html += '<h3 class="font-semibold mt-4 mb-2">🖼️ Live Preview (Click & Drag Elements)</h3>';
       html += '<div class="canvas-wrapper mb-4" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="certPreviewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto; cursor: default; border-radius: 8px;"></canvas></div>';
-      html += '<p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-hand-pointer mr-1"></i> <strong>Click and drag</strong> any element directly on the canvas. Sliders update in real-time.</p>';
-      
-      // Signature Pad
-      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">✍️ Official Signature</h3>';
+      html += '<p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-hand-pointer mr-1"></i> <strong>Click and drag</strong> any element directly on the canvas.</p>';
+      html += '<h3 class="font-semibold mt-4 mb-2">✍️ Official Signature</h3>';
       html += '<div class="p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 mb-4"><div class="flex items-center gap-3 mb-3"><div class="w-16 h-16 rounded-xl bg-white/90 flex items-center justify-center overflow-hidden" style="min-width: 64px;">';
       if (hasSignature) { html += '<img id="signaturePreviewImg" src="' + sigImg + '" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder" style="display:none;"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
       else { html += '<img id="signaturePreviewImg" src="" alt="Signature" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
@@ -2870,127 +2570,36 @@ async function renderAdmin() {
       html += '<div class="flex gap-2"><button onclick="window.openSignaturePadModal()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-900 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-pen-to-square mr-1"></i> ' + (hasSignature ? 'Redraw Signature' : 'Draw Signature') + '</button>';
       if (hasSignature) { html += '<button onclick="window.clearSavedSignature()" class="bg-red-600/50 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash"></i></button>'; }
       html += '</div></div>';
-      
-      // Test Data
-      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">📝 Test Data</h3><div class="space-y-2">';
+      html += '<h3 class="font-semibold mt-4 mb-2">📝 Test Data</h3><div class="space-y-2">';
       html += '<div><label class="block text-xs text-gray-400 mb-1">Student Name</label><input type="text" id="testStudentName" value="John Doe" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
       html += '<div><label class="block text-xs text-gray-400 mb-1">Course Name</label><input type="text" id="testCourseName" value="Computer Certified Professional (CCP)" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
       html += '<div><label class="block text-xs text-gray-400 mb-1">Issue Date</label><input type="text" id="testIssueDate" value="24 June 2026" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
       html += '<div><label class="block text-xs text-gray-400 mb-1">Certificate ID</label><input type="text" id="testCertId" value="OBX-CCP-TEST123" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '</div></div>';
+      html += '<div><h3 class="font-semibold mb-2">📍 Text Positions</h3><div class="grid grid-cols-2 gap-2">';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Name X</label><input type="number" id="posNameX" value="' + (pos.nameX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Y</label><input type="number" id="posNameY" value="' + (pos.nameY || 455) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Course X</label><input type="number" id="posCourseX" value="' + (pos.courseX || 800) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Course Y</label><input type="number" id="posCourseY" value="' + (pos.courseY || 620) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Date X</label><input type="number" id="posDateX" value="' + (pos.dateX || 470) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Date Y</label><input type="number" id="posDateY" value="' + (pos.dateY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID X</label><input type="number" id="posCertIdX" value="' + (pos.certIdX || 1180) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Cert ID Y</label><input type="number" id="posCertIdY" value="' + (pos.certIdY || 885) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig X</label><input type="number" id="posSignatureX" value="' + (pos.signatureX || 800) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig Y</label><input type="number" id="posSignatureY" value="' + (pos.signatureY || 980) + '" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Sig Scale</label><input type="number" id="posSignatureScale" value="' + (pos.signatureScale || 1.0) + '" step="0.1" min="0.1" max="3.0" class="w-full bg-transparent border border-amber-500/30 rounded-xl px-3 py-1.5 text-sm focus:border-amber-400 transition"></div>';
       html += '</div>';
-      
-      html += '</div>'; // END LEFT COLUMN
-      
-      // ===== RIGHT COLUMN =====
-      html += '<div>';
-      
-      // Position Sliders
-      html += '<h3 class="font-semibold mb-2 text-cyan-400">📍 Positions (Drag or Slide)</h3>';
-      html += '<div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">';
-      
-      // Name Position
-      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-purple-400 mb-2">Student Name</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posNameXVal">' + (pos.nameX || 800) + '</span></label><input type="range" id="posNameX" min="0" max="1600" value="' + (pos.nameX || 800) + '" class="w-full" oninput="document.getElementById(\'posNameXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posNameYVal">' + (pos.nameY || 455) + '</span></label><input type="range" id="posNameY" min="0" max="1131" value="' + (pos.nameY || 455) + '" class="w-full" oninput="document.getElementById(\'posNameYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
-      
-      // Course Position
-      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-cyan-400 mb-2">Course Name</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posCourseXVal">' + (pos.courseX || 800) + '</span></label><input type="range" id="posCourseX" min="0" max="1600" value="' + (pos.courseX || 800) + '" class="w-full" oninput="document.getElementById(\'posCourseXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posCourseYVal">' + (pos.courseY || 620) + '</span></label><input type="range" id="posCourseY" min="0" max="1131" value="' + (pos.courseY || 620) + '" class="w-full" oninput="document.getElementById(\'posCourseYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
-      
-      // Date Position
-      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-green-400 mb-2">Issue Date</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posDateXVal">' + (pos.dateX || 470) + '</span></label><input type="range" id="posDateX" min="0" max="1600" value="' + (pos.dateX || 470) + '" class="w-full" oninput="document.getElementById(\'posDateXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posDateYVal">' + (pos.dateY || 885) + '</span></label><input type="range" id="posDateY" min="0" max="1131" value="' + (pos.dateY || 885) + '" class="w-full" oninput="document.getElementById(\'posDateYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
-      
-      // Cert ID Position
-      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-yellow-400 mb-2">Certificate ID</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posCertIdXVal">' + (pos.certIdX || 1180) + '</span></label><input type="range" id="posCertIdX" min="0" max="1600" value="' + (pos.certIdX || 1180) + '" class="w-full" oninput="document.getElementById(\'posCertIdXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posCertIdYVal">' + (pos.certIdY || 885) + '</span></label><input type="range" id="posCertIdY" min="0" max="1131" value="' + (pos.certIdY || 885) + '" class="w-full" oninput="document.getElementById(\'posCertIdYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
-      
-      // Signature Position
-      html += '<div class="glass rounded-xl p-3 border border-amber-500/20"><p class="text-xs font-medium text-amber-400 mb-2">✍️ Signature</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posSignatureXVal">' + (pos.signatureX || 800) + '</span></label><input type="range" id="posSignatureX" min="0" max="1600" value="' + (pos.signatureX || 800) + '" class="w-full" oninput="document.getElementById(\'posSignatureXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posSignatureYVal">' + (pos.signatureY || 980) + '</span></label><input type="range" id="posSignatureY" min="0" max="1131" value="' + (pos.signatureY || 980) + '" class="w-full" oninput="document.getElementById(\'posSignatureYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
-      html += '<div class="mt-2"><label class="text-xs text-gray-500">Scale: <span id="posSignatureScaleVal">' + (pos.signatureScale || 1.0) + '</span></label><input type="range" id="posSignatureScale" min="0.1" max="3.0" step="0.1" value="' + (pos.signatureScale || 1.0) + '" class="w-full" oninput="document.getElementById(\'posSignatureScaleVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
-      
-      html += '</div>'; // End position sliders scrollable area
-      
-      // ===== FULL FONT SETTINGS FOR ALL ELEMENTS =====
-      html += '<h3 class="font-semibold mt-4 mb-2 text-pink-400">🎨 Font Settings</h3>';
-      html += '<div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">';
-      
-      // Font Family
-      html += '<div class="glass rounded-xl p-3 border border-white/5"><div><label class="block text-xs text-gray-400 mb-1">Font Family</label><select id="fontFamily" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"><option value="Georgia"' + (sty.fontFamily === 'Georgia' ? ' selected' : '') + '>Georgia</option><option value="Times New Roman"' + (sty.fontFamily === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option><option value="Arial"' + (sty.fontFamily === 'Arial' ? ' selected' : '') + '>Arial</option><option value="Playfair Display"' + (sty.fontFamily === 'Playfair Display' ? ' selected' : '') + '>Playfair Display</option><option value="Montserrat"' + (sty.fontFamily === 'Montserrat' ? ' selected' : '') + '>Montserrat</option></select></div></div>';
-      
-      // Student Name Font
-      html += '<div class="glass rounded-xl p-3 border border-purple-500/20"><p class="text-xs font-medium text-purple-400 mb-2">📛 Student Name</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontNameSizeVal">' + (sty.nameFontSize || 52) + 'px</span></label><input type="range" id="fontNameSize" min="20" max="100" value="' + (sty.nameFontSize || 52) + '" class="w-full" oninput="document.getElementById(\'fontNameSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontNameColor" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontNameColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontNameColorText" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontNameColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
-      
-      // Course Name Font
-      html += '<div class="glass rounded-xl p-3 border border-cyan-500/20"><p class="text-xs font-medium text-cyan-400 mb-2">📚 Course Name</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontCourseSizeVal">' + (sty.courseFontSize || 36) + 'px</span></label><input type="range" id="fontCourseSize" min="16" max="80" value="' + (sty.courseFontSize || 36) + '" class="w-full" oninput="document.getElementById(\'fontCourseSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontCourseColor" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontCourseColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontCourseColorText" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontCourseColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
-      
-      // Issue Date Font
-      html += '<div class="glass rounded-xl p-3 border border-green-500/20"><p class="text-xs font-medium text-green-400 mb-2">📅 Issue Date</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontDateSizeVal">' + (sty.dateFontSize || 28) + 'px</span></label><input type="range" id="fontDateSize" min="12" max="60" value="' + (sty.dateFontSize || 28) + '" class="w-full" oninput="document.getElementById(\'fontDateSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontDateColor" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontDateColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontDateColorText" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontDateColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
-      
-      // Cert ID Font
-      html += '<div class="glass rounded-xl p-3 border border-yellow-500/20"><p class="text-xs font-medium text-yellow-400 mb-2">🏷️ Certificate ID</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontCertIdSizeVal">' + (sty.certIdFontSize || 28) + 'px</span></label><input type="range" id="fontCertIdSize" min="12" max="60" value="' + (sty.certIdFontSize || 28) + '" class="w-full" oninput="document.getElementById(\'fontCertIdSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontCertIdColor" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontCertIdColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontCertIdColorText" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontCertIdColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
-      
-      html += '</div>'; // End font settings scrollable area
-      
-      // Color Presets
+      html += '<h3 class="font-semibold mt-4 mb-2">🎨 Font Settings</h3><div class="grid grid-cols-2 gap-2">';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Font</label><select id="fontFamily" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"><option value="Georgia"' + (sty.fontFamily === 'Georgia' ? ' selected' : '') + '>Georgia</option><option value="Times New Roman"' + (sty.fontFamily === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option><option value="Arial"' + (sty.fontFamily === 'Arial' ? ' selected' : '') + '>Arial</option><option value="Playfair Display"' + (sty.fontFamily === 'Playfair Display' ? ' selected' : '') + '>Playfair Display</option><option value="Montserrat"' + (sty.fontFamily === 'Montserrat' ? ' selected' : '') + '>Montserrat</option></select></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Size</label><input type="range" id="fontNameSize" min="20" max="100" value="' + (sty.nameFontSize || 52) + '" class="w-full"><span class="text-xs text-gray-400" id="fontNameSizeVal">' + (sty.nameFontSize || 52) + 'px</span></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Name Color</label><div class="flex gap-2"><input type="color" id="fontNameColor" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="w-10 h-10 rounded-lg border-0 cursor-pointer"><input type="text" id="fontNameColorText" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"></div></div>';
+      html += '</div>';
       html += '<div class="flex flex-wrap gap-2 mt-3">';
       var presets = [{ name: 'GOLD', color: '#D4AF37' }, { name: 'SILVER', color: '#C0C0C0' }, { name: 'NAVY', color: '#1B2A4A' }, { name: 'BLACK', color: '#1A1A1A' }];
-      for (var pidx = 0; pidx < presets.length; pidx++) { var preset = presets[pidx]; html += '<button onclick="window.applyColorPreset(\'' + preset.color + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border-2 border-white/10 hover:scale-105" style="background:' + preset.color + '; color:' + (preset.color === '#FFFFFF' || preset.color === '#C0C0C0' ? '#1a1a1a' : '#ffffff') + ';">' + preset.name + '</button>'; }
+      for (var pidx = 0; pidx < presets.length; pidx++) { var preset = presets[pidx]; html += '<button onclick="window.applyColorPreset(\'' + preset.color + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border-2 border-white/10" style="background:' + preset.color + '; color:' + (preset.color === '#FFFFFF' || preset.color === '#C0C0C0' ? '#1a1a1a' : '#ffffff') + ';">' + preset.name + '</button>'; }
+      html += '</div></div></div>';
+      html += '<div class="flex gap-3 mt-4"><button id="saveCertSettingsBtn" class="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Settings</button><button id="testCertPreviewBtn" class="bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-eye mr-1"></i> Test Preview</button></div>';
       html += '</div>';
-      
-      // ===== EXPIRY DATE SECTION - AUTO-CALCULATE, CLEAN DATE (NO PREFIX) =====
-      html += '<div class="glass rounded-xl p-4 mt-4 border border-yellow-500/20">';
-      html += '<h3 class="font-semibold mb-3 text-yellow-400">📅 Expiry Date <span class="text-xs text-yellow-500/70 font-normal">(Auto-Calculated)</span></h3>';
-      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Expiry Period</label><select id="expiryPeriod" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm" onchange="redrawCertPreviewCanvas();"><option value="never"' + (expPeriod === 'never' ? ' selected' : '') + '>Never Expires</option><option value="1year"' + (expPeriod === '1year' ? ' selected' : '') + '>1 Year</option><option value="2years"' + (expPeriod === '2years' ? ' selected' : '') + '>2 Years</option><option value="3years"' + (expPeriod === '3years' ? ' selected' : '') + '>3 Years</option></select></div>';
-      html += '<div class="p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/10 mb-3"><p class="text-xs text-gray-400 mb-1">📐 Auto-Calculated Preview:</p><p id="expiryAutoPreview" class="text-sm text-green-400 font-semibold"></p><p class="text-xs text-gray-500 mt-1">(Issue Date + Selected Period = Expiry Date)</p></div>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posExpiryDateXVal">' + (pos.expiryDateX || 470) + '</span></label><input type="range" id="posExpiryDateX" min="0" max="1600" value="' + (pos.expiryDateX || 470) + '" class="w-full" oninput="document.getElementById(\'posExpiryDateXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posExpiryDateYVal">' + (pos.expiryDateY || 920) + '</span></label><input type="range" id="posExpiryDateY" min="0" max="1131" value="' + (pos.expiryDateY || 920) + '" class="w-full" oninput="document.getElementById(\'posExpiryDateYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
-      html += '<div class="grid grid-cols-2 gap-2 mt-2"><div><label class="block text-xs text-gray-400 mb-1">Font Size: <span id="fontExpiryDateSizeVal">' + (sty.expiryDateFontSize || 24) + 'px</span></label><input type="range" id="fontExpiryDateSize" min="12" max="60" value="' + (sty.expiryDateFontSize || 24) + '" class="w-full" oninput="document.getElementById(\'fontExpiryDateSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Color</label><div class="flex gap-1"><input type="color" id="fontExpiryDateColor" value="' + escapeHtml(sty.expiryDateFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontExpiryDateColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontExpiryDateColorText" value="' + escapeHtml(sty.expiryDateFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontExpiryDateColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div>';
-      html += '</div>';
-      
-      // ===== VERIFY URL SECTION =====
-      html += '<div class="glass rounded-xl p-4 mt-4 border border-cyan-500/20">';
-      html += '<h3 class="font-semibold mb-3 text-cyan-400">🔗 Verify At URL</h3>';
-      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Base URL</label><input type="text" id="verifyUrlBase" value="' + escapeHtml(vrfBase) + '" placeholder="e.g., oblixel-academy.onrender.com/verify/" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off" oninput="redrawCertPreviewCanvas();"></div>';
-      html += '<p class="text-xs text-gray-500 mb-2"><i class="fa-solid fa-circle-info mr-1"></i> Certificate ID auto-appended: <span class="text-cyan-400" style="word-break: break-all;">' + escapeHtml(vrfBase) + '<strong>OBX-CCP-TEST123</strong></span></p>';
-      html += '<p class="text-xs text-gray-500 mb-3"><i class="fa-solid fa-globe mr-1"></i> Anyone with this URL can verify the certificate — no login required.</p>';
-      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posVerifyUrlXVal">' + (pos.verifyUrlX || 1180) + '</span></label><input type="range" id="posVerifyUrlX" min="0" max="1600" value="' + (pos.verifyUrlX || 1180) + '" class="w-full" oninput="document.getElementById(\'posVerifyUrlXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="text-xs text-gray-500">Y: <span id="posVerifyUrlYVal">' + (pos.verifyUrlY || 920) + '</span></label><input type="range" id="posVerifyUrlY" min="0" max="1131" value="' + (pos.verifyUrlY || 920) + '" class="w-full" oninput="document.getElementById(\'posVerifyUrlYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
-      html += '<div class="grid grid-cols-2 gap-2 mt-2"><div><label class="block text-xs text-gray-400 mb-1">Font Size: <span id="fontVerifyUrlSizeVal">' + (sty.verifyUrlFontSize || 20) + 'px</span></label><input type="range" id="fontVerifyUrlSize" min="10" max="50" value="' + (sty.verifyUrlFontSize || 20) + '" class="w-full" oninput="document.getElementById(\'fontVerifyUrlSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
-      html += '<div><label class="block text-xs text-gray-400 mb-1">Color</label><div class="flex gap-1"><input type="color" id="fontVerifyUrlColor" value="' + escapeHtml(sty.verifyUrlFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontVerifyUrlColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontVerifyUrlColorText" value="' + escapeHtml(sty.verifyUrlFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontVerifyUrlColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div>';
-      html += '</div>';
-      
-      // ===== CUSTOM TEXT FIELDS SECTION =====
-      html += '<div class="glass rounded-xl p-4 mt-4 border border-green-500/20">';
-      html += '<div class="flex justify-between items-center mb-3"><h3 class="font-semibold text-green-400">📝 Custom Text Fields</h3><button onclick="window.addCustomTextField()" class="bg-green-600/50 hover:bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus mr-1"></i> Add Custom Text Field</button></div>';
-      html += '<div id="customTextFieldsContainer" class="max-h-[400px] overflow-y-auto pr-1"></div>';
-      html += '</div>';
-      
-      html += '</div>'; // END RIGHT COLUMN
-      
-      html += '</div>'; // END TWO COLUMN GRID
-      
-      // Bottom Buttons
-      html += '<div class="flex gap-3 mt-6 pt-4 border-t border-white/10">';
-      html += '<button id="saveCertSettingsBtn" class="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl text-sm font-bold transition flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Save All Settings</button>';
-      html += '<button id="testCertPreviewBtn" class="bg-cyan-600 hover:bg-cyan-500 px-6 py-3 rounded-xl text-sm font-bold transition flex-1"><i class="fa-solid fa-eye mr-1"></i> Test Full Preview</button>';
-      html += '</div>';
-      
-      html += '</div>'; // End certificate settings glass container
     }
 
     // Vouchers
@@ -3009,7 +2618,7 @@ async function renderAdmin() {
       html += '</div></div>';
     }
 
-    // User Management
+    // User Management with FULL admin actions
     if (canManageUsers) {
       html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>';
       if (users.length > 0) {
@@ -3023,15 +2632,19 @@ async function renderAdmin() {
           else { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20">Student</span>'; }
           
           var actionsHtml = '';
+          // Edit privileges for existing admins (except main admin)
           if (!isMainAdminUser && isAdminUser && (isMain || canManageAdmins)) {
             actionsHtml += '<button onclick="window.showEditAdminPrivilegesModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\', \'' + escapeHtml(u.email).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-gear"></i> Edit</button>';
           }
+          // Remove admin (main admin only)
           if (!isMainAdminUser && isAdminUser && isMain) {
             actionsHtml += '<button onclick="window.showRemoveAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-user-slash"></i> Remove Admin</button>';
           }
+          // Make admin for students
           if (!isAdminUser && !isMainAdminUser && (isMain || canManageAdmins)) {
             actionsHtml += '<button onclick="window.showMakeAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-crown"></i> Make Admin</button>';
           }
+          // Delete user
           if (u.email !== currentUser.email && !isMainAdminUser) {
             actionsHtml += '<button onclick="window.showDeleteUserModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-trash"></i></button>';
           }
@@ -3049,6 +2662,7 @@ async function renderAdmin() {
   root.innerHTML = renderAdminContent();
 
   setTimeout(function() {
+    // System Controls dropdown
     var sysBtn = document.getElementById('systemControlsBtn');
     var sysDropdown = document.getElementById('systemControlsDropdown');
     if (sysBtn && sysDropdown) {
@@ -3056,6 +2670,7 @@ async function renderAdmin() {
       document.addEventListener('click', function(e) { if (!sysDropdown.classList.contains('hidden') && !sysDropdown.contains(e.target) && e.target !== sysBtn) { sysDropdown.classList.add('hidden'); } });
     }
     
+    // Quick Action panel toggles
     var qaPanels = ['qaAddCourse', 'qaVoucher', 'qaUsers', 'qaAddAdmin', 'qaApprove'];
     for (var qpi = 0; qpi < qaPanels.length; qpi++) {
       (function(panelId) {
@@ -3072,117 +2687,27 @@ async function renderAdmin() {
     }
     document.addEventListener('click', function() { var allInfos = document.querySelectorAll('[id$="Info"]'); for (var ai2 = 0; ai2 < allInfos.length; ai2++) { allInfos[ai2].classList.add('hidden'); } });
     
+    // Add Admin header button
     var qaAdminBtn = document.getElementById('quickAddAdminBtn');
     if (qaAdminBtn) { qaAdminBtn.addEventListener('click', function() { showAddAdminModal(); }); }
     
+    // Course management initialization
     if (canManageCourses) {
       initDragAndDrop();
       var saveBtn = document.getElementById('saveCourseOrderBtn');
       if (saveBtn) { saveBtn.addEventListener('click', async function() { var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row'); var orderData = []; rows.forEach(function(row, index) { orderData.push({ courseId: row.dataset.courseId, displayOrder: index }); }); try { await apiRequest('/admin/courses/reorder', { method: 'PUT', body: JSON.stringify({ courses: orderData }) }); showToast('Course order saved!', 'success'); await loadCourses(); window._adminCoursesData = coursesData.slice(); } catch (error) { showToast('Failed: ' + error.message, 'error'); } }); }
       
       initCertDragEngine();
-      renderCustomTextFieldsList();
       redrawCertPreviewCanvas();
       
       var saveCertBtn = document.getElementById('saveCertSettingsBtn');
-      if (saveCertBtn) { saveCertBtn.addEventListener('click', async function() {
-        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
-        var positions = {
-          nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
-          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
-          dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
-          expiryDateX: parseInt(document.getElementById('posExpiryDateX')?.value) || 470, expiryDateY: parseInt(document.getElementById('posExpiryDateY')?.value) || 920,
-          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
-          verifyUrlX: parseInt(document.getElementById('posVerifyUrlX')?.value) || 1180, verifyUrlY: parseInt(document.getElementById('posVerifyUrlY')?.value) || 920,
-          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
-          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
-        };
-        var styles = {
-          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
-          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
-          nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a',
-          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
-          courseFontColor: document.getElementById('fontCourseColorText')?.value || document.getElementById('fontCourseColor')?.value || '#1a1a1a',
-          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
-          dateFontColor: document.getElementById('fontDateColorText')?.value || document.getElementById('fontDateColor')?.value || '#1a1a1a',
-          expiryDateFontSize: parseInt(document.getElementById('fontExpiryDateSize')?.value) || 24,
-          expiryDateFontColor: document.getElementById('fontExpiryDateColorText')?.value || document.getElementById('fontExpiryDateColor')?.value || '#1a1a1a',
-          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
-          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || document.getElementById('fontCertIdColor')?.value || '#1a1a1a',
-          verifyUrlFontSize: parseInt(document.getElementById('fontVerifyUrlSize')?.value) || 20,
-          verifyUrlFontColor: document.getElementById('fontVerifyUrlColorText')?.value || document.getElementById('fontVerifyUrlColor')?.value || '#1a1a1a'
-        };
-        var signatureImage = window._certTemplate?.signatureImage || '';
-        var expiryPeriod = document.getElementById('expiryPeriod')?.value || 'never';
-        var verifyUrlBase = document.getElementById('verifyUrlBase')?.value || '';
-        
-        try {
-          await updateCertificateTemplateImage(imageUrl);
-          await updateCertificateTemplateSettings(positions, styles, signatureImage, expiryPeriod, verifyUrlBase, customTextFields);
-          showToast('Certificate settings saved!', 'success');
-        } catch (error) { showToast('Failed: ' + error.message, 'error'); }
-      }); }
+      if (saveCertBtn) { saveCertBtn.addEventListener('click', async function() { var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png'; var positions = { nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455, courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620, dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885, certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885, signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980, signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0 }; var styles = { fontFamily: document.getElementById('fontFamily')?.value || 'Georgia', nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52, nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a' }; var signatureImage = window._certTemplate?.signatureImage || ''; try { await updateCertificateTemplateImage(imageUrl); await updateCertificateTemplateSettings(positions, styles, signatureImage); showToast('Certificate settings saved!', 'success'); } catch (error) { showToast('Failed: ' + error.message, 'error'); } }); }
       
       var testBtn = document.getElementById('testCertPreviewBtn');
-      if (testBtn) { testBtn.addEventListener('click', function() {
-        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
-        var positions = {
-          nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
-          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
-          dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
-          expiryDateX: parseInt(document.getElementById('posExpiryDateX')?.value) || 470, expiryDateY: parseInt(document.getElementById('posExpiryDateY')?.value) || 920,
-          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
-          verifyUrlX: parseInt(document.getElementById('posVerifyUrlX')?.value) || 1180, verifyUrlY: parseInt(document.getElementById('posVerifyUrlY')?.value) || 920,
-          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
-          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
-        };
-        var styles = {
-          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
-          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
-          nameFontColor: document.getElementById('fontNameColorText')?.value || '#1a1a1a',
-          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
-          courseFontColor: document.getElementById('fontCourseColorText')?.value || '#1a1a1a',
-          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
-          dateFontColor: document.getElementById('fontDateColorText')?.value || '#1a1a1a',
-          expiryDateFontSize: parseInt(document.getElementById('fontExpiryDateSize')?.value) || 24,
-          expiryDateFontColor: document.getElementById('fontExpiryDateColorText')?.value || '#1a1a1a',
-          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
-          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || '#1a1a1a',
-          verifyUrlFontSize: parseInt(document.getElementById('fontVerifyUrlSize')?.value) || 20,
-          verifyUrlFontColor: document.getElementById('fontVerifyUrlColorText')?.value || '#1a1a1a'
-        };
-        var testData = {
-          studentName: document.getElementById('testStudentName')?.value || 'John Doe',
-          courseName: document.getElementById('testCourseName')?.value || 'Computer Certified Professional (CCP)',
-          issueDate: document.getElementById('testIssueDate')?.value || '24 June 2026',
-          certId: document.getElementById('testCertId')?.value || 'OBX-CCP-TEST123'
-        };
-        var sigImg = window._certTemplate?.signatureImage || '';
-        var expPeriod = document.getElementById('expiryPeriod')?.value || 'never';
-        var vrfBase = document.getElementById('verifyUrlBase')?.value || '';
-        
-        showCertPreviewModal(imageUrl, positions, styles, testData, sigImg, expPeriod, vrfBase, customTextFields);
-      }); }
+      if (testBtn) { testBtn.addEventListener('click', function() { var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png'; var positions = { nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455, courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620, dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885, certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885, signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980, signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0 }; var styles = { fontFamily: document.getElementById('fontFamily')?.value || 'Georgia', nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52, nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a', courseFontSize: 36, courseFontColor: '#1a1a1a', dateFontSize: 28, dateFontColor: '#1a1a1a', certIdFontSize: 28, certIdFontColor: '#1a1a1a' }; var testData = { studentName: document.getElementById('testStudentName')?.value || 'John Doe', courseName: document.getElementById('testCourseName')?.value || 'Computer Certified Professional (CCP)', issueDate: document.getElementById('testIssueDate')?.value || '24 June 2026', certId: document.getElementById('testCertId')?.value || 'OBX-CCP-TEST123' }; var sigImg = window._certTemplate?.signatureImage || ''; showCertPreviewModal(imageUrl, positions, styles, testData, sigImg); }); }
       
-      var allInputs = document.querySelectorAll('#posNameX, #posNameY, #posCourseX, #posCourseY, #posDateX, #posDateY, #posExpiryDateX, #posExpiryDateY, #posCertIdX, #posCertIdY, #posVerifyUrlX, #posVerifyUrlY, #posSignatureX, #posSignatureY, #posSignatureScale, #fontFamily, #fontNameSize, #fontNameColor, #fontNameColorText, #fontCourseSize, #fontCourseColor, #fontCourseColorText, #fontDateSize, #fontDateColor, #fontDateColorText, #fontExpiryDateSize, #fontExpiryDateColor, #fontExpiryDateColorText, #fontCertIdSize, #fontCertIdColor, #fontCertIdColorText, #fontVerifyUrlSize, #fontVerifyUrlColor, #fontVerifyUrlColorText, #testStudentName, #testCourseName, #testIssueDate, #testCertId, #certTemplateImage, #verifyUrlBase');
-      allInputs.forEach(function(input) {
-        input.addEventListener('input', function() {
-          if (input.id === 'fontNameColor') { var t = document.getElementById('fontNameColorText'); if (t) t.value = input.value; }
-          if (input.id === 'fontNameColorText') { var c = document.getElementById('fontNameColor'); if (c) c.value = input.value; }
-          if (input.id === 'fontCourseColor') { var ct = document.getElementById('fontCourseColorText'); if (ct) ct.value = input.value; }
-          if (input.id === 'fontCourseColorText') { var cc = document.getElementById('fontCourseColor'); if (cc) cc.value = input.value; }
-          if (input.id === 'fontDateColor') { var dt = document.getElementById('fontDateColorText'); if (dt) dt.value = input.value; }
-          if (input.id === 'fontDateColorText') { var dc = document.getElementById('fontDateColor'); if (dc) dc.value = input.value; }
-          if (input.id === 'fontExpiryDateColor') { var et = document.getElementById('fontExpiryDateColorText'); if (et) et.value = input.value; }
-          if (input.id === 'fontExpiryDateColorText') { var ec = document.getElementById('fontExpiryDateColor'); if (ec) ec.value = input.value; }
-          if (input.id === 'fontCertIdColor') { var it = document.getElementById('fontCertIdColorText'); if (it) it.value = input.value; }
-          if (input.id === 'fontCertIdColorText') { var ic = document.getElementById('fontCertIdColor'); if (ic) ic.value = input.value; }
-          if (input.id === 'fontVerifyUrlColor') { var vt = document.getElementById('fontVerifyUrlColorText'); if (vt) vt.value = input.value; }
-          if (input.id === 'fontVerifyUrlColorText') { var vc = document.getElementById('fontVerifyUrlColor'); if (vc) vc.value = input.value; }
-          if (input.id === 'certTemplateImage') { var p = document.getElementById('certTemplatePreview'); if (p) p.src = input.value; var n = document.getElementById('certTemplateName'); if (n) n.textContent = input.value; }
-          redrawCertPreviewCanvas();
-        });
-      });
+      var allInputs = document.querySelectorAll('#posNameX, #posNameY, #posCourseX, #posCourseY, #posDateX, #posDateY, #posCertIdX, #posCertIdY, #posSignatureX, #posSignatureY, #posSignatureScale, #fontFamily, #fontNameSize, #fontNameColor, #fontNameColorText, #testStudentName, #testCourseName, #testIssueDate, #testCertId, #certTemplateImage');
+      allInputs.forEach(function(input) { input.addEventListener('input', function() { if (input.id === 'fontNameColor') { var t = document.getElementById('fontNameColorText'); if (t) t.value = input.value; } if (input.id === 'fontNameColorText') { var c = document.getElementById('fontNameColor'); if (c) c.value = input.value; } var s = document.getElementById('fontNameSize'); var sv = document.getElementById('fontNameSizeVal'); if (s && sv) sv.textContent = s.value + 'px'; if (input.id === 'certTemplateImage') { var p = document.getElementById('certTemplatePreview'); if (p) p.src = input.value; var n = document.getElementById('certTemplateName'); if (n) n.textContent = input.value; } redrawCertPreviewCanvas(); }); input.addEventListener('change', function() { redrawCertPreviewCanvas(); }); });
       
       var addCourseBtn = document.getElementById('addCourseTableBtn'); if (addCourseBtn) addCourseBtn.addEventListener('click', function() { showAddCourseModal(); });
     }
@@ -3193,12 +2718,25 @@ async function renderAdmin() {
   }, 400);
 }
 
-console.log('✅ Part 2 (Course Dashboard + Admin Console v13.0 with Clean Expiry + Verify URL) loaded');
+// ==================== APPLY COLOR PRESET ====================
+window.applyColorPreset = function(color) {
+  var focusedEl = document.activeElement;
+  if (focusedEl && (focusedEl.id === 'fontNameColorText' || focusedEl.id === 'fontNameColor')) {
+    document.getElementById('fontNameColorText').value = color;
+    document.getElementById('fontNameColor').value = color;
+  } else {
+    document.getElementById('fontNameColorText').value = color;
+    document.getElementById('fontNameColor').value = color;
+  }
+  redrawCertPreviewCanvas();
+  showToast('Color applied: ' + color, 'info');
+};
 
-// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 3 ====================
-// v13.0 FINAL: All Admin Modals, Reset Modals, Edit Privileges, Make/Remove Admin,
-//              AI Teacher Chat, AI Widget Chat, Global Exports, Initialization,
-//              FULL Font Controls for ALL Certificate Elements
+console.log('✅ Part 2 (Course Dashboard + Admin Console with ALL features) loaded');
+
+// ==================== obliXel Academy v12.5 - COMPLETE APP.JS PART 3 ====================
+// v12.5 FINAL: All Admin Modals, Reset Modals, Edit Privileges, Make/Remove Admin,
+//              AI Teacher Chat, AI Widget Chat, Global Exports, Initialization
 console.log('🚀 Loading Part 3 (Admin Modals, AI Chats, Initialization)');
 
 // ==================== DRAG AND DROP FOR COURSE TABLE ====================
@@ -3436,7 +2974,6 @@ window.confirmDeleteUser = async function(userId) {
 };
 
 function closeModal(modalId) { var modal = document.getElementById(modalId); if (modal) modal.remove(); }
-window.closeModal = closeModal;
 
 // ==================== SYSTEM RESET MODALS ====================
 window.showResetRevenueModal = function() {
@@ -3686,12 +3223,12 @@ function clearTeacherChat() { if (currentTeacherCourseId) { var teacher = getTea
 function expandTeacherChat() { var modal = document.getElementById('aiTeacherModal'); if (modal) { modal.classList.toggle('expanded'); var icon = document.querySelector('#expandTeacherChat i'); if (icon) icon.className = modal.classList.contains('expanded') ? 'fa-solid fa-compress' : 'fa-solid fa-expand'; } }
 
 // ==================== AI WIDGET CHAT ====================
-window.openAIChatModal = function(courseId) {
-  window.currentAIChatCourseId = courseId || null;
+function openAIChatModal(courseId) {
+  currentAIChatCourseId = courseId || null;
   aiWidgetActive = true;
   var modal = document.getElementById('aiChatModal');
   if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); restoreChatHistory(); }
-};
+}
 
 function restoreChatHistory() {
   var chatDiv = document.getElementById('chatMessages');
@@ -3802,9 +3339,6 @@ window.saveSignatureFromPad = saveSignatureFromPad;
 window.clearSavedSignature = clearSavedSignature;
 window.closeSignaturePadModal = closeSignaturePadModal;
 window.applyColorPreset = applyColorPreset;
-window.addCustomTextField = addCustomTextField;
-window.removeCustomTextField = removeCustomTextField;
-window.updateCustomTextField = updateCustomTextField;
 window.showResetRevenueModal = showResetRevenueModal;
 window.confirmResetRevenue = confirmResetRevenue;
 window.showResetEnrollmentsModal = showResetEnrollmentsModal;
@@ -3817,13 +3351,12 @@ window.showRemoveAdminModal = showRemoveAdminModal;
 window.confirmRemoveAdmin = confirmRemoveAdmin;
 window.showMakeAdminModal = showMakeAdminModal;
 window.confirmMakeAdminWithPrivileges = confirmMakeAdminWithPrivileges;
-window.closeModal = closeModal;
 window.shareToLinkedIn = function(id) { window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.origin + '/verify/' + id), '_blank'); };
 window.verifyCertificate = function(id) { window.open('/verify/' + id, '_blank'); };
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async function() {
-  console.log('🚀 obliXel Academy v13.0 - DOM loaded');
+  console.log('🚀 obliXel Academy v12.5 FINAL - DOM loaded');
   
   initNavbarAutoHide();
   
@@ -3893,23 +3426,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateNavbarStyle();
     if (loader) { loader.style.transition = 'opacity 0.5s ease-out'; loader.style.opacity = '0'; setTimeout(function() { loader.style.display = 'none'; }, 500); }
     renderPage(currentUser ? 'dashboard' : 'landing');
-    console.log('✅ obliXel Academy v13.0 fully initialized');
+    console.log('✅ obliXel Academy v12.5 FINAL fully initialized');
     console.log('🎉 ALL FEATURES READY');
   }, 6000);
 });
 
-console.log('🎉 obliXel Academy v13.0 - COMPLETE - All 3 Parts Loaded');
+console.log('🎉 obliXel Academy v12.5 FINAL - COMPLETE - All 3 Parts Loaded');
 console.log('✅ Main Admin: mutaurijoe@gmail.com');
-console.log('✅ Two-Column Certificate Settings with Sliders');
-console.log('✅ FULL Font Controls for ALL Elements (Name, Course, Date, Cert ID, Expiry, Verify)');
-console.log('✅ Expiry Date with text + period dropdown');
-console.log('✅ Verify URL with auto-appended cert ID');
-console.log('✅ Unlimited Custom Text Fields - add/remove/edit');
-console.log('✅ Position Sliders for ALL elements (X and Y)');
-console.log('✅ Drag-to-Position on Live Canvas');
-console.log('✅ Signature Pad with color/width controls');
-console.log('✅ Gold/Silver/Navy/Black Color Presets');
-console.log('✅ Color presets apply to ALL font color fields');
 console.log('✅ Privilege-based UI rendering');
 console.log('✅ Sub-admin restricted access');
 console.log('✅ System reset controls (Revenue, Enrollments, Certificates)');
@@ -3919,3 +3442,6 @@ console.log('✅ Make Admin with privilege selection');
 console.log('✅ Legal name banner auto-hide');
 console.log('✅ Blurred professor when certified');
 console.log('✅ Quick action panels with dropdown info');
+console.log('✅ Signature drawing pad with drag-to-position');
+console.log('✅ Gold/Silver/Navy/Black color presets');
+console.log('✅ All previous features intact');

@@ -31,12 +31,13 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/community', require('./routes/community'));
+app.use('/api', require('./routes/verify'));
 
 app.get('/api/health', (req, res) => {
   const mongoose = require('mongoose');
   res.json({
     status: 'OK',
-    version: '10.0',
+    version: '13.0',
     database: mongoose.connection.readyState === 1 ? 'MongoDB Connected' : 'Disconnected',
     timestamp: new Date().toISOString()
   });
@@ -46,8 +47,12 @@ const frontendPath = path.join(__dirname, '../frontend');
 console.log(`📁 Serving frontend from: ${frontendPath}`);
 app.use(express.static(frontendPath));
 
+app.get('/verify/:certificateId', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'verify.html'));
+});
+
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/verify')) {
     res.sendFile(path.join(frontendPath, 'index.html'));
   }
 });
@@ -261,9 +266,10 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 obliXel Academy v10.0 running on http://localhost:${PORT}`);
+    console.log(`\n🚀 obliXel Academy v13.0 running on http://localhost:${PORT}`);
     console.log(`📚 API: http://localhost:${PORT}/api`);
     console.log(`🌐 Frontend: http://localhost:${PORT}`);
+    console.log(`🔍 Verify: http://localhost:${PORT}/verify/:id`);
     console.log(`   DeepSeek AI: ${process.env.DEEPSEEK_API_KEY ? '✅ Connected' : '❌ Fallback'}\n`);
   });
 }
