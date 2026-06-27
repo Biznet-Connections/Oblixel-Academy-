@@ -1,29 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const authenticate = require('../middleware/auth');
 const Certificate = require('../models/Certificate');
 const CertificateTemplate = require('../models/CertificateTemplate');
-const Enrollment = require('../models/Enrollment');
-const Course = require('../models/Course');
 const User = require('../models/User');
+const authenticate = require('../middleware/auth');
 
 // ==================== GET MY CERTIFICATES ====================
 router.get('/my-certificates', authenticate, async (req, res) => {
   try {
+    const certificates = await Certificate.find({ 
+      userId: req.user._id || req.user.id,
+      status: 'issued'
+    }).sort({ createdAt: -1 });
+
     const user = await User.findById(req.user._id || req.user.id);
-    const studentName = user ? (user.fullName || user.name) : (req.user.name || 'Student');
+    const studentName = user ? (user.fullName || user.name) : 'Student';
 
-    const earned = await Certificate.find({ 
-      userId: req.user._id || req.user.id, 
-      status: 'issued' 
-    }).sort({ issuedAt: -1 });
-
-    const formattedEarned = earned.map(c => ({
-      id: c._id,
+    const formattedEarned = certificates.map(c => ({
       certificateId: c.certificateId,
       courseName: c.courseName,
       courseId: c.courseId,
       score: c.score,
+      issueDate: c.issueDate || c.issuedAt || c.submittedAt,
+      expiryDate: c.expiryDate || null,
+      verifyUrl: c.verifyUrl || '',
       issuedAt: c.issuedAt || c.submittedAt,
       status: c.status,
       studentName: c.studentName || studentName,
@@ -62,35 +62,49 @@ router.get('/:certificateId/download', authenticate, async (req, res) => {
       template = await CertificateTemplate.create({});
     }
 
-    const issueDate = certificate.issuedAt
-      ? new Date(certificate.issuedAt).toLocaleDateString('en-US', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
+    // Format dates for display
+    const issueDateFormatted = certificate.issueDate
+      ? new Date(certificate.issueDate).toLocaleDateString('en-US', {
+          day: 'numeric', month: 'long', year: 'numeric'
         })
-      : new Date().toLocaleDateString('en-US', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
+      : new Date(certificate.issuedAt || certificate.createdAt || new Date()).toLocaleDateString('en-US', {
+          day: 'numeric', month: 'long', year: 'numeric'
         });
+
+    const expiryDateFormatted = certificate.expiryDate
+      ? new Date(certificate.expiryDate).toLocaleDateString('en-US', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        })
+      : '';
+
+    // Get verify URL from certificate or build from template
+    const verifyUrlBase = template.verifyUrlBase || 'oblixel-academy-platform.onrender.com/verify/';
+    const verifyUrl = certificate.verifyUrl || (verifyUrlBase + certificate.certificateId);
 
     // Use certificate's stored name, or fall back to user's current name
     const studentName = certificate.studentName || (user ? (user.fullName || user.name) : 'Student');
 
     console.log(`[CERTS] Certificate download data sent for ${studentName} - ${certificate.certificateId}`);
+    console.log(`[CERTS]   issueDate: ${issueDateFormatted}`);
+    console.log(`[CERTS]   expiryDate: ${expiryDateFormatted || '(none)'}`);
+    console.log(`[CERTS]   verifyUrl: ${verifyUrl}`);
 
     res.json({
       certificate: {
         studentName: studentName,
         courseName: certificate.courseName,
         certificateId: certificate.certificateId,
-        issueDate: issueDate,
-        score: certificate.score
+        issueDate: issueDateFormatted,
+        expiryDate: expiryDateFormatted,
+        score: certificate.score,
+        verifyUrl: verifyUrl
       },
       template: {
         imageUrl: template.templateImage,
         positions: template.positions,
-        styles: template.styles
+        styles: template.styles,
+        signatureImage: template.signatureImage || '',
+        customTexts: template.customTexts || []
       }
     });
   } catch (error) {
@@ -102,15 +116,25 @@ router.get('/:certificateId/download', authenticate, async (req, res) => {
 // ==================== VERIFY CERTIFICATE (PUBLIC - NO AUTH REQUIRED) ====================
 router.get('/verify/:certificateId', async (req, res) => {
   try {
-    const certificate = await Certificate.findOne({ 
-      certificateId: req.params.certificateId 
+    const certificate = await Certificate.findOne({
+      certificateId: req.params.certificateId
     });
 
     if (!certificate) {
-      return res.json({ 
-        valid: false, 
-        message: 'Certificate not found in our system.' 
+      return res.json({
+        valid: false,
+        message: 'Certificate not found in our system.'
       });
+    }
+
+    // Check if expired
+    let isExpired = false;
+    if (certificate.expiryDate) {
+      const now = new Date();
+      const expiryDate = new Date(certificate.expiryDate);
+      now.setHours(0, 0, 0, 0);
+      expiryDate.setHours(0, 0, 0, 0);
+      isExpired = expiryDate < now;
     }
 
     const user = await User.findById(certificate.userId);
@@ -122,8 +146,10 @@ router.get('/verify/:certificateId', async (req, res) => {
         studentName: certificate.studentName || (user ? (user.fullName || user.name) : 'Unknown'),
         courseName: certificate.courseName,
         score: certificate.score,
-        issuedAt: certificate.issuedAt || certificate.submittedAt,
-        status: certificate.status
+        issueDate: certificate.issueDate || certificate.issuedAt || certificate.submittedAt,
+        expiryDate: certificate.expiryDate || null,
+        isExpired: isExpired,
+        status: isExpired ? 'expired' : certificate.status
       }
     });
   } catch (error) {

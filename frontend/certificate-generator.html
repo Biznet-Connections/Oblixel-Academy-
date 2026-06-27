@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>obliXel Academy - Certificate</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+
     body {
       background: #050816;
       color: white;
@@ -18,13 +19,13 @@
       min-height: 100vh;
       padding: 20px;
     }
-    
+
     .container {
       text-align: center;
       max-width: 900px;
       width: 100%;
     }
-    
+
     h2 {
       font-size: 24px;
       margin-bottom: 20px;
@@ -33,7 +34,7 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    
+
     .canvas-wrapper {
       background: rgba(255,255,255,0.05);
       border-radius: 16px;
@@ -41,13 +42,13 @@
       border: 1px solid rgba(255,255,255,0.1);
       backdrop-filter: blur(18px);
     }
-    
+
     canvas {
       max-width: 100%;
       height: auto !important;
       border-radius: 8px;
     }
-    
+
     .student-name-display {
       font-size: 18px;
       font-weight: 600;
@@ -59,7 +60,7 @@
       border: 1px solid rgba(6, 182, 212, 0.2);
       display: inline-block;
     }
-    
+
     .button-group {
       display: flex;
       gap: 12px;
@@ -67,7 +68,7 @@
       flex-wrap: wrap;
       margin-top: 20px;
     }
-    
+
     button {
       padding: 14px 28px;
       border-radius: 12px;
@@ -78,50 +79,60 @@
       transition: all 0.3s ease;
       font-family: 'Inter', sans-serif;
     }
-    
+
     .btn-download {
       background: linear-gradient(135deg, #8b5cf6, #06b6d4);
       color: white;
       box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
     }
-    
+
     .btn-download:hover {
       transform: scale(1.03);
       box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
     }
-    
+
     .btn-share {
       background: rgba(10, 102, 194, 0.3);
       color: white;
       border: 1px solid rgba(10, 102, 194, 0.5);
     }
-    
+
     .btn-share:hover {
       background: rgba(10, 102, 194, 0.5);
     }
-    
+
+    .btn-verify {
+      background: rgba(34, 197, 94, 0.3);
+      color: white;
+      border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+
+    .btn-verify:hover {
+      background: rgba(34, 197, 94, 0.5);
+    }
+
     .btn-back {
       background: rgba(255,255,255,0.1);
       color: white;
       border: 1px solid rgba(255,255,255,0.2);
     }
-    
+
     .btn-back:hover {
       background: rgba(255,255,255,0.2);
     }
-    
+
     .loading {
       font-size: 16px;
       color: #06b6d4;
       margin: 40px 0;
     }
-    
+
     .thinking-dots {
       display: inline-flex;
       gap: 4px;
       align-items: center;
     }
-    
+
     .thinking-dots span {
       width: 6px;
       height: 6px;
@@ -129,16 +140,16 @@
       border-radius: 50%;
       animation: dotPulse 1.4s infinite ease-in-out;
     }
-    
+
     .thinking-dots span:nth-child(1) { animation-delay: 0s; }
     .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
     .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-    
+
     @keyframes dotPulse {
       0%, 60%, 100% { transform: scale(0.6); opacity: 0.4; }
       30% { transform: scale(1.2); opacity: 1; }
     }
-    
+
     .error {
       color: #ef4444;
       font-size: 16px;
@@ -148,7 +159,7 @@
       border-radius: 12px;
       border: 1px solid rgba(239,68,68,0.3);
     }
-    
+
     .success-toast {
       position: fixed;
       bottom: 30px;
@@ -163,12 +174,12 @@
       font-size: 14px;
       z-index: 9999;
     }
-    
+
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
-    
+
     .cert-info {
       display: flex;
       gap: 16px;
@@ -176,7 +187,7 @@
       flex-wrap: wrap;
       margin-bottom: 16px;
     }
-    
+
     .cert-info-badge {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
@@ -185,38 +196,60 @@
       font-size: 13px;
       color: #a0aec0;
     }
-    
+
     .cert-info-badge strong {
       color: #e2e8f0;
+    }
+
+    .verify-url-display {
+      margin-top: 12px;
+      padding: 10px 16px;
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      border-radius: 10px;
+      font-size: 12px;
+      color: #06b6d4;
+      word-break: break-all;
+      display: inline-block;
+    }
+
+    .verify-url-display i {
+      margin-right: 6px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>🎓 obliXel Academy Certificate</h2>
-    
+
     <div id="studentNameDisplay" class="student-name-display" style="display:none;"></div>
-    
+
     <div class="canvas-wrapper">
       <canvas id="certificateCanvas" width="1600" height="1131"></canvas>
     </div>
-    
+
     <div id="loadingMessage" class="loading">
       <div class="thinking-dots"><span></span><span></span><span></span></div>
       <p style="margin-top: 10px;">Generating your certificate...</p>
     </div>
-    
+
     <div id="errorMessage" class="error" style="display:none;"></div>
-    
+
     <div id="certInfo" class="cert-info" style="display:none;">
       <div class="cert-info-badge">📊 Score: <strong id="infoScore">-</strong></div>
       <div class="cert-info-badge">📅 Issued: <strong id="infoDate">-</strong></div>
+      <div class="cert-info-badge" id="expiryBadge" style="display:none;">⏰ Expires: <strong id="infoExpiry">-</strong></div>
       <div class="cert-info-badge">🔑 ID: <strong id="infoId">-</strong></div>
     </div>
-    
+
+    <div id="verifyUrlDisplay" class="verify-url-display" style="display:none;">
+      <i class="fa-solid fa-link"></i> <span id="verifyUrlText"></span>
+    </div>
+
     <div class="button-group" id="buttonGroup" style="display:none;">
       <button class="btn-download" onclick="downloadCertificate()">📥 Download Certificate (PNG)</button>
       <button class="btn-share" onclick="shareToLinkedIn()"><i class="fa-brands fa-linkedin"></i> Share to LinkedIn</button>
+      <button class="btn-verify" onclick="openVerifyPage()"><i class="fa-solid fa-check-circle"></i> Verify Certificate</button>
       <button class="btn-back" onclick="goBack()">← Back to Dashboard</button>
     </div>
   </div>
@@ -245,8 +278,8 @@
 
     async function loadCertificate() {
       try {
-        var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-          ? 'http://localhost:5001/api' 
+        var API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? 'http://localhost:5001/api'
           : '/api';
 
         var response = await fetch(API_BASE + '/certificates/' + certificateId + '/download', {
@@ -262,16 +295,32 @@
         var cert = data.certificate;
         var template = data.template;
 
+        console.log('[CERT GEN] Loaded certificate:', cert);
+        console.log('[CERT GEN] Template positions:', template.positions);
+
         // Display student name
         var nameDisplay = document.getElementById('studentNameDisplay');
         nameDisplay.textContent = '🏅 ' + cert.studentName;
         nameDisplay.style.display = 'inline-block';
-        
+
         // Display cert info
         document.getElementById('infoScore').textContent = cert.score + '%';
         document.getElementById('infoDate').textContent = cert.issueDate;
         document.getElementById('infoId').textContent = cert.certificateId;
+        
+        // Expiry date
+        if (cert.expiryDate && cert.expiryDate.length > 0) {
+          document.getElementById('infoExpiry').textContent = cert.expiryDate;
+          document.getElementById('expiryBadge').style.display = 'block';
+        }
+        
         document.getElementById('certInfo').style.display = 'flex';
+
+        // Display verify URL
+        if (cert.verifyUrl && cert.verifyUrl.length > 0) {
+          document.getElementById('verifyUrlText').textContent = cert.verifyUrl;
+          document.getElementById('verifyUrlDisplay').style.display = 'inline-block';
+        }
 
         // Draw certificate
         var canvas = document.getElementById('certificateCanvas');
@@ -290,6 +339,9 @@
           var styles = template.styles;
           var fontFamily = styles.fontFamily || 'Georgia';
 
+          console.log('[CERT GEN] Drawing with fontFamily:', fontFamily);
+          console.log('[CERT GEN] Positions:', pos);
+
           // Student Name
           ctx.font = 'bold ' + (styles.nameFontSize || 52) + 'px ' + fontFamily;
           ctx.fillStyle = styles.nameFontColor || '#1a1a1a';
@@ -306,10 +358,38 @@
           ctx.fillStyle = styles.dateFontColor || '#1a1a1a';
           ctx.fillText(cert.issueDate, pos.dateX || 470, pos.dateY || 885);
 
+          // Expiry Date (NEW)
+          if (cert.expiryDate && cert.expiryDate.length > 0) {
+            console.log('[CERT GEN] Drawing expiry date:', cert.expiryDate);
+            ctx.font = (styles.expiryDateFontSize || 24) + 'px ' + fontFamily;
+            ctx.fillStyle = styles.expiryDateFontColor || '#1a1a1a';
+            ctx.fillText(cert.expiryDate, pos.expiryDateX || 470, pos.expiryDateY || 920);
+          }
+
           // Certificate ID
           ctx.font = (styles.certIdFontSize || 28) + 'px ' + fontFamily;
           ctx.fillStyle = styles.certIdFontColor || '#1a1a1a';
           ctx.fillText(cert.certificateId, pos.certIdX || 1180, pos.certIdY || 885);
+
+          // Verify URL (NEW)
+          if (cert.verifyUrl && cert.verifyUrl.length > 0) {
+            console.log('[CERT GEN] Drawing verify URL:', cert.verifyUrl);
+            ctx.font = (styles.verifyUrlFontSize || 20) + 'px ' + fontFamily;
+            ctx.fillStyle = styles.verifyUrlFontColor || '#1a1a1a';
+            ctx.fillText(cert.verifyUrl, pos.verifyUrlX || 1180, pos.verifyUrlY || 920);
+          }
+
+          // Custom Text Fields (NEW)
+          if (template.customTexts && template.customTexts.length > 0) {
+            template.customTexts.forEach(function(ct) {
+              if (ct.text && ct.text.trim()) {
+                ctx.font = (ct.fontSize || 28) + 'px ' + (ct.fontFamily || fontFamily);
+                ctx.fillStyle = ct.fontColor || '#1a1a1a';
+                ctx.textAlign = 'center';
+                ctx.fillText(ct.text, ct.x || 800, ct.y || 700);
+              }
+            });
+          }
 
           // Signature Image (if exists)
           if (template.signatureImage && template.signatureImage.length > 10) {
@@ -322,7 +402,7 @@
               var sx = (pos.signatureX || 800) - w / 2;
               var sy = (pos.signatureY || 980) - h / 2;
               ctx.drawImage(sigImg, sx, sy, w, h);
-              
+
               // All drawing complete
               finishLoading();
             };
@@ -343,7 +423,7 @@
           document.getElementById('errorMessage').style.display = 'block';
           document.getElementById('errorMessage').textContent = 'Failed to load certificate template image. Please contact support.';
         };
-        
+
         function finishLoading() {
           // Hide loading, show buttons
           document.getElementById('loadingMessage').style.display = 'none';
@@ -365,11 +445,22 @@
       link.click();
       showToast('Certificate downloaded successfully! 🎉');
     }
-    
+
     function shareToLinkedIn() {
       var shareUrl = window.location.origin + '/verify/' + certificateId;
       window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(shareUrl), '_blank');
       showToast('Opening LinkedIn share...');
+    }
+
+    function openVerifyPage() {
+      // Get the verify URL from the display
+      var verifyUrlText = document.getElementById('verifyUrlText').textContent;
+      if (verifyUrlText) {
+        window.open('https://' + verifyUrlText, '_blank');
+      } else {
+        window.open('/verify/' + certificateId, '_blank');
+      }
+      showToast('Opening verification page...');
     }
 
     function goBack() {

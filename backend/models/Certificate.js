@@ -10,8 +10,14 @@ const certificateSchema = new mongoose.Schema({
   studentFirstName: { type: String, default: '' },
   studentLastName: { type: String, default: '' },
   score: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'issued', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'issued', 'rejected', 'expired', 'revoked'], default: 'pending' },
   type: { type: String, enum: ['exam_only', 'learning'], default: 'exam_only' },
+  // Certificate dates
+  issueDate: { type: Date },
+  expiryDate: { type: Date },
+  // Verification
+  verifyUrl: { type: String, default: '' },
+  // Original fields
   submittedAt: { type: Date, default: Date.now },
   issuedAt: Date,
   rejectedAt: Date,
@@ -20,6 +26,7 @@ const certificateSchema = new mongoose.Schema({
 
 certificateSchema.index({ userId: 1 });
 certificateSchema.index({ status: 1 });
+certificateSchema.index({ certificateId: 1 });
 
 const Certificate = mongoose.model('Certificate', certificateSchema);
 module.exports = Certificate;

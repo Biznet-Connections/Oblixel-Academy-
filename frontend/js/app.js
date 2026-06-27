@@ -1222,6 +1222,7 @@ console.log('✅ Part 1 (Core & Auth + All Pages + v13.0 Prepped) loaded');
 // v13.0: Two-column Certificate Settings, Position Sliders, AUTO-CALCULATE Expiry Date (Clean),
 //        Verify URL with Render default, Custom Text Fields, Live Canvas, Drag-to-Position,
 //        Signature Pad, Color Presets, FULL Font Controls for ALL Elements
+//        BUG FIX: expiryPeriod and verifyUrlBase now save correctly
 console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel v13.0)');
 
 // ==================== COURSE DASHBOARD ====================
@@ -2708,7 +2709,7 @@ window.applyColorPreset = function(color) {
   showToast('Color applied: ' + color, 'info');
 };
 
-// ==================== ADMIN CONSOLE (v13.0 - CLEAN EXPIRY + VERIFY URL WITH RENDER DEFAULT) ====================
+// ==================== ADMIN CONSOLE (v13.0 - BUG FIX: expiryPeriod & verifyUrlBase SAVE CORRECTLY) ====================
 async function renderAdmin() {
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
@@ -2773,7 +2774,6 @@ async function renderAdmin() {
     var sigImg = ct.signatureImage || '';
     var hasSignature = !!(sigImg && sigImg.length > 10);
     var expPeriod = ct.expiryPeriod || 'never';
-    // Default verify URL to Render URL if empty
     var vrfBase = ct.verifyUrlBase || 'oblixel-academy-platform.onrender.com/verify/';
     
     var html = '';
@@ -2837,7 +2837,7 @@ async function renderAdmin() {
       html += '</tbody></table></div></div>';
     }
 
-    // ========== v13.0 CERTIFICATE SETTINGS - TWO COLUMN LAYOUT WITH CLEAN EXPIRY + VERIFY URL ==========
+    // ========== v13.0 CERTIFICATE SETTINGS - TWO COLUMN LAYOUT - BUG FIXED SAVE ==========
     if (canManageCourses) {
       html += '<div class="glass rounded-3xl p-6 mb-8" style="border: 1px solid rgba(139, 92, 246, 0.3);">';
       html += '<h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-certificate text-purple-400 mr-2"></i> 🎓 Certificate Settings</h2>';
@@ -3084,6 +3084,7 @@ async function renderAdmin() {
       renderCustomTextFieldsList();
       redrawCertPreviewCanvas();
       
+      // ===== BUG FIX: SAVE CERTIFICATE SETTINGS - expiryPeriod & verifyUrlBase NOW SAVE CORRECTLY =====
       var saveCertBtn = document.getElementById('saveCertSettingsBtn');
       if (saveCertBtn) { saveCertBtn.addEventListener('click', async function() {
         var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
@@ -3116,10 +3117,15 @@ async function renderAdmin() {
         var expiryPeriod = document.getElementById('expiryPeriod')?.value || 'never';
         var verifyUrlBase = document.getElementById('verifyUrlBase')?.value || '';
         
+        console.log('💾 SAVING: expiryPeriod=' + expiryPeriod + ', verifyUrlBase=' + verifyUrlBase);
+        
         try {
           await updateCertificateTemplateImage(imageUrl);
           await updateCertificateTemplateSettings(positions, styles, signatureImage, expiryPeriod, verifyUrlBase, customTextFields);
           showToast('Certificate settings saved!', 'success');
+          // Refresh the certTemplate in memory
+          window._certTemplate.expiryPeriod = expiryPeriod;
+          window._certTemplate.verifyUrlBase = verifyUrlBase;
         } catch (error) { showToast('Failed: ' + error.message, 'error'); }
       }); }
       
@@ -3193,7 +3199,7 @@ async function renderAdmin() {
   }, 400);
 }
 
-console.log('✅ Part 2 (Course Dashboard + Admin Console v13.0 with Clean Expiry + Verify URL) loaded');
+console.log('✅ Part 2 (Course Dashboard + Admin Console v13.0 with SAVE BUG FIXED) loaded');
 
 // ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 3 ====================
 // v13.0 FINAL: All Admin Modals, Reset Modals, Edit Privileges, Make/Remove Admin,
