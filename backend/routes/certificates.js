@@ -78,7 +78,7 @@ router.get('/:certificateId/download', authenticate, async (req, res) => {
       : '';
 
     // Get verify URL from certificate or build from template
-    const verifyUrlBase = template.verifyUrlBase || 'oblixel-academy-platform.onrender.com/verify/';
+    const verifyUrlBase = template.verifyUrlBase || 'oblixelacademy.com/verify/';
     const verifyUrl = certificate.verifyUrl || (verifyUrlBase + certificate.certificateId);
 
     // Use certificate's stored name, or fall back to user's current name
