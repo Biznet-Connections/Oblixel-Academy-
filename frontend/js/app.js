@@ -2774,7 +2774,7 @@ async function renderAdmin() {
     var hasSignature = !!(sigImg && sigImg.length > 10);
     var expPeriod = ct.expiryPeriod || 'never';
     // Default verify URL to Render URL if empty
-    var vrfBase = ct.verifyUrlBase || 'oblixel-academy.onrender.com/verify/';
+    var vrfBase = ct.verifyUrlBase || 'oblixel-academy-platform.onrender.com/verify/';
     
     var html = '';
     html += '<div class="max-w-7xl mx-auto fade-in">';
@@ -2965,7 +2965,7 @@ async function renderAdmin() {
       // ===== VERIFY URL SECTION =====
       html += '<div class="glass rounded-xl p-4 mt-4 border border-cyan-500/20">';
       html += '<h3 class="font-semibold mb-3 text-cyan-400">🔗 Verify At URL</h3>';
-      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Base URL</label><input type="text" id="verifyUrlBase" value="' + escapeHtml(vrfBase) + '" placeholder="e.g., oblixel-academy.onrender.com/verify/" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off" oninput="redrawCertPreviewCanvas();"></div>';
+      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Base URL</label><input type="text" id="verifyUrlBase" value="' + escapeHtml(vrfBase) + '" placeholder="e.g., oblixel-academy-platform.onrender.com/verify/" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off" oninput="redrawCertPreviewCanvas();"></div>';
       html += '<p class="text-xs text-gray-500 mb-2"><i class="fa-solid fa-circle-info mr-1"></i> Certificate ID auto-appended: <span class="text-cyan-400" style="word-break: break-all;">' + escapeHtml(vrfBase) + '<strong>OBX-CCP-TEST123</strong></span></p>';
       html += '<p class="text-xs text-gray-500 mb-3"><i class="fa-solid fa-globe mr-1"></i> Anyone with this URL can verify the certificate — no login required.</p>';
       html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posVerifyUrlXVal">' + (pos.verifyUrlX || 1180) + '</span></label><input type="range" id="posVerifyUrlX" min="0" max="1600" value="' + (pos.verifyUrlX || 1180) + '" class="w-full" oninput="document.getElementById(\'posVerifyUrlXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
