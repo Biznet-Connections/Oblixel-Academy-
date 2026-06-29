@@ -12,7 +12,7 @@ const Course = require('../models/Course');
 router.get('/profile', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-
+    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -98,7 +98,11 @@ router.get('/profile', authenticate, async (req, res) => {
         totalSpent: totalSpent,
         enrolledCourses: user.enrolledCourses,
         phone: user.phone,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        hasProvidedLegalName: user.hasProvidedLegalName || false,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        fullName: user.fullName || ''
       },
       stats: {
         enrolledCourses: enrollmentsWithProgress.length,
@@ -141,7 +145,11 @@ router.put('/profile', authenticate, async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        phone: user.phone
+        phone: user.phone,
+        hasProvidedLegalName: user.hasProvidedLegalName || false,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        fullName: user.fullName || ''
       }
     });
   } catch (error) {
