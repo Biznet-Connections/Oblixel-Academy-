@@ -1,5 +1,34 @@
 ﻿// ==================== ENROLL MODAL LOGIC ====================
 (function () {
+
+  function requireLogin() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      const modal = document.getElementById('enrollModal');
+      if (modal) {
+        modal.innerHTML = `
+          <div class="enroll-modal-header">
+            <div>
+              <p class="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1">Login Required</p>
+              <h2 class="text-xl font-black leading-tight">Please log in first</h2>
+            </div>
+            <button class="enroll-modal-close" onclick="closeEnrollModal()">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <p class="text-sm text-gray-300 my-4">You need an account to enroll in a course. It only takes 30 seconds.</p>
+          <button class="enroll-cta" onclick="closeEnrollModal(); if(typeof window.openLoginModal === 'function'){window.openLoginModal();} else { location.reload(); }">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i> Log In / Sign Up
+          </button>
+          <button class="enroll-cta" style="margin-top:0.5rem;background:rgba(255,255,255,0.06);box-shadow:none;" onclick="closeEnrollModal()">
+            Cancel
+          </button>
+        `;
+      }
+      return false;
+    }
+    return true;
+  }
   let currentCourse = null;
   let currentPlan = 'exam_only';
   let currentPrice = 0;
@@ -65,6 +94,7 @@
 
   // ---------- Linkwa flow ----------
   window.startLinkwaPayment = async function () {
+    if (!requireLogin()) return;
     if (!currentCourse) return;
 
     const btn = document.getElementById('enrollPayBtn');
@@ -135,6 +165,7 @@
   };
 
   window.applyVoucher = async function () {
+    if (!requireLogin()) return;
     if (!currentCourse) return;
     const code = document.getElementById('enrollVoucherInput').value.trim().toUpperCase();
     const msg = document.getElementById('enrollVoucherMsg');
