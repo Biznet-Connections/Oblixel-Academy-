@@ -76,6 +76,10 @@ const frontendPath = path.join(__dirname, '../frontend');
 console.log(`ðŸ“ Serving frontend from: ${frontendPath}`);
 app.use(express.static(frontendPath));
 
+app.get('/payment-complete', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'payment-complete.html'));
+});
+
 app.get('/verify/:certificateId', (req, res) => {
   res.sendFile(path.join(frontendPath, 'verify.html'));
 });
