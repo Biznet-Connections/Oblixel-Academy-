@@ -1,4 +1,4 @@
-// frontend/js/api.js - Complete API communication layer
+﻿// frontend/js/api.js - Complete API communication layer
 // AUTO-DETECTS if running locally or on Render
 
 // Auto-detect API URL - works on localhost AND Render!
@@ -429,7 +429,7 @@ window.OBliXelAPI = {
   youtube: { fetchYouTubeMetadata, getYouTubeVideoId }
 };
 
-console.log('✅ API module loaded with base URL:', API_BASE_URL);
+console.log('âœ… API module loaded with base URL:', API_BASE_URL);
 
 // ==================== LINKWA PAYMENT HELPERS ====================
 async function initiateLinkwaPayment(courseId, type, phone = null) {

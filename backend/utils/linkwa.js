@@ -1,7 +1,7 @@
 ﻿const axios = require('axios');
 const crypto = require('crypto');
 
-const BASE_URL = process.env.LINKWA_BASE_URL || 'https://sandbox.linkwa.co.zw/api/v1/third-party';
+const BASE_URL = process.env.LINKWA_BASE_URL || 'https://linkwa.co.zw/api/v1/third-party';
 
 function authHeaders() {
   return {
