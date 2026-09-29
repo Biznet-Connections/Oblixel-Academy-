@@ -1,0 +1,515 @@
+{
+  "_id": "6a3267488e6569fc4fecb774",
+  "courseId": "ccp",
+  "name": "Computer Certified Professional (CCP)",
+  "abbreviation": "CCP",
+  "level": "Professional",
+  "description": "Professional computing certification covering computer fundamentals, hardware, operating systems, networking, cybersecurity, and modern IT practices.",
+  "examPrice": 150,
+  "pathPrice": 250,
+  "icon": "fa-microchip",
+  "category": "Development",
+  "color": "purple",
+  "duration": "15 weeks",
+  "totalModules": 15,
+  "modules": [
+    {
+      "moduleId": 1,
+      "name": "Computer Fundamentals",
+      "description": "Discover what makes a computer tick — hardware, software, and how they work together to solve problems.",
+      "complexity": "Beginner",
+      "estimatedMinutes": 25,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=AkFi90lZmXA",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
+      "icon": "fa-computer",
+      "keyTopics": [
+        "Hardware vs Software",
+        "Input/Output",
+        "The Information Processing Cycle"
+      ],
+      "learningObjectives": [
+        "Identify the main components of a computer system",
+        "Explain the difference between hardware and software",
+        "Describe the information processing cycle (input → process → output → storage)",
+        "Recognize common input and output devices"
+      ],
+      "xpReward": 50,
+      "prerequisites": [],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 2,
+      "name": "Hardware Basics",
+      "description": "Explore the physical parts of a computer — from motherboards to peripherals — and what each one does.",
+      "complexity": "Beginner",
+      "estimatedMinutes": 30,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=ExxFxD4OSZ0",
+      "imageUrl": "https://images.unsplash.com/photo-1591488320449-011318cc908e?w=800&q=80",
+      "icon": "fa-microchip",
+      "keyTopics": [
+        "Motherboard",
+        "CPU",
+        "RAM",
+        "Storage Devices",
+        "Peripherals"
+      ],
+      "learningObjectives": [
+        "Identify the internal components of a computer",
+        "Explain the role of the motherboard and its connections",
+        "Compare different types of storage (HDD, SSD, NVMe)",
+        "Understand how peripherals connect (USB, Bluetooth, HDMI)"
+      ],
+      "xpReward": 60,
+      "prerequisites": [
+        1
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 3,
+      "name": "CPU & Memory",
+      "description": "Learn how processors execute billions of instructions per second and how memory stores data temporarily.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=Z5JC9Ve1sfI",
+      "imageUrl": "https://images.unsplash.com/photo-1555617981-dac3880eac6e?w=800&q=80",
+      "icon": "fa-microchip",
+      "keyTopics": [
+        "Fetch-Decode-Execute",
+        "CPU Cores",
+        "Cache Levels",
+        "RAM vs ROM"
+      ],
+      "learningObjectives": [
+        "Explain the fetch-decode-execute cycle",
+        "Differentiate between RAM, ROM, and cache memory",
+        "Understand clock speed, cores, and hyperthreading",
+        "Compare x86 and ARM architectures"
+      ],
+      "xpReward": 100,
+      "prerequisites": [
+        2
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 4,
+      "name": "Storage & File Systems",
+      "description": "Understand how data persists — from spinning disks to SSDs — and how operating systems organize files.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 40,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=KN8YgJnShPM",
+      "imageUrl": "https://images.unsplash.com/photo-1601737487795-dab272f52420?w=800&q=80",
+      "icon": "fa-hard-drive",
+      "keyTopics": [
+        "HDD vs SSD",
+        "File Systems (NTFS, ext4, APFS)",
+        "Partitions",
+        "Backups"
+      ],
+      "learningObjectives": [
+        "Compare HDD, SSD, and NVMe storage technologies",
+        "Explain how file systems organize data (FAT32, NTFS, ext4)",
+        "Understand partitions and disk management",
+        "Implement a basic backup strategy (3-2-1 rule)"
+      ],
+      "xpReward": 80,
+      "prerequisites": [
+        3
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 5,
+      "name": "Operating Systems",
+      "description": "Explore Windows, macOS, and Linux — how they manage hardware, run apps, and give you a usable interface.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=26QPDBe-NB8",
+      "imageUrl": "https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=800&q=80",
+      "icon": "fa-windows",
+      "keyTopics": [
+        "Kernel",
+        "Processes",
+        "Users & Permissions",
+        "Command Line"
+      ],
+      "learningObjectives": [
+        "Explain the role of the OS kernel",
+        "Describe how processes and threads are managed",
+        "Understand file permissions and user accounts",
+        "Use basic command-line tools (cd, ls, mkdir, etc.)"
+      ],
+      "xpReward": 90,
+      "prerequisites": [
+        2
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 6,
+      "name": "Networking Basics",
+      "description": "How computers talk to each other — IP addresses, routers, switches, and the layers of network communication.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 50,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=qiQR5rTSshw",
+      "imageUrl": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80",
+      "icon": "fa-network-wired",
+      "keyTopics": [
+        "OSI Model",
+        "IP Addressing",
+        "DNS",
+        "Routers & Switches",
+        "Protocols"
+      ],
+      "learningObjectives": [
+        "Explain the OSI 7-layer model",
+        "Understand IP addressing (IPv4 and IPv6)",
+        "Describe how DNS resolves domain names",
+        "Differentiate between routers, switches, and hubs"
+      ],
+      "xpReward": 100,
+      "prerequisites": [
+        1
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 7,
+      "name": "Internet & Web Technology",
+      "description": "How the web works — HTTP, browsers, servers, and the technologies that power the modern internet.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 40,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=7_LPdttKXPc",
+      "imageUrl": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80",
+      "icon": "fa-globe",
+      "keyTopics": [
+        "HTTP/HTTPS",
+        "Browsers",
+        "Web Servers",
+        "Cookies & Sessions",
+        "APIs"
+      ],
+      "learningObjectives": [
+        "Explain how HTTP requests and responses work",
+        "Understand the role of DNS, servers, and CDNs",
+        "Describe cookies, sessions, and browser storage",
+        "Recognize what APIs are and how they power modern apps"
+      ],
+      "xpReward": 80,
+      "prerequisites": [
+        6
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 8,
+      "name": "Databases Fundamentals",
+      "description": "How applications store and retrieve data — relational databases, SQL, and modern NoSQL systems.",
+      "complexity": "Intermediate",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=FR4QIeZaPeM",
+      "imageUrl": "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&q=80",
+      "icon": "fa-database",
+      "keyTopics": [
+        "Relational DBs",
+        "SQL Basics",
+        "NoSQL",
+        "Indexes",
+        "Backups"
+      ],
+      "learningObjectives": [
+        "Explain tables, rows, columns, and relationships",
+        "Write basic SQL queries (SELECT, INSERT, UPDATE, DELETE)",
+        "Understand when to use SQL vs NoSQL",
+        "Recognize the importance of indexes and backups"
+      ],
+      "xpReward": 100,
+      "prerequisites": [
+        5
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 9,
+      "name": "Cybersecurity Basics",
+      "description": "Protect systems and data from threats — passwords, encryption, malware, and security best practices.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 50,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=inWWhr5tnEA",
+      "imageUrl": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80",
+      "icon": "fa-shield-halved",
+      "keyTopics": [
+        "Threats & Attacks",
+        "Encryption",
+        "Authentication",
+        "Firewalls",
+        "Malware"
+      ],
+      "learningObjectives": [
+        "Identify common cyber threats (phishing, malware, ransomware)",
+        "Explain encryption basics (symmetric, asymmetric, hashing)",
+        "Understand MFA and password best practices",
+        "Describe the role of firewalls and antivirus"
+      ],
+      "xpReward": 120,
+      "prerequisites": [
+        6,
+        7
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 10,
+      "name": "Cloud Computing Intro",
+      "description": "Learn how AWS, Azure, and Google Cloud deliver computing as a service — IaaS, PaaS, SaaS, and beyond.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=M988_fsOSWo",
+      "imageUrl": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80",
+      "icon": "fa-cloud",
+      "keyTopics": [
+        "IaaS/PaaS/SaaS",
+        "AWS/Azure/GCP",
+        "Virtualization",
+        "Containers",
+        "Serverless"
+      ],
+      "learningObjectives": [
+        "Differentiate IaaS, PaaS, and SaaS",
+        "Explain virtualization and containers",
+        "Understand core AWS/Azure/GCP services",
+        "Recognize when serverless makes sense"
+      ],
+      "xpReward": 110,
+      "prerequisites": [
+        6
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 11,
+      "name": "Software Development Basics",
+      "description": "How software gets built — programming languages, version control, testing, and the dev lifecycle.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 55,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=poJfwre2PIs",
+      "imageUrl": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80",
+      "icon": "fa-code",
+      "keyTopics": [
+        "Programming Languages",
+        "Git & GitHub",
+        "SDLC",
+        "Testing",
+        "Debugging"
+      ],
+      "learningObjectives": [
+        "Compare popular programming languages and their uses",
+        "Use Git for version control (commit, push, pull, branch)",
+        "Explain the software development lifecycle",
+        "Describe unit testing and debugging strategies"
+      ],
+      "xpReward": 130,
+      "prerequisites": [
+        5
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 12,
+      "name": "IT Support & Troubleshooting",
+      "description": "Diagnose and fix common IT problems — a systematic approach to helping users and maintaining systems.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=oDZ7mC8oF0s",
+      "imageUrl": "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80",
+      "icon": "fa-screwdriver-wrench",
+      "keyTopics": [
+        "Troubleshooting Steps",
+        "Ticketing Systems",
+        "Remote Support",
+        "Documentation"
+      ],
+      "learningObjectives": [
+        "Apply a systematic troubleshooting methodology",
+        "Use ticketing systems to track and resolve issues",
+        "Provide effective remote support",
+        "Document solutions for future reference"
+      ],
+      "xpReward": 110,
+      "prerequisites": [
+        5,
+        6
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 13,
+      "name": "Data Privacy & Ethics",
+      "description": "Handle data responsibly — privacy laws, user consent, ethical AI, and protecting personal information.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 40,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=9CeBP6lH6rA",
+      "imageUrl": "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&q=80",
+      "icon": "fa-user-shield",
+      "keyTopics": [
+        "GDPR",
+        "Data Protection",
+        "Consent",
+        "AI Ethics",
+        "Anonymization"
+      ],
+      "learningObjectives": [
+        "Explain key data privacy regulations (GDPR, POPIA)",
+        "Understand user consent and data handling principles",
+        "Recognize ethical concerns in AI and automation",
+        "Apply data anonymization techniques"
+      ],
+      "xpReward": 100,
+      "prerequisites": [
+        9
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 14,
+      "name": "Emerging Technologies",
+      "description": "Explore the future — AI, IoT, blockchain, quantum computing, and how they'll reshape IT.",
+      "complexity": "Advanced",
+      "estimatedMinutes": 60,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=QEzlsjAqADA",
+      "imageUrl": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80",
+      "icon": "fa-rocket",
+      "keyTopics": [
+        "Artificial Intelligence",
+        "IoT",
+        "Blockchain",
+        "Quantum Computing",
+        "AR/VR"
+      ],
+      "learningObjectives": [
+        "Explain the basics of AI and machine learning",
+        "Describe IoT architecture and use cases",
+        "Understand how blockchain works and its applications",
+        "Recognize the potential of quantum computing and AR/VR"
+      ],
+      "xpReward": 140,
+      "prerequisites": [
+        10,
+        11
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    },
+    {
+      "moduleId": 15,
+      "name": "Career Readiness & Interview Prep",
+      "description": "Turn your CCP certification into a career — CVs, interviews, portfolios, and professional growth.",
+      "complexity": "Professional",
+      "estimatedMinutes": 45,
+      "duration": "30 min",
+      "contentType": "mixed",
+      "videoUrl": "https://www.youtube.com/watch?v=naIkpQ_cIt0",
+      "imageUrl": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+      "icon": "fa-briefcase",
+      "keyTopics": [
+        "CV Writing",
+        "Interview Skills",
+        "Portfolio",
+        "Networking",
+        "Job Search"
+      ],
+      "learningObjectives": [
+        "Build an IT-focused CV and cover letter",
+        "Prepare for technical and behavioral interviews",
+        "Create a portfolio showcasing your skills",
+        "Use LinkedIn and networking to find opportunities"
+      ],
+      "xpReward": 150,
+      "prerequisites": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "passScore": 70,
+      "quizQuestions": 10
+    }
+  ],
+  "enrolledCount": 1882,
+  "prerequisite": null,
+  "isActive": true,
+  "__v": 0,
+  "createdAt": "2026-06-17T09:22:17.100Z",
+  "updatedAt": "2026-09-29T19:03:38.737Z",
+  "bannerImage": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=80",
+  "careerPaths": [
+    "IT Support Specialist",
+    "Junior Systems Administrator",
+    "Help Desk Technician",
+    "Network Technician",
+    "Cybersecurity Analyst (entry)"
+  ],
+  "displayOrder": 1,
+  "learningOutcomes": [
+    "Understand computer hardware, software, and operating systems",
+    "Configure and troubleshoot basic networks",
+    "Identify and mitigate common cybersecurity threats",
+    "Explain cloud, AI, and emerging technologies",
+    "Build a professional IT career foundation"
+  ],
+  "longDescription": "The CCP certification is a comprehensive 15-module program covering the full spectrum of modern computing — from hardware fundamentals to cybersecurity, cloud, AI, and career readiness. Complete all modules and pass the final exam to earn your globally-recognized CCP credential.",
+  "price": 150,
+  "totalMinutes": 660
+}

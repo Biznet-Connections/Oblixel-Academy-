@@ -13,9 +13,6 @@ const moduleSchema = new mongoose.Schema({
   icon:              { type: String, default: 'fa-book' },
   keyTopics:         { type: [String], default: [] },
   learningObjectives:{ type: [String], default: [] },
-  lessonContent:     { type: String, default: '' },      // HTML lesson body
-  readingTime:       { type: Number, default: 25 },       // minutes
-  keyTerms:          [{ term: String, definition: String }],
   xpReward:          { type: Number, default: 50, min: 0 },
   prerequisites:     { type: [Number], default: [] },
   passScore:         { type: Number, default: 70, min: 0, max: 100 },

@@ -1765,83 +1765,6 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
   };
   render();
 }
-
-// ==================== LESSON DRAWER ====================
-window.openLessonDrawer = function () {
-  const backdrop = document.getElementById('lessonDrawerBackdrop');
-  const drawer = document.getElementById('lessonDrawer');
-  if (!drawer) { console.warn('[Drawer] Not found'); return; }
-
-  backdrop.classList.add('active');
-  drawer.classList.add('active');
-  document.body.style.overflow = 'hidden';
-
-  const body = document.getElementById('lessonDrawerBody');
-  const key = 'lesson_scroll_' + drawer.dataset.course + '_' + drawer.dataset.module;
-  const saved = sessionStorage.getItem(key);
-  if (saved && body) {
-    setTimeout(() => { body.scrollTop = parseInt(saved, 10); }, 100);
-  }
-
-  setTimeout(() => {
-    if (body) {
-      body.addEventListener('scroll', handleDrawerScroll);
-      handleDrawerScroll();
-    }
-  }, 50);
-};
-
-window.closeLessonDrawer = function () {
-  const backdrop = document.getElementById('lessonDrawerBackdrop');
-  const drawer = document.getElementById('lessonDrawer');
-  if (!drawer) return;
-
-  const body = document.getElementById('lessonDrawerBody');
-  const key = 'lesson_scroll_' + drawer.dataset.course + '_' + drawer.dataset.module;
-  if (body) {
-    sessionStorage.setItem(key, String(body.scrollTop));
-    body.removeEventListener('scroll', handleDrawerScroll);
-  }
-
-  backdrop.classList.remove('active');
-  drawer.classList.remove('active');
-  document.body.style.overflow = '';
-
-  const progressFill = document.getElementById('drawerProgress');
-  if (progressFill && parseInt(progressFill.style.width, 10) >= 95) {
-    markLessonAsRead(drawer.dataset.course, drawer.dataset.module);
-  }
-};
-
-function handleDrawerScroll() {
-  const body = document.getElementById('lessonDrawerBody');
-  const fill = document.getElementById('drawerProgress');
-  if (!body || !fill) return;
-  const total = body.scrollHeight - body.clientHeight;
-  const percent = total > 0 ? Math.min(100, (body.scrollTop / total) * 100) : 0;
-  fill.style.width = percent + '%';
-}
-
-async function markLessonAsRead(courseId, moduleId) {
-  try {
-    await apiRequest(`/courses/${courseId}/modules/${moduleId}/read`, { method: 'POST' });
-  } catch (e) { /* ignore */ }
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const drawer = document.getElementById('lessonDrawer');
-    if (drawer && drawer.classList.contains('active')) {
-      window.closeLessonDrawer();
-    }
-  }
-});
-
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'lessonDrawerBackdrop') {
-    window.closeLessonDrawer();
-  }
-});
 window.renderCourseDashboard = renderCourseDashboard;
 
 // ==================== MODULE FILTER ====================
@@ -2041,40 +1964,17 @@ async function renderModulePage(courseId, moduleId) {
           </ul>
         </div>` : ''}
 
-        <!-- Open Full Lesson Button -->
-        <div class="mb-6">
-          <button class="open-lesson-btn" onclick="window.openLessonDrawer('${courseId}', ${moduleId})">
-            <div class="left">
-              <span class="icon">📖</span>
-              <div class="label">
-                <span class="title">Open Full Lesson</span>
-                <span class="subtitle">${readingMin} min read · ${m.lessonContent ? 'Tap to read' : 'Coming soon'}</span>
+        <!-- Lesson layout: TOC + body -->
+        <div class="lesson-layout">
+          <aside>${tocHtml}</aside>
+          <main>
+            <div class="glass rounded-3xl p-6 md:p-8 mb-6">
+              <div class="lesson-body" id="lessonBody">
+                ${lessonHtml}
               </div>
+              ${keyTermsHtml}
             </div>
-            <div style="display:flex;align-items:center;">
-              ${(prog.lessonRead || false) ? '<span class="read-badge">✓ Read</span>' : ''}
-              <span class="arrow">→</span>
-            </div>
-          </button>
-        </div>
-
-        <!-- Lesson Drawer (hidden until opened) -->
-        <div class="lesson-drawer-backdrop" id="lessonDrawerBackdrop"></div>
-        <div class="lesson-drawer" id="lessonDrawer" data-course="${courseId}" data-module="${moduleId}">
-          <div class="lesson-drawer-header">
-            <h2>📖 ${escapeHtml(m.name)}</h2>
-            <button class="lesson-drawer-close" onclick="window.closeLessonDrawer()" title="Close (ESC)">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <div class="lesson-drawer-progress"><div class="lesson-drawer-progress-fill" id="drawerProgress"></div></div>
-          <div class="lesson-drawer-body" id="lessonDrawerBody">
-            ${tocHtml}
-            <div class="lesson-body" id="lessonBody">
-              ${lessonHtml}
-            </div>
-            ${keyTermsHtml}
-          </div>
+          </main>
         </div>
 
         <!-- Video -->
@@ -2084,7 +1984,14 @@ async function renderModulePage(courseId, moduleId) {
           ${videoEmbed}
         </div>` : ''}
 
-
+        <!-- Key Concepts (chips) -->
+        ${m.keyTopics && m.keyTopics.length ? `
+        <div class="glass rounded-3xl p-6 mb-6">
+          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-lightbulb text-amber-400 mr-2"></i>Key Concepts</h2>
+          <div class="flex flex-wrap gap-2">
+            ${m.keyTopics.map(t => `<span class="text-sm px-4 py-2 bg-purple-500/15 border border-purple-500/30 rounded-xl">${escapeHtml(t)}</span>`).join('')}
+          </div>
+        </div>` : ''}
 
         <!-- Quiz -->
         <div class="glass rounded-3xl p-6 mb-6">

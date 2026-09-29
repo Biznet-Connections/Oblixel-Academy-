@@ -1765,83 +1765,6 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
   };
   render();
 }
-
-// ==================== LESSON DRAWER ====================
-window.openLessonDrawer = function () {
-  const backdrop = document.getElementById('lessonDrawerBackdrop');
-  const drawer = document.getElementById('lessonDrawer');
-  if (!drawer) { console.warn('[Drawer] Not found'); return; }
-
-  backdrop.classList.add('active');
-  drawer.classList.add('active');
-  document.body.style.overflow = 'hidden';
-
-  const body = document.getElementById('lessonDrawerBody');
-  const key = 'lesson_scroll_' + drawer.dataset.course + '_' + drawer.dataset.module;
-  const saved = sessionStorage.getItem(key);
-  if (saved && body) {
-    setTimeout(() => { body.scrollTop = parseInt(saved, 10); }, 100);
-  }
-
-  setTimeout(() => {
-    if (body) {
-      body.addEventListener('scroll', handleDrawerScroll);
-      handleDrawerScroll();
-    }
-  }, 50);
-};
-
-window.closeLessonDrawer = function () {
-  const backdrop = document.getElementById('lessonDrawerBackdrop');
-  const drawer = document.getElementById('lessonDrawer');
-  if (!drawer) return;
-
-  const body = document.getElementById('lessonDrawerBody');
-  const key = 'lesson_scroll_' + drawer.dataset.course + '_' + drawer.dataset.module;
-  if (body) {
-    sessionStorage.setItem(key, String(body.scrollTop));
-    body.removeEventListener('scroll', handleDrawerScroll);
-  }
-
-  backdrop.classList.remove('active');
-  drawer.classList.remove('active');
-  document.body.style.overflow = '';
-
-  const progressFill = document.getElementById('drawerProgress');
-  if (progressFill && parseInt(progressFill.style.width, 10) >= 95) {
-    markLessonAsRead(drawer.dataset.course, drawer.dataset.module);
-  }
-};
-
-function handleDrawerScroll() {
-  const body = document.getElementById('lessonDrawerBody');
-  const fill = document.getElementById('drawerProgress');
-  if (!body || !fill) return;
-  const total = body.scrollHeight - body.clientHeight;
-  const percent = total > 0 ? Math.min(100, (body.scrollTop / total) * 100) : 0;
-  fill.style.width = percent + '%';
-}
-
-async function markLessonAsRead(courseId, moduleId) {
-  try {
-    await apiRequest(`/courses/${courseId}/modules/${moduleId}/read`, { method: 'POST' });
-  } catch (e) { /* ignore */ }
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const drawer = document.getElementById('lessonDrawer');
-    if (drawer && drawer.classList.contains('active')) {
-      window.closeLessonDrawer();
-    }
-  }
-});
-
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'lessonDrawerBackdrop') {
-    window.closeLessonDrawer();
-  }
-});
 window.renderCourseDashboard = renderCourseDashboard;
 
 // ==================== MODULE FILTER ====================
@@ -1872,6 +1795,7 @@ async function renderModulePage(courseId, moduleId) {
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading module...</p></div>';
 
+  // Stop any previous timer
   if (currentStudyTimer) { clearInterval(currentStudyTimer); currentStudyTimer = null; currentStudySeconds = 0; }
 
   try {
@@ -1880,7 +1804,7 @@ async function renderModulePage(courseId, moduleId) {
     const prog = data.progress;
     currentModuleInfo = { courseId, moduleId, module: m };
 
-    // ---- Study timer ----
+    // Start study timer
     currentStudySeconds = 0;
     currentStudyTimer = setInterval(() => {
       currentStudySeconds++;
@@ -1892,6 +1816,7 @@ async function renderModulePage(courseId, moduleId) {
       }
     }, 1000);
 
+    // Save time periodically (every 30s)
     const timeSaveInterval = setInterval(async () => {
       if (currentStudySeconds >= 30) {
         const toSave = currentStudySeconds;
@@ -1901,10 +1826,11 @@ async function renderModulePage(courseId, moduleId) {
             method: 'POST',
             body: JSON.stringify({ seconds: toSave })
           });
-        } catch (e) {}
+        } catch (e) { console.warn('[Timer] Save failed', e); }
       }
     }, 30000);
 
+    // Save remaining time on page hide/unload
     const saveOnLeave = () => {
       if (currentStudySeconds > 5) {
         const toSave = currentStudySeconds;
@@ -1913,11 +1839,14 @@ async function renderModulePage(courseId, moduleId) {
         try {
           fetch(`/api/courses/${courseId}/modules/${moduleId}/time`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: 'Bearer ' + token } : {})
+            },
             body: JSON.stringify({ seconds: toSave }),
             keepalive: true
           });
-        } catch (e) {}
+        } catch (e) { /* silent */ }
       }
     };
     window.addEventListener('beforeunload', saveOnLeave);
@@ -1928,7 +1857,7 @@ async function renderModulePage(courseId, moduleId) {
       saveOnLeave();
     };
 
-    // ---- Prereq check ----
+    // Prerequisite check
     const prereqs = m.prerequisites || [];
     if (prereqs.length > 0) {
       const progressData = await apiRequest('/courses/' + courseId + '/progress');
@@ -1938,14 +1867,14 @@ async function renderModulePage(courseId, moduleId) {
         root.innerHTML = `<div class="glass rounded-3xl p-10 text-center max-w-lg mx-auto mt-10">
           <i class="fa-solid fa-lock text-4xl text-amber-400 mb-4"></i>
           <h2 class="text-xl font-black mb-2">Module Locked</h2>
-          <p class="text-gray-400 text-sm mb-6">Complete prerequisite modules: <strong>${missing.map(x => 'M' + x).join(', ')}</strong></p>
+          <p class="text-gray-400 text-sm mb-6">Complete prerequisite modules first: <strong>${missing.map(x => 'M' + x).join(', ')}</strong></p>
           <button onclick="window.renderCourseDashboard('${courseId}')" class="bg-purple-600 px-6 py-2 rounded-xl">← Back to Course</button>
         </div>`;
         return;
       }
     }
 
-    // ---- Video embed ----
+    // Video embed URL
     let videoEmbed = '';
     if (m.videoUrl) {
       const ytMatch = m.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
@@ -1956,50 +1885,17 @@ async function renderModulePage(courseId, moduleId) {
       }
     }
 
-    // ---- Lesson body (from DB) ----
-    const lessonHtml = m.lessonContent || '<p class="text-gray-400 italic">Lesson content coming soon.</p>';
+    const complexityColor =
+      m.complexity === 'Beginner' ? 'text-emerald-400' :
+      m.complexity === 'Intermediate' ? 'text-amber-400' :
+      m.complexity === 'Advanced' ? 'text-red-400' :
+      'text-purple-400';
 
-    // ---- Table of contents — extract H2s ----
-    const h2Regex = /<h2[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-    let match;
-    const tocItems = [];
-    while ((match = h2Regex.exec(lessonHtml)) !== null) {
-      const cleanTitle = match[2].replace(/<[^>]+>/g, '').trim();
-      tocItems.push({ id: match[1], title: cleanTitle });
-    }
-
-    const tocHtml = tocItems.length > 0 ? `
-      <div class="lesson-toc">
-        <h3>📑 On this page</h3>
-        <ol>
-          ${tocItems.map(t => `<li><a href="#${t.id}" onclick="event.preventDefault(); document.getElementById('${t.id}').scrollIntoView({behavior:'smooth', block:'start'});">${escapeHtml(t.title)}</a></li>`).join('')}
-        </ol>
-      </div>
-    ` : '';
-
-    // ---- Key terms ----
-    const keyTermsHtml = (m.keyTerms && m.keyTerms.length) ? `
-      <div class="lesson-glossary">
-        <h2><i class="fa-solid fa-key text-purple-400 mr-2"></i>Key Terms</h2>
-        <div class="lesson-glossary-grid">
-          ${m.keyTerms.map(kt => `
-            <div class="lesson-term">
-              <div class="term">${escapeHtml(kt.term)}</div>
-              <div class="definition">${escapeHtml(kt.definition)}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
-
-    const readingMin = m.readingTime || m.estimatedMinutes || 25;
-
-    // ---- Render full page ----
     root.innerHTML = `
-      <div class="max-w-6xl mx-auto px-4 py-6">
+      <div class="max-w-5xl mx-auto px-4 py-6">
 
-        <!-- Sticky top bar -->
-        <div class="glass rounded-2xl p-4 mb-4 sticky top-2 z-20 flex items-center justify-between flex-wrap gap-3">
+        <!-- STICKY HEADER -->
+        <div class="glass rounded-2xl p-4 mb-6 sticky top-2 z-20 flex items-center justify-between flex-wrap gap-3">
           <button onclick="window.leaveModule('${courseId}')" class="text-gray-400 hover:text-white text-sm">
             <i class="fa-solid fa-arrow-left mr-1"></i> Back to Course
           </button>
@@ -2015,78 +1911,44 @@ async function renderModulePage(courseId, moduleId) {
           </div>
         </div>
 
-        <!-- Hero -->
-        <div class="lesson-hero" style="background-image: url('${m.imageUrl || ''}');">
-          <div class="lesson-hero-content">
-            <div class="lesson-hero-badges">
-              <span class="lesson-badge">Module ${m.moduleId} of ${currentModuleProgress?.totalModules || 15}</span>
-              <span class="lesson-badge">${m.complexity || 'Beginner'}</span>
-              <span class="lesson-badge time">⏱ ${readingMin} min read</span>
-              <span class="lesson-badge xp">⚡ +${m.xpReward || 50} XP</span>
-            </div>
-            <h1>${escapeHtml(m.name)}</h1>
-            <p>${escapeHtml(m.description || '')}</p>
+        <!-- MODULE HEADER -->
+        <div class="glass rounded-3xl p-6 mb-6">
+          <div class="flex items-center gap-3 flex-wrap mb-3">
+            <span class="text-xs px-3 py-1 bg-purple-500/20 rounded-full">Module ${m.moduleId} of ${currentModuleProgress?.totalModules || 15}</span>
+            <span class="text-xs px-3 py-1 border rounded-full ${complexityColor} border-current">${m.complexity}</span>
+            <span class="text-xs px-3 py-1 glass rounded-full"><i class="fa-regular fa-clock mr-1"></i>${m.estimatedMinutes} min</span>
+            <span class="text-xs px-3 py-1 glass rounded-full text-cyan-400"><i class="fa-solid fa-bolt mr-1"></i>+${m.xpReward} XP</span>
           </div>
+          <h1 class="text-2xl md:text-3xl font-black mb-2">${escapeHtml(m.name)}</h1>
+          <p class="text-gray-400 text-sm">${escapeHtml(m.description || '')}</p>
         </div>
 
-        <!-- Reading progress bar -->
-        <div class="lesson-progress-bar"><div class="lesson-progress-fill" id="lessonProgress"></div></div>
-
-        <!-- What You'll Learn -->
+        <!-- LEARNING OBJECTIVES -->
         ${m.learningObjectives && m.learningObjectives.length ? `
         <div class="glass rounded-3xl p-6 mb-6">
-          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-bullseye text-purple-400 mr-2"></i>What You'll Learn</h2>
+          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-target text-purple-400 mr-2"></i>What You'll Learn</h2>
           <ul class="space-y-2">
             ${m.learningObjectives.map(o => `<li class="text-sm text-gray-300 flex gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5 flex-shrink-0"></i><span>${escapeHtml(o)}</span></li>`).join('')}
           </ul>
         </div>` : ''}
 
-        <!-- Open Full Lesson Button -->
-        <div class="mb-6">
-          <button class="open-lesson-btn" onclick="window.openLessonDrawer('${courseId}', ${moduleId})">
-            <div class="left">
-              <span class="icon">📖</span>
-              <div class="label">
-                <span class="title">Open Full Lesson</span>
-                <span class="subtitle">${readingMin} min read · ${m.lessonContent ? 'Tap to read' : 'Coming soon'}</span>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;">
-              ${(prog.lessonRead || false) ? '<span class="read-badge">✓ Read</span>' : ''}
-              <span class="arrow">→</span>
-            </div>
-          </button>
-        </div>
-
-        <!-- Lesson Drawer (hidden until opened) -->
-        <div class="lesson-drawer-backdrop" id="lessonDrawerBackdrop"></div>
-        <div class="lesson-drawer" id="lessonDrawer" data-course="${courseId}" data-module="${moduleId}">
-          <div class="lesson-drawer-header">
-            <h2>📖 ${escapeHtml(m.name)}</h2>
-            <button class="lesson-drawer-close" onclick="window.closeLessonDrawer()" title="Close (ESC)">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <div class="lesson-drawer-progress"><div class="lesson-drawer-progress-fill" id="drawerProgress"></div></div>
-          <div class="lesson-drawer-body" id="lessonDrawerBody">
-            ${tocHtml}
-            <div class="lesson-body" id="lessonBody">
-              ${lessonHtml}
-            </div>
-            ${keyTermsHtml}
-          </div>
-        </div>
-
-        <!-- Video -->
+        <!-- VIDEO -->
         ${videoEmbed ? `
         <div class="glass rounded-3xl p-6 mb-6">
           <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-play text-cyan-400 mr-2"></i>Watch the Lesson</h2>
           ${videoEmbed}
         </div>` : ''}
 
+        <!-- KEY CONCEPTS -->
+        ${m.keyTopics && m.keyTopics.length ? `
+        <div class="glass rounded-3xl p-6 mb-6">
+          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-lightbulb text-amber-400 mr-2"></i>Key Concepts</h2>
+          <div class="flex flex-wrap gap-2">
+            ${m.keyTopics.map(t => `<span class="text-sm px-4 py-2 bg-purple-500/15 border border-purple-500/30 rounded-xl">${escapeHtml(t)}</span>`).join('')}
+          </div>
+        </div>` : ''}
 
-
-        <!-- Quiz -->
+        <!-- QUIZ LAUNCH -->
         <div class="glass rounded-3xl p-6 mb-6">
           <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-pencil text-cyan-400 mr-2"></i>Practice & Test</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2100,7 +1962,7 @@ async function renderModulePage(courseId, moduleId) {
           ${prog.quizScore !== null ? `<p class="text-xs text-gray-400 mt-3 text-center">Best score: <span class="text-emerald-400 font-bold">${prog.bestScore || prog.quizScore}%</span></p>` : ''}
         </div>
 
-        <!-- Notes -->
+        <!-- NOTES -->
         <div class="glass rounded-3xl p-6 mb-6">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-black"><i class="fa-solid fa-note-sticky text-emerald-400 mr-2"></i>Your Notes</h2>
@@ -2109,7 +1971,7 @@ async function renderModulePage(courseId, moduleId) {
           <textarea id="moduleNotes" class="w-full min-h-[200px] bg-black/30 border border-white/10 rounded-2xl p-4 text-sm font-mono resize-y focus:border-cyan-400 focus:outline-none" placeholder="Write your notes here... (auto-saves as you type)">${prog.notes ? escapeHtml(prog.notes) : ''}</textarea>
         </div>
 
-        <!-- Nav -->
+        <!-- NAV -->
         <div class="flex justify-between items-center gap-3 flex-wrap">
           ${m.moduleId > 1 ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId - 1})" class="glass px-6 py-3 rounded-2xl font-bold text-sm">← Previous</button>` : '<span></span>'}
           <button onclick="window.leaveModule('${courseId}')" class="glass px-6 py-3 rounded-2xl font-bold text-sm">All Modules</button>
@@ -2118,22 +1980,7 @@ async function renderModulePage(courseId, moduleId) {
       </div>
     `;
 
-    // ---- Reading progress tracking ----
-    const lessonBody = document.getElementById('lessonBody');
-    const progressFill = document.getElementById('lessonProgress');
-    if (lessonBody && progressFill) {
-      const updateProgress = () => {
-        const rect = lessonBody.getBoundingClientRect();
-        const total = lessonBody.offsetHeight;
-        const scrolled = Math.min(total, Math.max(0, -rect.top + window.innerHeight * 0.3));
-        const percent = Math.min(100, (scrolled / total) * 100);
-        progressFill.style.width = percent + '%';
-      };
-      window.addEventListener('scroll', updateProgress);
-      window.__cleanupModuleProgress = () => window.removeEventListener('scroll', updateProgress);
-    }
-
-    // ---- Notes auto-save ----
+    // Notes auto-save
     const notesEl = document.getElementById('moduleNotes');
     const statusEl = document.getElementById('notesSaveStatus');
     let notesSaveTimer = null;
@@ -2157,12 +2004,14 @@ async function renderModulePage(courseId, moduleId) {
       }, 2000);
     });
 
-    if (typeof AOS !== 'undefined') AOS.refresh();
   } catch (error) {
     console.error('Module error:', error);
     root.innerHTML = `<div class="glass rounded-3xl p-12 text-center max-w-lg mx-auto mt-10"><p class="text-red-400 mb-4">Failed to load module: ${error.message}</p><button onclick="window.renderCourseDashboard('${courseId}')" class="bg-purple-600 px-6 py-2 rounded-xl">← Back</button></div>`;
   }
 }
+window.renderModulePage = renderModulePage;
+
+// ==================== LEAVE MODULE (with cleanup) ====================
 window.leaveModule = function (courseId, nextModuleId) {
   if (window.__cleanupModule) { window.__cleanupModule(); window.__cleanupModule = null; }
   if (nextModuleId) renderModulePage(courseId, nextModuleId);

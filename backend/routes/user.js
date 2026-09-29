@@ -192,4 +192,28 @@ router.delete('/account', authenticate, async (req, res) => {
 const ExamSession = require('../models/ExamSession');
 const ExamAttempt = require('../models/ExamAttempt');
 
+// ==================== GET XP + LEVEL ====================
+router.get('/xp', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('xp level streak totalSpent');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const xpForNextLevel = (user.level || 1) * 500;
+    const xpCurrentLevel = (user.level - 1) * 500;
+
+    res.json({
+      xp: user.xp || 0,
+      level: user.level || 1,
+      streak: user.streak || 0,
+      xpForNextLevel,
+      xpCurrentLevel,
+      xpToNext: xpForNextLevel - (user.xp || 0),
+      progressPercent: Math.round(((user.xp - xpCurrentLevel) / (xpForNextLevel - xpCurrentLevel)) * 100)
+    });
+  } catch (error) {
+    console.error('[USER] XP error:', error.message);
+    res.status(500).json({ error: 'Failed to load XP' });
+  }
+});
+
 module.exports = router;
