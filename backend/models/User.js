@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
     systemSettings: { type: Boolean, default: false },
     viewFinance: { type: Boolean, default: true }
   },
+  // Password reset (code-based)
+  resetCode: { type: String, default: null, select: false },
+  resetCodeExpires: { type: Date, default: null },
+  resetCodeAttempts: { type: Number, default: 0 },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   lastLogin: Date

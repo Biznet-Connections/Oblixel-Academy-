@@ -145,6 +145,7 @@
   }
   </script>
   <link rel="stylesheet" href="/css/enroll-modal.css">
+  <link rel="stylesheet" href="/css/forgot-password.css">
 </head>
 <body>
 
@@ -453,5 +454,66 @@
 </div>
 <!-- ==================== END ENROLL MODAL ==================== -->
 
+  <script src="/js/forgot-password.js"></script>
+
+<!-- ==================== FORGOT PASSWORD MODAL ==================== -->
+<div class="fp-backdrop" id="fpBackdrop">
+  <div class="fp-modal">
+
+    <div class="fp-header">
+      <div>
+        <p class="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1">Password Reset</p>
+        <h2 class="text-xl font-black leading-tight">Forgot your password?</h2>
+      </div>
+      <button class="fp-close" onclick="closeForgotPassword()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="fp-steps">
+      <div class="fp-step-dot active"></div>
+      <div class="fp-step-dot"></div>
+      <div class="fp-step-dot"></div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="fp-step active" id="fp-step-1">
+      <h3>Enter your email</h3>
+      <p class="hint">We'll send a 6-digit reset code to this address.</p>
+      <input type="email" class="fp-input" id="fpEmailInput" placeholder="you@example.com" autocomplete="email" />
+      <button class="fp-cta" id="fpSendBtn" onclick="fpSendCode()">
+        <i class="fa-solid fa-paper-plane mr-2"></i> Send Reset Code
+      </button>
+      <div class="fp-msg" id="fpMsg1"></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="fp-step" id="fp-step-2">
+      <h3>Enter the code</h3>
+      <p class="hint">Check your inbox for the 6-digit code. It expires in 15 minutes.</p>
+      <input type="text" class="fp-input code" id="fpCodeInput" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+      <button class="fp-cta" id="fpVerifyBtn" onclick="fpVerifyCode()">
+        <i class="fa-solid fa-check mr-2"></i> Verify Code
+      </button>
+      <button class="fp-secondary" onclick="fpBackToStep(1)">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Change email
+      </button>
+      <div class="fp-msg" id="fpMsg2"></div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="fp-step" id="fp-step-3">
+      <h3>Set a new password</h3>
+      <p class="hint">Choose something strong. Minimum 5 characters.</p>
+      <input type="password" class="fp-input" id="fpPasswordInput" placeholder="New password" autocomplete="new-password" />
+      <button class="fp-cta" id="fpResetBtn" onclick="fpResetPassword()">
+        <i class="fa-solid fa-key mr-2"></i> Reset Password
+      </button>
+      <div class="fp-msg" id="fpMsg3"></div>
+    </div>
+
+  </div>
+</div>
+<!-- ==================== END FORGOT PASSWORD MODAL ==================== -->
 </body>
 </html>

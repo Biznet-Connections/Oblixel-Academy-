@@ -833,16 +833,12 @@ function renderLogin() {
     }
   });
   document.getElementById('switchToRegister').addEventListener('click', (e) => { e.preventDefault(); renderPage('register'); });
-  document.getElementById('forgotPasswordLink').addEventListener('click', async (e) => {
+  document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
     e.preventDefault();
-    const email = prompt('Enter your email address:');
-    if (email) {
-      try {
-        await forgotPassword(email);
-        showToast('Password reset link sent to your email', 'success');
-      } catch (error) {
-        showToast('Failed to send reset link', 'error');
-      }
+    if (typeof window.openForgotPassword === 'function') {
+      window.openForgotPassword();
+    } else {
+      showToast('Reset modal not loaded — refresh the page', 'error');
     }
   });
   let vis2 = false;
