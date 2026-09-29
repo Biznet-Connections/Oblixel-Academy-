@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, unique: true },
@@ -8,9 +8,30 @@ const paymentSchema = new mongoose.Schema({
   originalAmount: { type: Number, required: true },
   discountAmount: { type: Number, default: 0 },
   amount: { type: Number, required: true },
+  currency: { type: String, default: 'USD' },
+
+  // Voucher (kept for admin/partner codes)
   voucherCode: { type: String, default: null },
-  status: { type: String, enum: ['pending', 'completed', 'failed', 'refunded'], default: 'pending' },
-  paymentMethod: { type: String, enum: ['voucher', 'credit_card', 'paypal', 'ecocash'], default: 'voucher' },
+  voucherDiscountType: { type: String, default: null },
+  voucherDiscountValue: { type: Number, default: null },
+
+  // Linkwa fields
+  linkwaCheckoutUrl: { type: String, default: null },
+  linkwaShortUrl: { type: String, default: null },
+  linkwaPaymentReference: { type: String, default: null },
+  linkwaExternalLinkId: { type: String, default: null },
+  webhookPayload: { type: Object, default: null },
+
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'paid', 'failed', 'cancelled', 'refunded'],
+    default: 'pending'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['voucher', 'linkwa', 'credit_card', 'paypal', 'ecocash'],
+    default: 'voucher'
+  },
   billingInfo: {
     firstName: { type: String, default: '' },
     lastName: { type: String, default: '' },
@@ -18,11 +39,15 @@ const paymentSchema = new mongoose.Schema({
     phone: { type: String, default: '' },
     country: { type: String, default: 'Zimbabwe' }
   },
-  completedAt: Date
+  failureReason: { type: String, default: null },
+  completedAt: Date,
+  paidAt: Date
 }, { timestamps: true });
 
 paymentSchema.index({ userId: 1 });
 paymentSchema.index({ status: 1 });
+paymentSchema.index({ linkwaExternalLinkId: 1 });
+paymentSchema.index({ linkwaShortUrl: 1, linkwaPaymentReference: 1 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 module.exports = Payment;

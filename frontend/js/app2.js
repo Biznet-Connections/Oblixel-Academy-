@@ -1,4 +1,4 @@
-// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 1 ====================
+﻿// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 1 ====================
 // v13.0: Two-column Certificate Settings, Position Sliders, Expiry Date, Verify URL,
 //        Custom Text Fields, Live Canvas, Drag-to-Position, Signature Pad, Color Presets,
 //        FULL Font Controls for ALL Elements (Name, Course, Date, Expiry, Cert ID, Verify)
@@ -667,7 +667,7 @@ function renderLandingPage() {
           <div data-aos="fade-right">
             <p class="uppercase tracking-[6px] text-cyan-400 text-sm mb-5">Future Of Professional Certification</p>
             <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight">Build Your <span class="gradient-text">Global Skills</span></h1>
-            <p class="mt-4 sm:mt-6 text-gray-400 text-sm sm:text-base lg:text-lg">Enterprise-level certification platform. Join 42,000+ successful professionals with 25+ certifications including NCP & CCP.</p>
+            <p class="mt-4 sm:mt-6 text-gray-400 text-sm sm:text-base lg:text-lg">Enterprise-level certification platform. Join 42,000+ successful professionals with 25+ certifications </p>
             <div class="flex gap-3 sm:gap-5 mt-6 sm:mt-10"><button id="landingStartBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base glow">Start Learning</button><button id="landingExploreBtn" class="glass px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base">Explore</button></div>
             <div class="flex gap-4 sm:gap-10 mt-8 sm:mt-12"><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">42,000+</h2><p class="text-gray-400 text-xs sm:text-sm">Students</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">${coursesData.length}+</h2><p class="text-gray-400 text-xs sm:text-sm">Certifications</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">98%</h2><p class="text-gray-400 text-xs sm:text-sm">Success</p></div></div>
           </div>

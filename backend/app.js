@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require('path').join(__dirname, '.env') });
+﻿require("dotenv").config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -6,13 +6,30 @@ const bcrypt = require('bcryptjs');
 const connectDB = require('./config/database');
 
 const app = express();
+
+// ==================== LINKWA WEBHOOK (raw body, must be BEFORE express.json) ====================
+app.post('/api/payments/linkwa/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    try {
+      const paymentsRouter = require('./routes/payments');
+      const signature = req.headers['x-linkwa-signature'];
+      const result = await paymentsRouter.handleLinkwaWebhook(req.body, signature);
+      res.status(result.status).json({ received: result.ok, message: result.message });
+    } catch (err) {
+      console.error('[WEBHOOK] Handler error:', err.message);
+      res.status(500).json({ received: false });
+    }
+  }
+);
+// ==================== END LINKWA WEBHOOK ====================
 const PORT = process.env.PORT || 5001;
 
-console.log(`\n🔧 ENVIRONMENT CHECK:`);
-console.log(`   DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? '✅ Present (' + process.env.DEEPSEEK_API_KEY.substring(0, 12) + '...)' : '❌ MISSING'}`);
-console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Present' : '❌ MISSING'}`);
-console.log(`   MONGODB_URI: ${process.env.MONGODB_URI ? '✅ Present (Atlas)' : '❌ MISSING'}`);
-console.log(`   ADMIN_EMAIL: ${process.env.ADMIN_EMAIL || '❌ MISSING'}\n`);
+console.log(`\nðŸ”§ ENVIRONMENT CHECK:`);
+console.log(`   DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? 'âœ… Present (' + process.env.DEEPSEEK_API_KEY.substring(0, 12) + '...)' : 'âŒ MISSING'}`);
+console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? 'âœ… Present' : 'âŒ MISSING'}`);
+console.log(`   MONGODB_URI: ${process.env.MONGODB_URI ? 'âœ… Present (Atlas)' : 'âŒ MISSING'}`);
+console.log(`   ADMIN_EMAIL: ${process.env.ADMIN_EMAIL || 'âŒ MISSING'}\n`);
 
 app.use(cors({
   origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:5001', process.env.FRONTEND_URL],
@@ -21,7 +38,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-console.log('📦 Loading route modules...');
+console.log('ðŸ“¦ Loading route modules...');
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/exams', require('./routes/exams'));
@@ -44,7 +61,7 @@ app.get('/api/health', (req, res) => {
 });
 
 const frontendPath = path.join(__dirname, '../frontend');
-console.log(`📁 Serving frontend from: ${frontendPath}`);
+console.log(`ðŸ“ Serving frontend from: ${frontendPath}`);
 app.use(express.static(frontendPath));
 
 app.get('/verify/:certificateId', (req, res) => {
@@ -58,7 +75,7 @@ app.get('*', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.stack);
+  console.error('âŒ Error:', err.stack);
   res.status(500).json({ error: err.message || 'Something went wrong!' });
 });
 
@@ -76,7 +93,7 @@ async function seedDatabase() {
   try {
     const userCount = await User.countDocuments();
     if (userCount === 0) {
-      console.log('👤 No users found. Creating admin user...');
+      console.log('ðŸ‘¤ No users found. Creating admin user...');
       const adminEmail = process.env.ADMIN_EMAIL || 'mutaurijoe@gmail.com';
       const adminPassword = process.env.ADMIN_PASSWORD || 'JOELMUTAURI@2005';
       const salt = await bcrypt.genSalt(10);
@@ -94,32 +111,32 @@ async function seedDatabase() {
         totalSpent: 0,
         enrolledCourses: 0
       });
-      console.log(`✅ Admin user created: ${adminEmail}`);
+      console.log(`âœ… Admin user created: ${adminEmail}`);
     } else {
-      console.log(`👥 ${userCount} users in database`);
+      console.log(`ðŸ‘¥ ${userCount} users in database`);
     }
 
     const courseCount = await Course.countDocuments();
     if (courseCount === 0) {
-      console.log('🌱 Seeding courses...');
+      console.log('ðŸŒ± Seeding courses...');
       await Course.insertMany(getSeedCourses());
-      console.log(`✅ Courses seeded`);
+      console.log(`âœ… Courses seeded`);
     } else {
       await Course.deleteMany({ courseId: { $in: ['ona', 'onp'] } });
-      console.log(`📚 ${courseCount} courses in database`);
+      console.log(`ðŸ“š ${courseCount} courses in database`);
     }
 
     const questionCount = await ExamQuestion.countDocuments();
     if (questionCount < 50) {
       await ExamQuestion.deleteMany({});
-      console.log('📝 Seeding exam questions...');
+      console.log('ðŸ“ Seeding exam questions...');
       await ExamQuestion.insertMany(getSeedQuestions());
-      console.log(`✅ ${getSeedQuestions().length} exam questions seeded`);
+      console.log(`âœ… ${getSeedQuestions().length} exam questions seeded`);
     } else {
-      console.log(`📝 ${questionCount} exam questions in database`);
+      console.log(`ðŸ“ ${questionCount} exam questions in database`);
     }
   } catch (error) {
-    console.error('❌ Seed error:', error.message);
+    console.error('âŒ Seed error:', error.message);
   }
 }
 
@@ -262,15 +279,15 @@ async function startServer() {
   if (dbConnection) {
     await seedDatabase();
   } else {
-    console.warn('⚠️ Running without MongoDB\n');
+    console.warn('âš ï¸ Running without MongoDB\n');
   }
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 obliXel Academy v13.0 running on http://localhost:${PORT}`);
-    console.log(`📚 API: http://localhost:${PORT}/api`);
-    console.log(`🌐 Frontend: http://localhost:${PORT}`);
-    console.log(`🔍 Verify: http://localhost:${PORT}/verify/:id`);
-    console.log(`   DeepSeek AI: ${process.env.DEEPSEEK_API_KEY ? '✅ Connected' : '❌ Fallback'}\n`);
+    console.log(`\nðŸš€ obliXel Academy v13.0 running on http://localhost:${PORT}`);
+    console.log(`ðŸ“š API: http://localhost:${PORT}/api`);
+    console.log(`ðŸŒ Frontend: http://localhost:${PORT}`);
+    console.log(`ðŸ” Verify: http://localhost:${PORT}/verify/:id`);
+    console.log(`   DeepSeek AI: ${process.env.DEEPSEEK_API_KEY ? 'âœ… Connected' : 'âŒ Fallback'}\n`);
   });
 }
 

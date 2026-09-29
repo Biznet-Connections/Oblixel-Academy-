@@ -1,0 +1,97 @@
+﻿<!-- ==================== ENROLL MODAL ==================== -->
+<div class="enroll-modal-backdrop" id="enrollModalBackdrop">
+  <div class="enroll-modal" id="enrollModal">
+
+    <div class="enroll-modal-header">
+      <div>
+        <p class="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1">Enroll Now</p>
+        <h2 id="enrollCourseName" class="text-xl font-black leading-tight">Loading...</h2>
+      </div>
+      <button class="enroll-modal-close" onclick="closeEnrollModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="enroll-plan-box">
+      <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Choose your plan</p>
+      <label class="enroll-plan-option selected" data-plan="exam_only" onclick="selectPlan('exam_only')">
+        <div class="enroll-plan-radio"></div>
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-sm">Exam Only</span>
+            <span id="enrollExamPrice" class="font-black gradient-text">$0</span>
+          </div>
+          <p class="text-xs text-gray-400 mt-0.5">Just the certification exam</p>
+        </div>
+      </label>
+      <label class="enroll-plan-option" data-plan="learning" onclick="selectPlan('learning')">
+        <div class="enroll-plan-radio"></div>
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-sm">Full Learning Path</span>
+            <span id="enrollPathPrice" class="font-black gradient-text">$0</span>
+          </div>
+          <p class="text-xs text-gray-400 mt-0.5">Modules + exam + certificate</p>
+        </div>
+      </label>
+    </div>
+
+    <div class="enroll-tabs">
+      <button class="enroll-tab active" data-tab="linkwa" onclick="switchEnrollTab('linkwa')">
+        <i class="fa-solid fa-credit-card mr-1"></i> Pay Online
+      </button>
+      <button class="enroll-tab" data-tab="voucher" onclick="switchEnrollTab('voucher')">
+        <i class="fa-solid fa-ticket mr-1"></i> Voucher
+      </button>
+    </div>
+
+    <div class="enroll-pane active" id="pane-linkwa">
+      <p class="text-sm text-gray-300 mb-1">Pay securely with:</p>
+      <div class="enroll-methods">
+        <div class="enroll-method"><i class="fa-solid fa-mobile-screen"></i>EcoCash</div>
+        <div class="enroll-method"><i class="fa-solid fa-bolt"></i>InnBucks</div>
+        <div class="enroll-method"><i class="fa-solid fa-mobile-screen-button"></i>OneMoney</div>
+        <div class="enroll-method"><i class="fa-solid fa-wallet"></i>Omari</div>
+        <div class="enroll-method"><i class="fa-solid fa-coins"></i>SmileCash</div>
+        <div class="enroll-method"><i class="fa-brands fa-cc-visa"></i>Visa/MC</div>
+      </div>
+
+      <button class="enroll-cta" id="enrollPayBtn" onclick="startLinkwaPayment()">
+        <i class="fa-solid fa-lock mr-2"></i> Pay <span id="enrollPayAmount">$0</span> to Linkwa
+      </button>
+
+      <div class="enroll-msg" id="enrollLinkwaMsg"></div>
+
+      <p class="enroll-trust">
+        <i class="fa-solid fa-shield-halved mr-1"></i>
+        Secured by <strong>Linkwa</strong> - Sandbox mode
+      </p>
+    </div>
+
+    <div class="enroll-pane" id="pane-voucher">
+      <p class="text-sm text-gray-300 mb-3">Got a code from an admin or partner? Enter it below.</p>
+
+      <input type="text" class="enroll-voucher-input" id="enrollVoucherInput"
+             placeholder="OBX-XXXX-XXXX" oninput="resetVoucherMsg()" />
+
+      <button class="enroll-cta" style="margin-top:0.75rem;" id="enrollVoucherBtn" onclick="applyVoucher()">
+        <i class="fa-solid fa-ticket mr-2"></i> Apply Voucher
+      </button>
+
+      <div class="enroll-msg" id="enrollVoucherMsg"></div>
+
+      <p class="enroll-trust">
+        <i class="fa-solid fa-circle-info mr-1"></i>
+        Vouchers are issued for events, partners, or gifted enrollments.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<div class="linkwa-redirect-overlay" id="linkwaRedirectOverlay">
+  <div class="linkwa-redirect-spinner"></div>
+  <p class="text-lg font-bold">Redirecting to secure payment...</p>
+  <p class="text-sm text-gray-400">Powered by Linkwa</p>
+</div>
+<!-- ==================== END ENROLL MODAL ==================== -->

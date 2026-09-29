@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Complete — obliXel Academy</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  body { background: #0a0a1a; color: #fff; font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.1); }
+  .gradient-text { background: linear-gradient(90deg,#a855f7,#06b6d4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .spinner { width: 56px; height: 56px; border: 4px solid rgba(168,85,247,0.2); border-top-color: #a855f7; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #06b6d4; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+</style>
+</head>
+<body class="flex items-center justify-center p-6">
+
+<div id="app" class="glass rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center">
+
+  <!-- LOADING -->
+  <div id="state-loading">
+    <div class="spinner mx-auto mb-6"></div>
+    <h1 class="text-2xl sm:text-3xl font-black mb-3">Verifying Payment</h1>
+    <p class="text-gray-400 text-sm">Checking with Linkwa, please wait...</p>
+    <div class="flex justify-center gap-2 mt-6">
+      <div class="pulse-dot"></div>
+      <div class="pulse-dot" style="animation-delay:.2s"></div>
+      <div class="pulse-dot" style="animation-delay:.4s"></div>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="state-success" class="hidden">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-green-400 to-cyan-500 flex items-center justify-center">
+      <i class="fa-solid fa-check text-4xl text-white"></i>
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-black mb-3">Payment Confirmed!</h1>
+    <p class="text-gray-400 text-sm mb-1">You're now enrolled in</p>
+    <p id="success-course" class="gradient-text text-xl sm:text-2xl font-black mb-6">—</p>
+    <div class="glass rounded-2xl p-4 text-left text-sm mb-6">
+      <div class="flex justify-between mb-2"><span class="text-gray-400">Amount paid</span><span id="success-amount" class="font-bold">—</span></div>
+      <div class="flex justify-between"><span class="text-gray-400">Reference</span><span id="success-ref" class="font-mono text-xs">—</span></div>
+    </div>
+    <a href="/" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
+      🚀 Start Learning Now
+    </a>
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
+  </div>
+
+  <!-- FAILED -->
+  <div id="state-failed" class="hidden">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+      <i class="fa-solid fa-xmark text-4xl text-red-400"></i>
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-black mb-3">Payment Failed</h1>
+    <p class="text-gray-400 text-sm mb-6">No charge was made. You can try again.</p>
+    <a href="/" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">Try Again</a>
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
+  </div>
+
+  <!-- PENDING -->
+  <div id="state-pending" class="hidden">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+      <i class="fa-solid fa-hourglass-half text-4xl text-yellow-400"></i>
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-black mb-3">Still Processing</h1>
+    <p class="text-gray-400 text-sm mb-6">EcoCash can take up to 5 minutes. We'll email you when confirmed.</p>
+    <button onclick="location.reload()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">Check Again</button>
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
+  </div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const sessionId = params.get('reference');
+const shortUrl = params.get('short_url');
+const paymentRef = params.get('payment_reference');
+
+function show(id) {
+  ['loading','success','failed','pending'].forEach(s => {
+    document.getElementById('state-' + s).classList.toggle('hidden', s !== id);
+  });
+}
+
+let attempts = 0;
+const MAX_ATTEMPTS = 20; // ~60s
+
+async function check() {
+  if (!sessionId) { show('failed'); return; }
+
+  attempts++;
+  try {
+    const url = `/api/payments/status/${sessionId}` +
+      (shortUrl && paymentRef ? `?short_url=${shortUrl}&payment_reference=${paymentRef}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === 'completed' || data.status === 'paid') {
+      document.getElementById('success-course').textContent = data.courseName || 'your course';
+      document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
+      document.getElementById('success-ref').textContent = sessionId;
+      show('success');
+      return;
+    }
+    if (data.status === 'failed') { show('failed'); return; }
+  } catch (e) { /* ignore */ }
+
+  if (attempts >= MAX_ATTEMPTS) { show('pending'); return; }
+  setTimeout(check, 3000);
+}
+
+check();
+</script>
+</body>
+</html>

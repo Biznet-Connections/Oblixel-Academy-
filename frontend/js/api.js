@@ -430,3 +430,23 @@ window.OBliXelAPI = {
 };
 
 console.log('✅ API module loaded with base URL:', API_BASE_URL);
+
+// ==================== LINKWA PAYMENT HELPERS ====================
+async function initiateLinkwaPayment(courseId, type, phone = null) {
+  return apiRequest('/payments/initiate', {
+    method: 'POST',
+    body: JSON.stringify({ courseId, type, phone })
+  });
+}
+
+async function getLinkwaPaymentStatus(sessionId, shortUrl = null, paymentRef = null) {
+  let url = `/payments/status/${sessionId}`;
+  if (shortUrl && paymentRef) url += `?short_url=${shortUrl}&payment_reference=${paymentRef}`;
+  return apiRequest(url);
+}
+
+// Attach to existing payments object if present
+if (typeof window !== 'undefined' && window.api && window.api.payments) {
+  window.api.payments.initiateLinkwaPayment = initiateLinkwaPayment;
+  window.api.payments.getLinkwaPaymentStatus = getLinkwaPaymentStatus;
+}
