@@ -220,7 +220,6 @@ router.post('/initiate', authenticate, async (req, res) => {
     const returnUrl = `${appUrl}/payment-complete?reference=${sessionId}`;
 
     console.log('[INITIATE] Calling Linkwa with amount:', amount, 'for course:', course.courseId);
-    const appUrl = process.env.APP_URL || 'http://localhost:5001';
     const link = await linkwa.createPaymentLink({
       amount,
       name: `${course.name} — ${type === 'exam_only' ? 'Exam Only' : 'Full Learning Path'}`,
