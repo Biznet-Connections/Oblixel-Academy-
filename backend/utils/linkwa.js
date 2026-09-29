@@ -15,7 +15,7 @@ function authHeaders() {
  * Create a Linkwa payment link.
  * Returns { success, checkoutUrl, externalPaymentLinkId, shortUrl, raw }
  */
-async function createPaymentLink({ amount, name, description, returnUrl, phone, email }) {
+async function createPaymentLink({ amount, name, description, returnUrl, phone, email, imageUrl }) {
   try {
     const body = {
       amount: Number(amount),
@@ -25,6 +25,10 @@ async function createPaymentLink({ amount, name, description, returnUrl, phone, 
       return_url: returnUrl,
       stock: 1,
     };
+
+    if (imageUrl) {
+      body.image_url = imageUrl;
+    }
 
     if (phone || email) {
       body.autofill_contact_details = {};
