@@ -607,6 +607,17 @@ async function loadCourses() {
 
 // ==================== PAGE RENDERING DISPATCHER ====================
 function renderPage(page) {
+  // Handle ?page=dashboard&enrolled=xyz from payment redirect
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPage = urlParams.get('page');
+    if (urlPage === 'dashboard') {
+      page = 'dashboard';
+      // Clear the query string
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  } catch (e) {}
+
   if (currentUser && page === 'landing') { page = 'dashboard'; }
   currentPage = page;
   debugLog(`Rendering page: ${page}`);

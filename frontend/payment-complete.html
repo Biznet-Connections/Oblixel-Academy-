@@ -44,7 +44,7 @@
       <div class="flex justify-between mb-2"><span class="text-gray-400">Amount paid</span><span id="success-amount" class="font-bold">—</span></div>
       <div class="flex justify-between"><span class="text-gray-400">Reference</span><span id="success-ref" class="font-mono text-xs">—</span></div>
     </div>
-    <a href="/" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
+    <a id="startLearningBtn" href="/?page=dashboard" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
       🚀 Start Learning Now
     </a>
     <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
@@ -103,7 +103,19 @@ async function check() {
       document.getElementById('success-course').textContent = data.courseName || 'your course';
       document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
       document.getElementById('success-ref').textContent = sessionId;
+
+      // Save for later use
+      try {
+        sessionStorage.setItem('just_enrolled_course', data.courseId || '');
+        sessionStorage.setItem('just_enrolled_name', data.courseName || '');
+      } catch (e) {}
+
       show('success');
+
+      // Auto-redirect to course dashboard after 3.5s
+      setTimeout(() => {
+        window.location.href = '/?page=dashboard&enrolled=' + encodeURIComponent(data.courseId || '');
+      }, 3500);
       return;
     }
     if (data.status === 'failed') { show('failed'); return; }

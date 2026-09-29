@@ -34,7 +34,39 @@
   let currentPrice = 0;
   let currentOriginalPrice = 0;
 
-  window.openEnrollModal = function (course) {
+  window.openEnrollModal = async function (course) {
+    // Always fetch fresh course data to ensure prices are correct
+    try {
+      const res = await fetch('/api/courses');
+      if (res.ok) {
+        const data = await res.json();
+        const fresh = (data.courses || []).find(c =>
+          c.id === course.courseId || c.courseId === course.courseId || c.id === course.id
+        );
+        if (fresh) {
+          course.name = fresh.name || course.name;
+          course.examPrice = fresh.examPrice || fresh.price || 0;
+          course.pathPrice = fresh.pathPrice || fresh.examPrice || fresh.price || 0;
+          course.icon = fresh.icon || course.icon;
+        }
+      }
+    } catch (e) { console.warn('[Enroll] Could not fetch fresh course', e); }
+    // If price is missing, fetch fresh from API
+    if (!course.examPrice && !course.price) {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await fetch('/api/courses/' + course.courseId, {
+          headers: token ? { Authorization: 'Bearer ' + token } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.course) {
+            course.examPrice = data.course.examPrice || 0;
+            course.pathPrice = data.course.pathPrice || data.course.examPrice || 0;
+          }
+        }
+      } catch (e) { console.warn('[Enroll] Could not fetch course', e); }
+    }
     // course: { courseId, name, examPrice, pathPrice, icon, ... }
     currentCourse = course;
     currentPlan = 'exam_only';

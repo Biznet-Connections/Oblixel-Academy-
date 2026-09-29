@@ -10,12 +10,10 @@ const paymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   currency: { type: String, default: 'USD' },
 
-  // Voucher (kept for admin/partner codes)
   voucherCode: { type: String, default: null },
   voucherDiscountType: { type: String, default: null },
   voucherDiscountValue: { type: Number, default: null },
 
-  // Linkwa fields
   linkwaCheckoutUrl: { type: String, default: null },
   linkwaShortUrl: { type: String, default: null },
   linkwaPaymentReference: { type: String, default: null },

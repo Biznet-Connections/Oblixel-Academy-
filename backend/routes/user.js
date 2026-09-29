@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const authenticate = require('../middleware/auth');
 const User = require('../models/User');
@@ -70,7 +70,7 @@ router.get('/profile', authenticate, async (req, res) => {
     // Calculate total spent
     const payments = await Payment.find({
       userId: req.user._id,
-      status: 'completed'
+      status: { $in: ['completed', 'paid'] }
     });
 
     const totalSpent = Math.round(

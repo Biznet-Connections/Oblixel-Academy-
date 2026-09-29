@@ -200,6 +200,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
 
 // ==================== INITIATE LINKWA PAYMENT ====================
 router.post('/initiate', authenticate, async (req, res) => {
+  console.log('[INITIATE] Request from', req.user.email, 'body:', JSON.stringify(req.body));
   const { courseId, type, phone } = req.body;
   const userId = req.user._id;
 
@@ -218,6 +219,7 @@ router.post('/initiate', authenticate, async (req, res) => {
     const appUrl = process.env.APP_URL || 'http://localhost:5001';
     const returnUrl = `${appUrl}/payment-complete?reference=${sessionId}`;
 
+    console.log('[INITIATE] Calling Linkwa with amount:', amount, 'for course:', course.courseId);
     const link = await linkwa.createPaymentLink({
       amount,
       name: `${course.name} — ${type === 'exam_only' ? 'Exam Only' : 'Full Learning Path'}`,
@@ -271,6 +273,7 @@ router.post('/initiate', authenticate, async (req, res) => {
 
 // ==================== CHECK PAYMENT STATUS ====================
 router.get('/status/:sessionId', async (req, res) => {
+  console.log('[STATUS] Checking:', req.params.sessionId, 'query:', JSON.stringify(req.query));
   const { sessionId } = req.params;
   const { short_url, payment_reference } = req.query;
 

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Course = require('../models/Course');
@@ -116,7 +116,7 @@ router.get('/stats', async (req, res) => {
     const [totalStudents, totalCourses, totalRevenue, pendingCertificates, activeVouchers, totalEnrollments, totalPayments] = await Promise.all([
       User.countDocuments({ role: 'student' }),
       Course.countDocuments({ isActive: true }),
-      Payment.aggregate([{ $match: { status: 'completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Payment.aggregate([{ $match: { status: { $in: ['completed', 'paid'] } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Certificate.countDocuments({ status: 'pending' }),
       Voucher.countDocuments({ active: true }),
       Enrollment.countDocuments(),
@@ -163,7 +163,7 @@ router.post('/reset-revenue', isMainAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Type RESET to confirm' });
     }
     
-    const result = await Payment.deleteMany({ status: 'completed' });
+    const result = await Payment.deleteMany({ status: { $in: ['completed', 'paid'] } });
     
     console.log(`[ADMIN] Revenue reset by main admin ${req.user.email}. Deleted ${result.deletedCount} payment records.`);
     
@@ -451,7 +451,7 @@ router.get('/users', async (req, res) => {
     const users = await User.find().sort({ createdAt: -1 });
     const usersWithStats = await Promise.all(users.map(async (u) => {
       const enrolledCount = await Enrollment.countDocuments({ userId: u._id });
-      const payments = await Payment.find({ userId: u._id, status: 'completed' });
+      const payments = await Payment.find({ userId: u._id, status: { $in: ['completed', 'paid'] } });
       const totalSpent = Math.round(payments.reduce((s, p) => s + (p.amount || 0), 0) * 100) / 100;
       return {
         id: u._id,
@@ -786,15 +786,15 @@ router.get('/finance', async (req, res) => {
     const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
     const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
     const [thisMonthResult, lastMonthResult, totalResult] = await Promise.all([
-      Payment.aggregate([{ $match: { status: 'completed', completedAt: { $exists: true } } }, { $addFields: { month: { $month: '$completedAt' }, year: { $year: '$completedAt' } } }, { $match: { month: thisMonth + 1, year: thisYear } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      Payment.aggregate([{ $match: { status: 'completed', completedAt: { $exists: true } } }, { $addFields: { month: { $month: '$completedAt' }, year: { $year: '$completedAt' } } }, { $match: { month: lastMonth + 1, year: lastMonthYear } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      Payment.aggregate([{ $match: { status: 'completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } }])
+      Payment.aggregate([{ $match: { status: { $in: ['completed', 'paid'] }, completedAt: { $exists: true } } }, { $addFields: { month: { $month: '$completedAt' }, year: { $year: '$completedAt' } } }, { $match: { month: thisMonth + 1, year: thisYear } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Payment.aggregate([{ $match: { status: { $in: ['completed', 'paid'] }, completedAt: { $exists: true } } }, { $addFields: { month: { $month: '$completedAt' }, year: { $year: '$completedAt' } } }, { $match: { month: lastMonth + 1, year: lastMonthYear } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      Payment.aggregate([{ $match: { status: { $in: ['completed', 'paid'] } } }, { $group: { _id: null, total: { $sum: '$amount' } } }])
     ]);
     res.json({
       thisMonth: thisMonthResult.length > 0 ? Math.round(thisMonthResult[0].total * 100) / 100 : 0,
       lastMonth: lastMonthResult.length > 0 ? Math.round(lastMonthResult[0].total * 100) / 100 : 0,
       total: totalResult.length > 0 ? Math.round(totalResult[0].total * 100) / 100 : 0,
-      paymentsCount: await Payment.countDocuments({ status: 'completed' }),
+      paymentsCount: await Payment.countDocuments({ status: { $in: ['completed', 'paid'] } }),
       enrollmentsCount: await Enrollment.countDocuments()
     });
   } catch (error) { res.status(500).json({ error: error.message }); }

@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 
 const enrollmentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  courseId: { type: String, required: true, lowercase: true },
+  courseId: { type: String, required: true, lowercase: true, trim: true },
   courseName: { type: String, default: '' },
   courseIcon: { type: String, default: 'fa-certificate' },
   type: { type: String, enum: ['exam_only', 'learning'], default: 'exam_only' },
@@ -13,7 +13,6 @@ const enrollmentSchema = new mongoose.Schema({
     totalModules: { type: Number, default: 8 },
     nextModuleName: { type: String, default: 'Module 1' }
   },
-  // Certificate legal name fields (saved at enrollment time)
   certificateFirstName: { type: String, trim: true, default: '' },
   certificateLastName: { type: String, trim: true, default: '' },
   certificateFullName: { type: String, trim: true, default: '' },
