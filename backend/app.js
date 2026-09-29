@@ -7,6 +7,16 @@ const connectDB = require('./config/database');
 
 const app = express();
 
+// LINKWA_DEBUG START
+console.log('   --- LINKWA DEBUG ---');
+console.log('   LINKWA_API_KEY length: ' + (process.env.LINKWA_API_KEY ? process.env.LINKWA_API_KEY.length : 'MISSING'));
+console.log('   LINKWA_API_KEY starts: ' + (process.env.LINKWA_API_KEY ? process.env.LINKWA_API_KEY.substring(0, 20) : 'MISSING'));
+console.log('   LINKWA_API_KEY ends:   ' + (process.env.LINKWA_API_KEY ? process.env.LINKWA_API_KEY.slice(-8) : 'MISSING'));
+console.log('   LINKWA_BASE_URL:       ' + (process.env.LINKWA_BASE_URL || 'MISSING'));
+console.log('   LINKWA_WEBHOOK_SECRET length: ' + (process.env.LINKWA_WEBHOOK_SECRET ? process.env.LINKWA_WEBHOOK_SECRET.length : 'MISSING'));
+console.log('   --- END LINKWA DEBUG ---');
+// LINKWA_DEBUG END
+
 // ==================== LINKWA WEBHOOK (raw body, must be BEFORE express.json) ====================
 app.post('/api/payments/linkwa/webhook',
   express.raw({ type: 'application/json' }),
