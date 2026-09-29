@@ -13,6 +13,8 @@ console.log('   LINKWA_API_KEY length: ' + (process.env.LINKWA_API_KEY ? process
 console.log('   LINKWA_API_KEY starts: ' + (process.env.LINKWA_API_KEY ? process.env.LINKWA_API_KEY.substring(0, 20) : 'MISSING'));
 console.log('   LINKWA_API_KEY ends:   ' + (process.env.LINKWA_API_KEY ? process.env.LINKWA_API_KEY.slice(-8) : 'MISSING'));
 console.log('   LINKWA_BASE_URL:       ' + (process.env.LINKWA_BASE_URL || 'MISSING'));
+console.log('   APP_URL:               ' + (process.env.APP_URL || 'MISSING'));
+console.log('   LINKWA_RETURN_URL:     ' + (process.env.LINKWA_RETURN_URL || 'MISSING'));
 console.log('   LINKWA_WEBHOOK_SECRET length: ' + (process.env.LINKWA_WEBHOOK_SECRET ? process.env.LINKWA_WEBHOOK_SECRET.length : 'MISSING'));
 console.log('   --- END LINKWA DEBUG ---');
 // LINKWA_DEBUG END
