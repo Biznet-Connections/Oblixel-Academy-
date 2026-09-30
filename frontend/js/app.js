@@ -291,7 +291,15 @@ async function completeModule(courseId, moduleId, quizScore) {
 
 // ==================== EXAM API CALLS ====================
 async function startExam(courseId) {
-  return apiRequest('/exams/start', { method: 'POST', body: JSON.stringify({ courseId }) });
+  const examData = await apiRequest('/exams/start', { method: 'POST', body: JSON.stringify({ courseId }) });
+  if (examData && examData.sessionId && Array.isArray(examData.questions)) {
+    renderExamPage(courseId, examData);
+  } else if (examData && examData.message) {
+    showToast(examData.message, 'warning');
+  } else {
+    showToast('Could not start exam. Please try again.', 'error');
+  }
+  return examData;
 }
 
 async function submitExam(sessionId, courseId, answers, timeSpent) {
