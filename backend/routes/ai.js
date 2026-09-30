@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const Course = require('../models/Course');
@@ -33,8 +33,8 @@ function formatAIResponse(text) {
   // Ensure double newlines before headings (lines that look like titles)
   formatted = formatted.replace(/\n([A-Z][A-Za-z\s]{2,40})\n/g, '\n\n$1\n');
 
-  // Convert markdown bullets to • if not already
-  formatted = formatted.replace(/^[-*]\s/gm, '• ');
+  // Convert markdown bullets to â€¢ if not already
+  formatted = formatted.replace(/^[-*]\s/gm, 'â€¢ ');
   formatted = formatted.replace(/^(\d+)\.\s/gm, '$1. ');
 
   // Ensure line breaks between sections
@@ -47,8 +47,8 @@ function formatAIResponse(text) {
   formatted = formatted.replace(/^#\s/gm, '');
 
   // Ensure bullets have proper spacing
-  formatted = formatted.replace(/•/g, '\n•');
-  formatted = formatted.replace(/^\n•/, '•'); // Remove leading newline before first bullet
+  formatted = formatted.replace(/â€¢/g, '\nâ€¢');
+  formatted = formatted.replace(/^\nâ€¢/, 'â€¢'); // Remove leading newline before first bullet
 
   // Clean up excessive newlines
   formatted = formatted.replace(/\n{3,}/g, '\n\n');
@@ -145,13 +145,13 @@ async function callAI(systemPrompt, userMessage, history = []) {
 // ==================== FORMATTING SYSTEM PROMPT ADDITION ====================
 const FORMATTING_INSTRUCTION = `
 FORMAT YOUR RESPONSES LIKE THIS:
-• Use • bullet points for lists
-• Use clear line breaks between sections
-• Keep paragraphs short (2-3 sentences max)
-• Never output a single large block of text
-• Use spacing to make information easy to scan
-• Separate different topics with blank lines
-• Be friendly and conversational
+â€¢ Use â€¢ bullet points for lists
+â€¢ Use clear line breaks between sections
+â€¢ Keep paragraphs short (2-3 sentences max)
+â€¢ Never output a single large block of text
+â€¢ Use spacing to make information easy to scan
+â€¢ Separate different topics with blank lines
+â€¢ Be friendly and conversational
 `;
 
 // ==================== PUBLIC AI CHAT (WIDGET) ====================
@@ -168,22 +168,22 @@ router.post('/chat', async (req, res) => {
   try {
     const courses = await Course.find({ isActive: true }).select('courseId name examPrice pathPrice totalModules description');
     const coursesList = courses.map(c =>
-      `• ${c.name} - $${c.examPrice} Exam / $${c.pathPrice} Path - ${c.totalModules} modules`
+      `â€¢ ${c.name} - $${c.examPrice} Exam / $${c.pathPrice} Path - ${c.totalModules} modules`
     ).join('\n');
 
     const systemPrompt = `You are OBliXel AI for OBliXel Academy (${courses.length} certifications).
 
-📚 COURSES:
+ðŸ“š COURSES:
 ${coursesList}
 
-📋 RULES:
-• 25 questions, 60 min, 70% pass
-• Failed = 7-day cooldown
-• Complete all modules before final exam
-• Vouchers = INSTANT enrollment, each code works ONCE
-• Credit Card/PayPal/EcoCash = COMING SOON
+ðŸ“‹ RULES:
+â€¢ 25 questions, 60 min, 70% pass
+â€¢ Failed = 7-day cooldown
+â€¢ Complete all modules before final exam
+â€¢ Vouchers = INSTANT enrollment, each code works ONCE
+â€¢ Credit Card/PayPal/EcoCash = COMING SOON
 
-📞 Support: ${config.supportWhatsApp}
+ðŸ“ž Support: ${config.supportWhatsApp}
 
 ${FORMATTING_INSTRUCTION}
 
@@ -228,11 +228,11 @@ router.post('/teacher/:courseId', async (req, res) => {
 
   const config = getAIConfig();
   const teachers = {
-    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor • 12 Years', avatar: '📡' },
-    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor • 15 Years', avatar: '📚' },
-    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect • AWS Certified', avatar: '☁️' },
-    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: '🧠' },
-    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚' }
+    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor â€¢ 12 Years', avatar: 'ðŸ“¡' },
+    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor â€¢ 15 Years', avatar: 'ðŸ“š' },
+    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect â€¢ AWS Certified', avatar: 'â˜ï¸' },
+    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: 'ðŸ§ ' },
+    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: 'ðŸ“š' }
   };
   const teacher = teachers[courseId] || teachers.default;
   const course = await Course.findOne({ courseId }).select('name');
@@ -244,11 +244,11 @@ COURSE: ${course ? course.name : courseId}
 CONTEXT: ${moduleContext || 'General course help'}
 
 YOUR TEACHING STYLE:
-• Be encouraging and patient
-• Explain concepts clearly with examples
-• Ask questions to check understanding
-• Provide practical real-world applications
-• Break complex topics into simple steps
+â€¢ Be encouraging and patient
+â€¢ Explain concepts clearly with examples
+â€¢ Ask questions to check understanding
+â€¢ Provide practical real-world applications
+â€¢ Break complex topics into simple steps
 
 ${FORMATTING_INSTRUCTION}
 
@@ -270,10 +270,10 @@ Keep responses under 200 words unless the student asks for more detail. Use the 
     const fallbackMsg = formatAIResponse(
       `I'm ${teacher.name}, your instructor for ${course ? course.name : 'this course'}.\n\n` +
       `Here's how I can help:\n` +
-      `• Explain difficult concepts\n` +
-      `• Provide study tips\n` +
-      `• Share real-world examples\n` +
-      `• Answer your questions\n\n` +
+      `â€¢ Explain difficult concepts\n` +
+      `â€¢ Provide study tips\n` +
+      `â€¢ Share real-world examples\n` +
+      `â€¢ Answer your questions\n\n` +
       `What would you like to learn about today?`
     );
     res.json({
@@ -286,8 +286,8 @@ Keep responses under 200 words unless the student asks for more detail. Use the 
     console.error('[AI Teacher] Error:', error.message);
     const fallbackMsg = formatAIResponse(
       `I'm ${teacher.name}, your instructor.\n\n` +
-      `• Ask me anything about ${course ? course.name : 'your course'}\n` +
-      `• I'm here to help you succeed\n\n` +
+      `â€¢ Ask me anything about ${course ? course.name : 'your course'}\n` +
+      `â€¢ I'm here to help you succeed\n\n` +
       `What would you like to know?`
     );
     res.json({
@@ -315,10 +315,10 @@ Return ONLY a JSON array in this exact format:
 ]
 
 Make questions:
-• Clear and concise
-• At appropriate difficulty level
-• With plausible wrong answers
-• Covering key concepts`;
+â€¢ Clear and concise
+â€¢ At appropriate difficulty level
+â€¢ With plausible wrong answers
+â€¢ Covering key concepts`;
 
   try {
     const { response: aiResponse, usedApi } = await callAI(systemPrompt, `Generate ${numberOfQuestions} specific quiz questions about ${topic || moduleName}.`);
@@ -349,13 +349,13 @@ router.post('/generate-notes', async (req, res) => {
   const systemPrompt = `Generate comprehensive study notes for "${moduleName}".
 
 FORMAT YOUR RESPONSE:
-• Use • bullet points for key concepts
-• Create clear section headings in UPPERCASE
-• Keep each bullet point concise (1-2 sentences)
-• Add practical examples where helpful
-• Include study tips and memory aids
-• 200-400 words total
-• No markdown symbols like ** or #
+â€¢ Use â€¢ bullet points for key concepts
+â€¢ Create clear section headings in UPPERCASE
+â€¢ Keep each bullet point concise (1-2 sentences)
+â€¢ Add practical examples where helpful
+â€¢ Include study tips and memory aids
+â€¢ 200-400 words total
+â€¢ No markdown symbols like ** or #
 
 Structure:
 1. KEY CONCEPTS (4-6 bullets)
@@ -385,21 +385,21 @@ function getFallbackResponse(message, config) {
   let response = '';
 
   if (lowerMsg.includes('support') || lowerMsg.includes('whatsapp')) {
-    response = `You can reach our support team through:\n\n• WhatsApp: ${config.supportWhatsApp}\n• Email: support@oblixel.com\n\nWe typically respond within a few hours.`;
+    response = `You can reach our support team through:\n\nâ€¢ WhatsApp: ${config.supportWhatsApp}\nâ€¢ Email: support@oblixel.com\n\nWe typically respond within a few hours.`;
   } else if (lowerMsg.includes('ncp')) {
-    response = `Network Certified Professional (NCP):\n\n• 8 comprehensive modules\n• Networking certification\n• $379 Exam Only / $599 Learning Path\n• Covers OSI model, routing, switching, security\n• Final exam: 25 questions, 60 min, 70% to pass`;
+    response = `Network Certified Professional (NCP):\n\nâ€¢ 8 comprehensive modules\nâ€¢ Networking certification\nâ€¢ $379 Exam Only / $599 Learning Path\nâ€¢ Covers OSI model, routing, switching, security\nâ€¢ Final exam: 25 questions, 60 min, 70% to pass`;
   } else if (lowerMsg.includes('ccp')) {
-    response = `Computer Certified Professional (CCP):\n\n• 8 comprehensive modules\n• Computing certification\n• $429 Exam Only / $679 Learning Path\n• Covers hardware, OS, programming, databases\n• Final exam: 25 questions, 60 min, 70% to pass`;
+    response = `Computer Certified Professional (CCP):\n\nâ€¢ 8 comprehensive modules\nâ€¢ Computing certification\nâ€¢ $429 Exam Only / $679 Learning Path\nâ€¢ Covers hardware, OS, programming, databases\nâ€¢ Final exam: 25 questions, 60 min, 70% to pass`;
   } else if (lowerMsg.includes('voucher')) {
-    response = `About Vouchers:\n\n• Vouchers provide instant enrollment\n• Each voucher code works ONCE\n• Enter your code at checkout\n• Discounts can be percentage (%) or fixed amount ($)\n• Some vouchers give FREE enrollment\n\nContact support if your voucher isn't working.`;
+    response = `About Vouchers:\n\nâ€¢ Vouchers provide instant enrollment\nâ€¢ Each voucher code works ONCE\nâ€¢ Enter your code at checkout\nâ€¢ Discounts can be percentage (%) or fixed amount ($)\nâ€¢ Some vouchers give FREE enrollment\n\nContact support if your voucher isn't working.`;
   } else if (lowerMsg.includes('exam')) {
-    response = `Certification Exam Details:\n\n• 25 multiple-choice questions\n• 60 minutes time limit\n• 70% required to pass\n• Failed exams have a 7-day cooldown\n• Complete all modules before taking the final exam\n• Certificate code issued upon passing`;
+    response = `Certification Exam Details:\n\nâ€¢ 25 multiple-choice questions\nâ€¢ 60 minutes time limit\nâ€¢ 70% required to pass\nâ€¢ Failed exams have a 7-day cooldown\nâ€¢ Complete all modules before taking the final exam\nâ€¢ Certificate code issued upon passing`;
   } else if (lowerMsg.includes('certificate') || lowerMsg.includes('code')) {
-    response = `Certificate Codes:\n\n• Generated upon passing the final exam (70%+)\n• Format: OBX-{COURSE}-{CODE} (e.g., OBX-NCP-A7X92K)\n• Show this code to the academics team\n• Contact: ${config.supportWhatsApp}\n• Codes can be verified on our platform`;
+    response = `Certificate Codes:\n\nâ€¢ Generated upon passing the final exam (70%+)\nâ€¢ Format: OBX-{COURSE}-{CODE} (e.g., OBX-NCP-A7X92K)\nâ€¢ Show this code to the academics team\nâ€¢ Contact: ${config.supportWhatsApp}\nâ€¢ Codes can be verified on our platform`;
   } else if (lowerMsg.includes('module') || lowerMsg.includes('progress')) {
-    response = `Module Structure:\n\n• Each course has 8 modules\n• Modules unlock one at a time\n• Each module has a 10-question exam (70% to pass)\n• Complete all 8 modules to unlock the final exam\n• Track your progress on the course dashboard`;
+    response = `Module Structure:\n\nâ€¢ Each course has 8 modules\nâ€¢ Modules unlock one at a time\nâ€¢ Each module has a 10-question exam (70% to pass)\nâ€¢ Complete all 8 modules to unlock the final exam\nâ€¢ Track your progress on the course dashboard`;
   } else {
-    response = `Welcome to OBliXel Academy! Here's what I can help with:\n\n• Course information (NCP, CCP, and more)\n• Exam preparation and requirements\n• Voucher codes and enrollment\n• Certificate codes and claiming\n• Technical support\n\nWhat would you like to know about?`;
+    response = `Welcome to OBliXel Academy! Here's what I can help with:\n\nâ€¢ Course information (NCP, CCP, and more)\nâ€¢ Exam preparation and requirements\nâ€¢ Voucher codes and enrollment\nâ€¢ Certificate codes and claiming\nâ€¢ Technical support\n\nWhat would you like to know about?`;
   }
 
   return response;
@@ -518,44 +518,159 @@ function generateFallbackNotes(moduleName) {
   return `
 ${moduleName.toUpperCase()}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
 KEY CONCEPTS
 
-• Understanding core fundamentals builds the foundation for advanced knowledge
-• Each concept connects to real-world applications and practical scenarios
-• Regular practice and consistent review strengthens long-term retention
-• Applying concepts through hands-on exercises deepens understanding
-• Connecting new information to existing knowledge improves learning speed
+â€¢ Understanding core fundamentals builds the foundation for advanced knowledge
+â€¢ Each concept connects to real-world applications and practical scenarios
+â€¢ Regular practice and consistent review strengthens long-term retention
+â€¢ Applying concepts through hands-on exercises deepens understanding
+â€¢ Connecting new information to existing knowledge improves learning speed
 
 IMPORTANT DETAILS
 
-• Start with basic principles and progress systematically through each topic
-• Apply concepts through practical exercises and hands-on practice labs
-• Test your knowledge regularly with self-assessment and practice quizzes
-• Review challenging material using spaced repetition techniques
-• Connect new information to concepts you already understand well
+â€¢ Start with basic principles and progress systematically through each topic
+â€¢ Apply concepts through practical exercises and hands-on practice labs
+â€¢ Test your knowledge regularly with self-assessment and practice quizzes
+â€¢ Review challenging material using spaced repetition techniques
+â€¢ Connect new information to concepts you already understand well
 
 REAL-WORLD APPLICATIONS
 
-• These concepts are used daily in professional IT environments
-• Understanding these fundamentals prepares you for advanced certifications
-• Practical application in lab environments simulates real workplace scenarios
+â€¢ These concepts are used daily in professional IT environments
+â€¢ Understanding these fundamentals prepares you for advanced certifications
+â€¢ Practical application in lab environments simulates real workplace scenarios
 
 STUDY TIPS
 
-• Set aside dedicated study time each day for consistent progress
-• Take detailed notes organized by topic and subtopic for easy review
-• Explain concepts aloud to reinforce understanding and identify gaps
-• Join study groups to discuss difficult topics and share perspectives
-• Use multiple learning resources for comprehensive topic coverage
+â€¢ Set aside dedicated study time each day for consistent progress
+â€¢ Take detailed notes organized by topic and subtopic for easy review
+â€¢ Explain concepts aloud to reinforce understanding and identify gaps
+â€¢ Join study groups to discuss difficult topics and share perspectives
+â€¢ Use multiple learning resources for comprehensive topic coverage
 
 QUICK SUMMARY
 
 ${moduleName} requires dedication and consistent effort to master. Focus on understanding concepts deeply rather than memorizing. Combine theoretical study with practical application for the best results in your certification journey.
 
 ---
-OBliXel Academy • ${new Date().toLocaleDateString()}`;
+OBliXel Academy â€¢ ${new Date().toLocaleDateString()}`;
 }
 
+
+// ==================== PROF. KELVIN — MODULE TUTOR ====================
+// Takes course + module + chat history, returns AI response with full module context.
+router.post('/module-tutor', authenticate, async (req, res) => {
+  const { courseId, moduleId, messages } = req.body;
+
+  if (!courseId || !moduleId || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'courseId, moduleId, and messages are required' });
+  }
+
+  try {
+    const Course = require('../models/Course');
+    const course = await Course.findOne({ courseId: courseId.toLowerCase() });
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const courseModule = course.modules.find(m => m.moduleId === parseInt(moduleId));
+    if (!courseModule) return res.status(404).json({ error: 'Module not found' });
+
+    // Strip HTML from lesson content so DeepSeek doesn't get tag soup
+    const plainLesson = (courseModule.lessonContent || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 8000);
+
+    const keyTermsText = (courseModule.keyTerms || [])
+      .map(t => `• ${t.term}: ${t.definition}`)
+      .join('\n');
+
+    const systemPrompt = `You are Prof. Kelvin — a warm, patient AI tutor for obliXel Academy.
+
+CURRENT CONTEXT — the student is on:
+  Course: ${course.name}
+  Module ${courseModule.moduleId}: ${courseModule.name}
+  Complexity: ${courseModule.complexity}
+  Reading time: ~${courseModule.readingTime || courseModule.estimatedMinutes || 25} min
+
+MODULE DESCRIPTION:
+${courseModule.description}
+
+LEARNING OBJECTIVES:
+${(courseModule.learningObjectives || []).map(o => '• ' + o).join('\n')}
+
+LESSON CONTENT:
+${plainLesson}
+
+KEY TERMS:
+${keyTermsText}
+
+YOUR STYLE:
+- Warm, encouraging, clear. Explain like a great teacher — not a textbook.
+- Use simple analogies and real-world examples (especially Zimbabwe-relevant where useful).
+- Break complex ideas into small steps.
+- Bold key terms with **term**.
+- Use short paragraphs and bullet lists when helpful.
+- When the student asks something outside this module, gently redirect: "That's covered in Module X, but here's a quick answer..."
+- If a student is stuck, ask a guiding question instead of just giving the answer.
+- Never make up facts. If unsure, say "Let me think about this differently..."
+
+CAPABILITIES:
+- Explain any concept from this module
+- Quiz the student (generate fresh practice questions)
+- Summarize the module
+- Give real-world examples
+- Compare concepts (e.g., RAM vs storage)
+- Help them study for the module quiz
+
+Keep responses focused and under ~250 words unless the student asks for a deep dive.`;
+
+    // Build the message array for DeepSeek
+    const apiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.slice(-10) // last 10 turns
+    ];
+
+    // Call DeepSeek
+    const axios = require('axios');
+    const DEEPSEEK_URL = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
+    const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+
+    const dsRes = await axios.post(
+      `${DEEPSEEK_URL}/v1/chat/completions`,
+      {
+        model: DEEPSEEK_MODEL,
+        messages: apiMessages,
+        temperature: 0.7,
+        max_tokens: 800
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      }
+    );
+
+    const reply = dsRes.data?.choices?.[0]?.message?.content || 'Sorry, I could not think of a reply. Try again?';
+
+    res.json({
+      success: true,
+      reply,
+      module: {
+        courseId: course.courseId,
+        courseName: course.name,
+        moduleId: courseModule.moduleId,
+        moduleName: courseModule.name
+      }
+    });
+  } catch (error) {
+    console.error('[PROF KELVIN] Error:', error.message);
+    const msg = error.response?.data?.error?.message || error.message;
+    res.status(500).json({ error: 'Prof. Kelvin is having trouble thinking: ' + msg });
+  }
+});
 module.exports = router;
