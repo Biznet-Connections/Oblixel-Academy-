@@ -2342,38 +2342,11 @@ async function renderModulePage(courseId, moduleId) {
           <textarea id="moduleNotes" class="w-full min-h-[200px] bg-black/30 border border-white/10 rounded-2xl p-4 text-sm font-mono resize-y focus:border-cyan-400 focus:outline-none" placeholder="Write your notes here... (auto-saves as you type)">${prog.notes ? escapeHtml(prog.notes) : ''}</textarea>
         </div>
 
-        <!-- Final Exam CTA (only on last module) -->
-        ${m.moduleId === 15 ? `
-        <div class="glass rounded-3xl p-6 mb-6 border-2 ${prog.completed ? 'border-purple-500/50 glow' : 'border-dashed border-white/20'}">
-          <div class="flex items-center gap-4 flex-wrap">
-            <div class="w-16 h-16 rounded-2xl ${prog.completed ? 'bg-gradient-to-r from-purple-600 to-cyan-500' : 'bg-white/10'} flex items-center justify-center flex-shrink-0">
-              <i class="fa-solid fa-trophy text-2xl ${prog.completed ? 'text-white' : 'text-gray-500'}"></i>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-              <h3 class="text-xl font-black mb-1">
-                ${prog.completed ? '🎓 Final Exam Ready!' : '🔒 Final Exam — Complete all modules first'}
-              </h3>
-              <p class="text-sm text-gray-400">
-                ${prog.completed
-                  ? '25 questions · 60 minutes · 70% to pass · 7-day cooldown if you fail'
-                  : 'Finish all 15 modules to unlock your certification exam.'}
-              </p>
-            </div>
-            ${prog.completed
-              ? `<button onclick="window.startExamCheck('${courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow whitespace-nowrap">
-                   🎯 Take Final Exam
-                 </button>`
-              : ''}
-          </div>
-        </div>` : ''}
-
         <!-- Nav -->
         <div class="flex justify-between items-center gap-3 flex-wrap">
           ${m.moduleId > 1 ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId - 1})" class="glass px-6 py-3 rounded-2xl font-bold text-sm">← Previous</button>` : '<span></span>'}
           <button onclick="window.leaveModule('${courseId}')" class="glass px-6 py-3 rounded-2xl font-bold text-sm">All Modules</button>
-          ${m.moduleId === 15 && prog.completed
-            ? `<button onclick="window.startExamCheck('${courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">🎯 Take Final Exam</button>`
-            : (m.moduleId < 15 ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId + 1})" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Next →</button>` : '<span></span>')}
+          ${m.moduleId < 15 ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId + 1})" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Next →</button>` : '<span></span>'}
         </div>
       </div>
     `;
