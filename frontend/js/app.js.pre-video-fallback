@@ -2028,53 +2028,6 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
-
-// ==================== VIDEO FALLBACK ====================
-// If a YouTube video fails to load (deleted, private, region-locked),
-// hide the entire "Watch the Lesson" section so the student isn't left
-// staring at "Video unavailable".
-
-function hideVideoIfBroken() {
-  const section = document.getElementById('videoSection');
-  if (!section) return;
-
-  const iframe = section.querySelector('iframe');
-  if (!iframe) {
-    section.style.display = 'none';
-    return;
-  }
-
-  // Listen for YouTube's "video unavailable" message
-  const handler = (event) => {
-    if (!event.origin || !event.origin.includes('youtube.com')) return;
-    try {
-      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-      // YouTube sends { event: 'onError', info: 100 } for "video not found"
-      // info: 150, 101 = embedding disabled
-      if (data && data.event === 'onError') {
-        console.warn('[Video] YouTube error', data.info, '- hiding section');
-        section.style.display = 'none';
-      }
-    } catch (e) { /* ignore non-JSON messages */ }
-  };
-
-  window.addEventListener('message', handler);
-
-  // Also — as a safety net — check the iframe contents after 3 seconds.
-  // If the iframe has been redirected to a "watch" URL (from embed), it's broken.
-  setTimeout(() => {
-    try {
-      // Can't read cross-origin iframe content, but we can detect YouTube's
-      // redirect to /watch when the video is unavailable
-      if (iframe.contentWindow && iframe.contentWindow.location.href && iframe.contentWindow.location.href.includes('/watch')) {
-        section.style.display = 'none';
-      }
-    } catch (e) { /* cross-origin — ignore */ }
-  }, 3000);
-}
-
-// Auto-run whenever module page is rendered
-document.addEventListener('DOMContentLoaded', hideVideoIfBroken);
 window.renderCourseDashboard = renderCourseDashboard;
 
 // ==================== MODULE FILTER ====================
@@ -2312,7 +2265,7 @@ async function renderModulePage(courseId, moduleId) {
 
         <!-- Video -->
         ${videoEmbed ? `
-        <div class="glass rounded-3xl p-6 mb-6" id="videoSection">
+        <div class="glass rounded-3xl p-6 mb-6">
           <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-play text-cyan-400 mr-2"></i>Watch the Lesson</h2>
           ${videoEmbed}
         </div>` : ''}
@@ -2393,11 +2346,6 @@ async function renderModulePage(courseId, moduleId) {
     // Mount Prof. Kelvin AI teacher
     if (typeof window.kelvinMount === 'function') {
       window.kelvinMount(courseId, moduleId, m.name);
-    }
-
-    // Check if video is broken — hide section if so
-    if (typeof hideVideoIfBroken === 'function') {
-      setTimeout(hideVideoIfBroken, 500);
     }
 
     if (typeof AOS !== 'undefined') AOS.refresh();
