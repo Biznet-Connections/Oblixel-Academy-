@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require('path').join(__dirname, '.env') });
+﻿require("dotenv").config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -139,7 +139,7 @@ async function seedDatabase() {
       console.log(`âœ… Courses seeded`);
     } else {
       await Course.deleteMany({ courseId: { $in: ['ona', 'onp'] } });
-      console.log(`📚 ${courseCount} courses in database`);
+      console.log(`ðŸ“š ${courseCount} courses in database`);
     }
 
     const questionCount = await ExamQuestion.countDocuments();
@@ -300,7 +300,7 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`\nðŸš€ obliXel Academy v13.0 running on http://localhost:${PORT}`);
-    console.log(`📚 API: http://localhost:${PORT}/api`);
+    console.log(`ðŸ“š API: http://localhost:${PORT}/api`);
     console.log(`ðŸŒ Frontend: http://localhost:${PORT}`);
     console.log(`ðŸ” Verify: http://localhost:${PORT}/verify/:id`);
     console.log(`   DeepSeek AI: ${process.env.DEEPSEEK_API_KEY ? 'âœ… Connected' : 'âŒ Fallback'}\n`);
