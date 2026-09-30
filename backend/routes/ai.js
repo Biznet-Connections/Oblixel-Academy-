@@ -1,4 +1,5 @@
 ﻿const express = require('express');
+const authenticate = require('../middleware/auth');
 const router = express.Router();
 const axios = require('axios');
 const Course = require('../models/Course');
