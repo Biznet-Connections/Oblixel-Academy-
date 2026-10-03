@@ -63,20 +63,6 @@ function generateCertificateCode(courseId) {
   return `OBX-${courseId.toUpperCase()}-${code}`;
 }
 
-// ==================== CHEAT LOG (anti-cheat audit trail) ====================
-router.post('/cheat-log', authenticate, async (req, res) => {
-  try {
-    const { courseId, event, detail, sessionId } = req.body;
-    const userId = req.user._id;
-    console.log('[ANTI-CHEAT]', String(userId), courseId, event, detail || '');
-    try {
-      const CheatLog = require('../models/CheatLog');
-      await CheatLog.create({ userId, courseId, sessionId, event, detail, at: new Date() });
-    } catch (_) {}
-    res.json({ ok: true });
-  } catch (e) { res.json({ ok: false }); }
-});
-
 // ==================== START EXAM ====================
 router.post('/start', authenticate, async (req, res) => {
   const { courseId } = req.body;
@@ -215,14 +201,6 @@ router.post('/submit', authenticate, async (req, res) => {
     }
     if (session.status === 'completed') {
       return res.status(400).json({ error: 'Already submitted' });
-    }
-
-    // Server-side timer enforcement (30s grace)
-    const cfgSubmitTime = getExamConfig(courseId);
-    const elapsedSec = Math.floor((Date.now() - new Date(session.startTime).getTime()) / 1000);
-    if (elapsedSec > cfgSubmitTime.timeLimitSec + 30) {
-      console.warn('[EXAM] Late submit: ' + elapsedSec + 's vs limit ' + cfgSubmitTime.timeLimitSec + 's');
-      session.lateSubmit = true;
     }
 
     const user = await User.findById(userId);

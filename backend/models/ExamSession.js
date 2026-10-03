@@ -15,7 +15,9 @@ const examSessionSchema = new mongoose.Schema({
   questionOrder: [String],
   score: Number,
   passed: Boolean,
-  completedAt: Date
+  completedAt: Date,
+  lateSubmit: { type: Boolean, default: false },
+  cheatFlags: { type: [String], default: [] }
 }, { timestamps: true });
 
 examSessionSchema.index({ userId: 1, courseId: 1 });
