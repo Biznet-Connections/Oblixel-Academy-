@@ -697,6 +697,7 @@ function __brandSvg__(name) {
   const n = (name || '').toLowerCase();
   if (n === 'google') return '<svg viewBox="0 0 24 24" width="36" height="36"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>';
   if (n === 'aws') return '<svg viewBox="0 0 48 24" width="48" height="24"><text x="0" y="16" font-family="Arial Black,Arial" font-weight="900" font-size="16" fill="#232F3E">aws</text><path d="M2 19c8 5 26 5 36 0" stroke="#FF9900" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M36 18l4 1-2 3z" fill="#FF9900"/></svg>';
+  if (n === 'cisco') return '<svg viewBox="0 0 80 32" width="48" height="32"><text x="0" y="22" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="#1BA0D7" letter-spacing="0.5">cisco</text><rect x="0" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="10" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="20" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="30" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="40" y="24" width="6" height="2" fill="#1BA0D7"/></svg>';
   if (n === 'meta') return '<svg viewBox="0 0 40 24" width="40" height="24"><path fill="#0064E1" d="M8 6c-3 0-5 3-5 6s2 6 5 6c2 0 3-1 4-3l3-5c1-2 2-3 4-3 3 0 5 3 5 6s-2 6-5 6c-2 0-3-1-4-3l-3-5c-1-2-2-3-4-3zm-4 6c0-2 1-4 4-4 1 0 2 .5 3 2l3 5c1 1.5 2 2 3 2 2 0 4-1.5 4-4s-2-4-4-4c-1 0-2 .5-3 2l-3 5c-1 1.5-2 2-3 2-3 0-4-2-4-4z"/></svg>';
   if (n === 'microsoft') return '<svg viewBox="0 0 24 24" width="32" height="32"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="13" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="13" width="10" height="10" fill="#00A4EF"/><rect x="13" y="13" width="10" height="10" fill="#FFB900"/></svg>';
   if (n === 'ibm') return '<svg viewBox="0 0 40 20" width="40" height="20"><text x="0" y="15" font-family="Arial Black,Arial" font-weight="900" font-size="15" fill="#052FAD" letter-spacing="1">IBM</text></svg>';
@@ -711,7 +712,11 @@ const __heroPhotos__ = [
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80&fit=crop'
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1920&q=80&fit=crop'
 ];
 
 let __heroInterval__ = null;
@@ -765,6 +770,7 @@ function renderLandingPage() {
     { name: "AWS", icon: "fab fa-aws", url: "https://aws.amazon.com", color: "#FF9900" },
     { name: "Meta", icon: "fab fa-meta", url: "https://meta.com", color: "#0064E1" },
     { name: "Microsoft", icon: "fab fa-microsoft", url: "https://microsoft.com", color: "#00A4EF" },
+    { name: "Cisco", icon: "fab fa-cisco", url: "https://cisco.com", color: "#1BA0D7" },
     { name: "IBM", icon: "fab fa-ibm", url: "https://ibm.com", color: "#052FAD" },
     { name: "Harvard", icon: "fas fa-university", url: "https://harvard.edu", color: "#A51C30" },
     { name: "MIT", icon: "fas fa-link", url: "https://mit.edu", color: "#A31F34" },
@@ -784,6 +790,10 @@ function renderLandingPage() {
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[1]}')"></div>
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[2]}')"></div>
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[3]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[4]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[5]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[6]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[7]}')"></div>
         <div class="hero-overlay"></div>
         <div class="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6">
           <div class="max-w-2xl" data-aos="fade-right">
@@ -791,7 +801,7 @@ function renderLandingPage() {
             <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight" style="text-shadow: 0 2px 20px rgba(0,0,0,0.5);">Build Your <span class="gradient-text">Global Skills</span></h1>
             <p class="mt-4 sm:mt-6 text-gray-200 text-sm sm:text-base lg:text-lg" style="text-shadow: 0 1px 8px rgba(0,0,0,0.4);">Enterprise-level certification platform. Join 42,000+ successful professionals with 25+ certifications</p>
             <div class="flex gap-3 sm:gap-5 mt-6 sm:mt-10"><button id="landingStartBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base glow">Start Learning</button><button id="landingExploreBtn" class="glass px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base">Explore</button></div>
-            <div class="flex gap-4 sm:gap-10 mt-8 sm:mt-12"><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">42,000+</h2><p class="text-gray-300 text-xs sm:text-sm">Students</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">${coursesData.length}+</h2><p class="text-gray-300 text-xs sm:text-sm">Certifications</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">98%</h2><p class="text-gray-300 text-xs sm:text-sm">Success</p></div></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 mt-8 sm:mt-12 max-w-2xl"><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">42,000+</h2><p class="text-gray-300 text-xs sm:text-sm">Students</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">200+</h2><p class="text-gray-300 text-xs sm:text-sm">Certifications</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">98%</h2><p class="text-gray-300 text-xs sm:text-sm">Success</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">40+</h2><p class="text-gray-300 text-xs sm:text-sm">Countries</p></div></div>
           </div>
         </div>
       </section>
