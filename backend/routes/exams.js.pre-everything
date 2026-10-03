@@ -35,24 +35,9 @@ function calculateExpiryDate(issuedAt, period) {
 
 
 const EXAM_PASS_SCORE = 70;
-const COURSE_EXAM_CONFIG = {
-  ccp:  { questions: 40, timeLimitSec: 75 * 60 },
-  ncp:  { questions: 30, timeLimitSec: 60 * 60 },
-  clp:  { questions: 20, timeLimitSec: 45 * 60 },
-  oca:  { questions: 20, timeLimitSec: 45 * 60 },
-  ocp:  { questions: 40, timeLimitSec: 90 * 60 }
-};
-const DEFAULT_EXAM_CONFIG = { questions: 25, timeLimitSec: 60 * 60 };
-
-function getExamConfig(courseId) {
-  return COURSE_EXAM_CONFIG[(courseId || '').toLowerCase()] || DEFAULT_EXAM_CONFIG;
-}
-
-function getCooldownHours(attemptCount) {
-  if (attemptCount <= 1) return 24;
-  if (attemptCount <= 2) return 72;
-  return 168;
-}
+const EXAM_COOLDOWN_HOURS = 3;
+const EXAM_TIME_LIMIT = 3600;
+const EXAM_TOTAL_QUESTIONS = 25;
 
 function generateCertificateCode(courseId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -132,15 +117,14 @@ router.post('/start', authenticate, async (req, res) => {
       });
     }
 
-    const cfg = getExamConfig(courseId);
-    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0, isActive: { $ne: false } });
-    if (questions.length < cfg.questions) {
+    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0 });
+    if (questions.length < EXAM_TOTAL_QUESTIONS) {
       const fallbackQuestions = getFallbackQuestions(courseId);
       questions = [...questions, ...fallbackQuestions];
     }
 
     const shuffled = questions.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, cfg.questions);
+    const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
 
     const safeQuestions = selected.map(q => ({
       id: q._id.toString(),
@@ -171,7 +155,7 @@ router.post('/start', authenticate, async (req, res) => {
       sessionId: session._id,
       questions: safeQuestions,
       totalQuestions: safeQuestions.length,
-      timeLimit: cfg.timeLimitSec,
+      timeLimit: EXAM_TIME_LIMIT,
       passingScore: EXAM_PASS_SCORE
     });
   } catch (error) {
@@ -219,9 +203,8 @@ router.post('/submit', authenticate, async (req, res) => {
       }
       
       // FIX: Shuffle and take 25 questions
-      const cfgSubmit = getExamConfig(courseId);
       const shuffled = dbQuestions.sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, cfgSubmit.questions);
+      const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
       
       questions = selected.map(q => ({
         id: q._id ? q._id.toString() : q.id,
@@ -311,7 +294,7 @@ router.post('/submit', authenticate, async (req, res) => {
         console.log(`[EXAM] ✅ Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
       } else {
         const cd = new Date();
-        cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
+        cd.setHours(cd.getHours() + EXAM_COOLDOWN_HOURS);
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
         console.log(`[EXAM] ❌ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);

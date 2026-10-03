@@ -10,49 +10,10 @@ const Course = require('../models/Course');
 const ModuleProgress = require('../models/ModuleProgress');
 const User = require('../models/User');
 
-function parseExpiryPeriod(str) {
-  if (!str) return null;
-  const s = String(str).toLowerCase().trim();
-  if (s === 'never' || s === '' || s === 'none' || s === 'lifetime') return null;
-  const m = s.match(/(\d+)\s*(year|years|yr|yrs|y|month|months|mo|day|days|d)/);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  const unit = m[2];
-  if (unit.startsWith('y')) return { years: n };
-  if (unit.startsWith('mo') || unit.startsWith('month')) return { months: n };
-  if (unit.startsWith('d')) return { days: n };
-  return null;
-}
-
-function calculateExpiryDate(issuedAt, period) {
-  if (!period) return null;
-  const d = new Date(issuedAt);
-  if (period.years) d.setFullYear(d.getFullYear() + period.years);
-  if (period.months) d.setMonth(d.getMonth() + period.months);
-  if (period.days) d.setDate(d.getDate() + period.days);
-  return d;
-}
-
-
 const EXAM_PASS_SCORE = 70;
-const COURSE_EXAM_CONFIG = {
-  ccp:  { questions: 40, timeLimitSec: 75 * 60 },
-  ncp:  { questions: 30, timeLimitSec: 60 * 60 },
-  clp:  { questions: 20, timeLimitSec: 45 * 60 },
-  oca:  { questions: 20, timeLimitSec: 45 * 60 },
-  ocp:  { questions: 40, timeLimitSec: 90 * 60 }
-};
-const DEFAULT_EXAM_CONFIG = { questions: 25, timeLimitSec: 60 * 60 };
-
-function getExamConfig(courseId) {
-  return COURSE_EXAM_CONFIG[(courseId || '').toLowerCase()] || DEFAULT_EXAM_CONFIG;
-}
-
-function getCooldownHours(attemptCount) {
-  if (attemptCount <= 1) return 24;
-  if (attemptCount <= 2) return 72;
-  return 168;
-}
+const EXAM_COOLDOWN_HOURS = 3;
+const EXAM_TIME_LIMIT = 3600;
+const EXAM_TOTAL_QUESTIONS = 25;
 
 function generateCertificateCode(courseId) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -132,15 +93,14 @@ router.post('/start', authenticate, async (req, res) => {
       });
     }
 
-    const cfg = getExamConfig(courseId);
-    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0, isActive: { $ne: false } });
-    if (questions.length < cfg.questions) {
+    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
+    if (questions.length < EXAM_TOTAL_QUESTIONS) {
       const fallbackQuestions = getFallbackQuestions(courseId);
       questions = [...questions, ...fallbackQuestions];
     }
 
     const shuffled = questions.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, cfg.questions);
+    const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
 
     const safeQuestions = selected.map(q => ({
       id: q._id.toString(),
@@ -171,7 +131,7 @@ router.post('/start', authenticate, async (req, res) => {
       sessionId: session._id,
       questions: safeQuestions,
       totalQuestions: safeQuestions.length,
-      timeLimit: cfg.timeLimitSec,
+      timeLimit: EXAM_TIME_LIMIT,
       passingScore: EXAM_PASS_SCORE
     });
   } catch (error) {
@@ -211,7 +171,7 @@ router.post('/submit', authenticate, async (req, res) => {
     if (questions.length === 0) {
       console.log('[EXAM] No questions in session, fetching all from DB');
       
-      let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0 });
+      let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
       
       if (dbQuestions.length === 0) {
         console.log('[EXAM] No DB questions, using fallback');
@@ -219,9 +179,8 @@ router.post('/submit', authenticate, async (req, res) => {
       }
       
       // FIX: Shuffle and take 25 questions
-      const cfgSubmit = getExamConfig(courseId);
       const shuffled = dbQuestions.sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, cfgSubmit.questions);
+      const selected = shuffled.slice(0, EXAM_TOTAL_QUESTIONS);
       
       questions = selected.map(q => ({
         id: q._id ? q._id.toString() : q.id,
@@ -277,15 +236,8 @@ router.post('/submit', authenticate, async (req, res) => {
         const studentFirstName = user.firstName || '';
         const studentLastName = user.lastName || '';
         
-        const certificateCode = generateCertificateCode(courseId);        const now = new Date();
-        const CertificateTemplate = require('../models/CertificateTemplate');
-        const template = await CertificateTemplate.findOne();
-        const expiryPeriodStr = template ? template.expiryPeriod : null;
-        const expiryPeriod = parseExpiryPeriod(expiryPeriodStr);
-        const expiryDate = calculateExpiryDate(now, expiryPeriod);
-        const verifyBase = (template && template.verifyUrlBase) ? template.verifyUrlBase : 'oblixelacademy.com/verify/';
-        const verifyUrl = verifyBase + certificateCode;
-
+        const certificateCode = generateCertificateCode(courseId);
+        
         await Certificate.create({
           userId,
           courseId: courseId.toLowerCase(),
@@ -297,21 +249,16 @@ router.post('/submit', authenticate, async (req, res) => {
           score,
           status: 'issued',
           type: enrollment.type,
-          issueDate: now,
-          expiryDate: expiryDate,
-          verifyUrl: verifyUrl,
-          submittedAt: now,
-          issuedAt: now
+          submittedAt: new Date(),
+          issuedAt: new Date()
         });
-
-        console.log('[EXAM] Expiry set: ' + (expiryDate ? expiryDate.toISOString() : 'never') + ' (from ' + expiryPeriodStr + ')');
         
         enrollment.certificateId = certificateCode;
         
         console.log(`[EXAM] ✅ Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
       } else {
         const cd = new Date();
-        cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
+        cd.setHours(cd.getHours() + EXAM_COOLDOWN_HOURS);
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
         console.log(`[EXAM] ❌ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
