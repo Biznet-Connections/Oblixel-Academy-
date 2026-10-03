@@ -615,6 +615,7 @@ async function loadCourses() {
 
 // ==================== PAGE RENDERING DISPATCHER ====================
 function renderPage(page) {
+  if (page !== 'landing' && typeof window.__stopHeroSlideshow__ === 'function') window.__stopHeroSlideshow__();
   // Handle ?page=dashboard&enrolled=xyz from payment redirect
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -705,6 +706,53 @@ function __brandSvg__(name) {
   return '';
 }
 
+// ==================== HERO SLIDESHOW ====================
+const __heroPhotos__ = [
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80&fit=crop'
+];
+
+let __heroInterval__ = null;
+
+function __startHeroSlideshow__() {
+  __stopHeroSlideshow__();
+  var slides = document.querySelectorAll('.hero-slide');
+  if (slides.length === 0) return;
+  var current = 0;
+  __heroInterval__ = setInterval(function() {
+    slides[current].classList.remove('active');
+    current = (current + 1) % slides.length;
+    slides[current].classList.add('active');
+  }, 5000);
+  console.log('[HERO] Slideshow started with', slides.length, 'photos');
+}
+
+function __stopHeroSlideshow__() {
+  if (__heroInterval__) {
+    clearInterval(__heroInterval__);
+    __heroInterval__ = null;
+    console.log('[HERO] Slideshow stopped');
+  }
+}
+
+window.__stopHeroSlideshow__ = __stopHeroSlideshow__;
+
+
+// Hero slideshow CSS
+(function() {
+  if (document.getElementById('hero-slideshow-css')) return;
+  var style = document.createElement('style');
+  style.id = 'hero-slideshow-css';
+  style.textContent = '.hero-slideshow { position: relative; }' +
+    '.hero-slide { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1.2s ease-in-out; will-change: opacity; }' +
+    '.hero-slide.active { opacity: 1; }' +
+    '.hero-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(26,11,61,0.78) 0%, rgba(10,46,61,0.62) 50%, rgba(26,11,61,0.72) 100%); z-index: 1; }' +
+    '@media (max-width: 640px) { .hero-overlay { background: linear-gradient(135deg, rgba(26,11,61,0.85) 0%, rgba(10,46,61,0.75) 100%); } }';
+  document.head.appendChild(style);
+})();
+
 function renderLandingPage() {
   console.log('🏠 Rendering landing page with', coursesData.length, 'courses');
   const root = document.getElementById('app-root');
@@ -731,16 +779,21 @@ function renderLandingPage() {
   ];
   root.innerHTML = `
     <div class="max-w-7xl mx-auto">
-      <section class="min-h-[80vh] flex items-center">
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center w-full">
-          <div data-aos="fade-right">
+      <section class="hero-slideshow relative min-h-[80vh] flex items-center overflow-hidden">
+        <div class="hero-slide active" style="background-image:url('${__heroPhotos__[0]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[1]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[2]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[3]}')"></div>
+        <div class="hero-overlay"></div>
+        <div class="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6">
+          <div class="max-w-2xl" data-aos="fade-right">
             <p class="uppercase tracking-[6px] text-cyan-400 text-sm mb-5">Future Of Professional Certification</p>
-            <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight">Build Your <span class="gradient-text">Global Skills</span></h1>
-            <p class="mt-4 sm:mt-6 text-gray-400 text-sm sm:text-base lg:text-lg">Enterprise-level certification platform. Join 42,000+ successful professionals with 25+ certifications </p>
+            <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight" style="text-shadow: 0 2px 20px rgba(0,0,0,0.5);">Build Your <span class="gradient-text">Global Skills</span></h1>
+            <p class="mt-4 sm:mt-6 text-gray-200 text-sm sm:text-base lg:text-lg" style="text-shadow: 0 1px 8px rgba(0,0,0,0.4);">Enterprise-level certification platform. Join 42,000+ successful professionals with 25+ certifications</p>
             <div class="flex gap-3 sm:gap-5 mt-6 sm:mt-10"><button id="landingStartBtn" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base glow">Start Learning</button><button id="landingExploreBtn" class="glass px-5 sm:px-8 py-2 sm:py-4 rounded-2xl font-bold text-sm sm:text-base">Explore</button></div>
-            <div class="flex gap-4 sm:gap-10 mt-8 sm:mt-12"><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">42,000+</h2><p class="text-gray-400 text-xs sm:text-sm">Students</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">${coursesData.length}+</h2><p class="text-gray-400 text-xs sm:text-sm">Certifications</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">98%</h2><p class="text-gray-400 text-xs sm:text-sm">Success</p></div></div>
+            <div class="flex gap-4 sm:gap-10 mt-8 sm:mt-12"><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">42,000+</h2><p class="text-gray-300 text-xs sm:text-sm">Students</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">${coursesData.length}+</h2><p class="text-gray-300 text-xs sm:text-sm">Certifications</p></div><div><h2 class="text-3xl sm:text-4xl font-black gradient-text">98%</h2><p class="text-gray-300 text-xs sm:text-sm">Success</p></div></div>
           </div>
-          </div>
+        </div>
       </section>
       <section class="py-6 sm:py-10"><div class="glass rounded-3xl py-3 sm:py-6 marquee"><div class="marquee-content">${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}</div></div></section>
       <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(cert => { const enrolled = currentUser && isAlreadyEnrolled(cert.id); const coursePrice = cert.price || cert.examPrice || 0; return `<div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 card-hover" data-aos="fade-up"><div class="flex justify-between items-start"><i class="fa-solid ${cert.icon || 'fa-certificate'} text-3xl sm:text-4xl text-purple-400"></i><span class="text-xs glass px-2 sm:px-3 py-1 rounded-full">${cert.category || 'Certification'}</span></div><h3 class="text-lg sm:text-2xl font-bold mt-3 sm:mt-4">${escapeHtml(cert.name)}</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p><div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div><p class="text-xs mt-2 text-cyan-400 font-medium">💰 Course Fee: $${coursePrice}</p><div class="mt-4"><button onclick="window.handleEnrollClick('${cert.id}')" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:bg-purple-500 py-2 rounded-xl text-sm font-medium transition">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button></div></div>`; }).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
@@ -753,6 +806,7 @@ function renderLandingPage() {
   document.getElementById('seeAllCoursesBtn')?.addEventListener('click', () => renderPage('courses'));
   document.getElementById('guestSignupBtn')?.addEventListener('click', (e) => { e.preventDefault(); renderPage('register'); });
   showAIWidget();
+  if (typeof __startHeroSlideshow__ === 'function') __startHeroSlideshow__();
 }
 
 // ==================== REGISTER PAGE ====================
