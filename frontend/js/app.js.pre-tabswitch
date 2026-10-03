@@ -2508,122 +2508,14 @@ function _blockKeys(e) {
   if (k === 'printscreen') { try { navigator.clipboard.writeText(''); } catch (_) {} }
   return true;
 }
-let _tabSwitchPause = false;
-let _pausedAt = null;
-let _pauseOffsetMs = 0;
-
 function _onVisibilityChange() {
   if (!_antiCheatActive) return;
   if (document.hidden) {
     _tabSwitchCount++;
-    _logCheat('tab-switch', '#' + _tabSwitchCount + '/' + TAB_SWITCH_LIMIT);
-
-    if (_tabSwitchCount >= TAB_SWITCH_LIMIT) {
-      // 3rd strike — void the session and stop exam
-      _voidSessionForCheating('Left the exam tab ' + _tabSwitchCount + ' times');
-      return;
-    }
-
-    // Pause the exam (freeze timer, blur content, show overlay)
-    _pauseExam();
+    if (typeof showToast === 'function') showToast('Warning: tab switch detected (' + _tabSwitchCount + '/' + TAB_SWITCH_LIMIT + ')', 'error');
+    if (_tabSwitchCount >= TAB_SWITCH_LIMIT) _autoSubmitForCheating('Left the exam tab ' + _tabSwitchCount + ' times');
   }
 }
-
-function _pauseExam() {
-  if (_tabSwitchPause) return;
-  _tabSwitchPause = true;
-  _pausedAt = Date.now();
-  _logCheat('exam-paused', 'switch #' + _tabSwitchCount);
-
-  // Blur the exam content
-  const root = document.getElementById('app-root');
-  if (root) root.style.filter = 'blur(14px)';
-  document.body.style.filter = 'none';
-
-  // Show overlay
-  let ov = document.getElementById('exam-pause-overlay');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'exam-pause-overlay';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,20,0.85);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-    ov.innerHTML = '<div style="max-width:480px;background:rgba(30,30,50,0.95);border:2px solid rgba(239,68,68,0.6);border-radius:24px;padding:32px;text-align:center;color:#fff;">' +
-      '<div style="font-size:64px;margin-bottom:16px;">⚠️</div>' +
-      '<h2 style="font-size:22px;font-weight:900;margin-bottom:8px;">Exam Paused</h2>' +
-      '<p style="font-size:14px;color:#cbd5e1;margin-bottom:8px;">Tab switch detected.</p>' +
-      '<p id="exam-pause-warning" style="font-size:13px;color:#fbbf24;margin-bottom:20px;"></p>' +
-      '<p style="font-size:12px;color:#94a3b8;margin-bottom:24px;">Time is frozen. Click below to continue.<br>On the 3rd switch, your attempt will be voided.</p>' +
-      '<button id="exam-pause-resume" style="background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;padding:14px 28px;border-radius:14px;font-weight:800;font-size:15px;border:none;cursor:pointer;">Resume Exam</button>' +
-      '</div>';
-    document.body.appendChild(ov);
-  }
-
-  const warningEl = document.getElementById('exam-pause-warning');
-  const left = TAB_SWITCH_LIMIT - _tabSwitchCount;
-  if (warningEl) warningEl.textContent = 'Warning ' + _tabSwitchCount + ' of ' + TAB_SWITCH_LIMIT + ' — ' + left + ' left before void.';
-
-  const btn = document.getElementById('exam-pause-resume');
-  if (btn && !btn._wired) {
-    btn._wired = true;
-    btn.onclick = _resumeExam;
-  }
-}
-
-function _resumeExam() {
-  if (!_tabSwitchPause) return;
-  _tabSwitchPause = false;
-  if (_pausedAt) { _pauseOffsetMs += (Date.now() - _pausedAt); _pausedAt = null; }
-  _logCheat('exam-resumed', 'after switch #' + _tabSwitchCount);
-  const ov = document.getElementById('exam-pause-overlay');
-  if (ov) ov.remove();
-  const root = document.getElementById('app-root');
-  if (root) root.style.filter = 'none';
-}
-
-function _voidSessionForCheating(reason) {
-  console.warn('[ANTI-CHEAT] Voiding session: ' + reason);
-  _logCheat('exam-voided', reason);
-  stopAntiCheat();
-
-  // Show a big blocking overlay
-  const ov = document.createElement('div');
-  ov.id = 'exam-void-overlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,20,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
-  ov.innerHTML = '<div style="max-width:480px;background:rgba(40,20,30,0.95);border:2px solid rgba(239,68,68,0.8);border-radius:24px;padding:32px;text-align:center;color:#fff;">' +
-    '<div style="font-size:64px;margin-bottom:16px;">🚫</div>' +
-    '<h2 style="font-size:22px;font-weight:900;margin-bottom:8px;color:#fca5a5;">Exam Voided</h2>' +
-    '<p style="font-size:14px;color:#cbd5e1;margin-bottom:16px;">' + reason + '</p>' +
-    '<p style="font-size:12px;color:#94a3b8;margin-bottom:24px;">This attempt has been marked void. A cooldown applies before your next attempt, and you will receive a fresh set of questions.</p>' +
-    '<button id="exam-void-back" style="background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;padding:14px 28px;border-radius:14px;font-weight:800;font-size:15px;border:none;cursor:pointer;">Back to Course</button>' +
-    '</div>';
-  document.body.appendChild(ov);
-
-  // Tell the backend to mark the session voided
-  try {
-    const token = localStorage.getItem('auth_token');
-    if (token && window._currentExamSessionId) {
-      fetch('/api/exams/void-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ sessionId: window._currentExamSessionId, reason: reason })
-      }).catch(() => {});
-    }
-  } catch (_) {}
-
-  const btn = document.getElementById('exam-void-back');
-  if (btn) {
-    btn.onclick = () => {
-      ov.remove();
-      const root = document.getElementById('app-root');
-      if (root) root.style.filter = 'none';
-      if (typeof window.leaveModule === 'function') window.leaveModule('ccp');
-      else window.location.reload();
-    };
-  }
-}
-
-window._voidSessionForCheating = _voidSessionForCheating;
-window._pauseExam = _pauseExam;
-window._resumeExam = _resumeExam;
 function _onWindowBlur() {}
 function startAntiCheat() {
   if (_antiCheatActive) return;
@@ -2845,9 +2737,6 @@ function renderExamPage(courseId, examData) {
     }, 1000);
   }
   async function submitFinalExam() {
-  const _ovp = document.getElementById('exam-pause-overlay'); if (_ovp) _ovp.remove();
-  const _ovv = document.getElementById('exam-void-overlay'); if (_ovv) _ovv.remove();
-  const _rt = document.getElementById('app-root'); if (_rt) _rt.style.filter = 'none';
   if (typeof window.stopAntiCheat === 'function') window.stopAntiCheat();
     clearInterval(timerInterval);
     const timeSpent = (examData.timeLimit || 3600) - timeLeft;

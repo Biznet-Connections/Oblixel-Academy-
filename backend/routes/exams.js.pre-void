@@ -63,40 +63,6 @@ function generateCertificateCode(courseId) {
   return `OBX-${courseId.toUpperCase()}-${code}`;
 }
 
-// ==================== VOID SESSION (anti-cheat) ====================
-router.post('/void-session', authenticate, async (req, res) => {
-  const { sessionId, reason } = req.body;
-  const userId = req.user._id;
-  if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
-  try {
-    const session = await ExamSession.findOne({ _id: sessionId, userId });
-    if (!session) return res.status(404).json({ error: 'Session not found' });
-    session.status = 'voided';
-    session.voidedAt = new Date();
-    session.voidReason = reason || 'Anti-cheat violation';
-    if (!session.cheatFlags) session.cheatFlags = [];
-    session.cheatFlags.push('voided: ' + (reason || ''));
-    await session.save();
-
-    // Also flag enrollment and apply cooldown (counts as attempt)
-    const enrollment = await Enrollment.findOne({ userId, courseId: session.courseId });
-    if (enrollment) {
-      enrollment.examAttempts = (enrollment.examAttempts || 0) + 1;
-      enrollment.lastExamDate = new Date();
-      enrollment.status = 'failed';
-      const cd = new Date();
-      cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
-      enrollment.cooldownUntil = cd;
-      await enrollment.save();
-      console.log('[EXAM] Voided session ' + sessionId + ' — cooldown until ' + cd.toISOString());
-    }
-    res.json({ ok: true, cooldownHours: enrollment ? getCooldownHours(enrollment.examAttempts) : null });
-  } catch (e) {
-    console.error('[EXAM] void-session error: ' + e.message);
-    res.status(500).json({ error: 'Failed to void' });
-  }
-});
-
 // ==================== CHEAT LOG (anti-cheat audit trail) ====================
 router.post('/cheat-log', authenticate, async (req, res) => {
   try {
