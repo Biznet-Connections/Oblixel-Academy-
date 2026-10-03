@@ -10,6 +10,30 @@ const Course = require('../models/Course');
 const ModuleProgress = require('../models/ModuleProgress');
 const User = require('../models/User');
 
+function parseExpiryPeriod(str) {
+  if (!str) return null;
+  const s = String(str).toLowerCase().trim();
+  if (s === 'never' || s === '' || s === 'none' || s === 'lifetime') return null;
+  const m = s.match(/(\d+)\s*(year|years|yr|yrs|y|month|months|mo|day|days|d)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  const unit = m[2];
+  if (unit.startsWith('y')) return { years: n };
+  if (unit.startsWith('mo') || unit.startsWith('month')) return { months: n };
+  if (unit.startsWith('d')) return { days: n };
+  return null;
+}
+
+function calculateExpiryDate(issuedAt, period) {
+  if (!period) return null;
+  const d = new Date(issuedAt);
+  if (period.years) d.setFullYear(d.getFullYear() + period.years);
+  if (period.months) d.setMonth(d.getMonth() + period.months);
+  if (period.days) d.setDate(d.getDate() + period.days);
+  return d;
+}
+
+
 const EXAM_PASS_SCORE = 70;
 const EXAM_COOLDOWN_HOURS = 3;
 const EXAM_TIME_LIMIT = 3600;
@@ -236,8 +260,15 @@ router.post('/submit', authenticate, async (req, res) => {
         const studentFirstName = user.firstName || '';
         const studentLastName = user.lastName || '';
         
-        const certificateCode = generateCertificateCode(courseId);
-        
+        const certificateCode = generateCertificateCode(courseId);        const now = new Date();
+        const CertificateTemplate = require('../models/CertificateTemplate');
+        const template = await CertificateTemplate.findOne();
+        const expiryPeriodStr = template ? template.expiryPeriod : null;
+        const expiryPeriod = parseExpiryPeriod(expiryPeriodStr);
+        const expiryDate = calculateExpiryDate(now, expiryPeriod);
+        const verifyBase = (template && template.verifyUrlBase) ? template.verifyUrlBase : 'oblixelacademy.com/verify/';
+        const verifyUrl = verifyBase + certificateCode;
+
         await Certificate.create({
           userId,
           courseId: courseId.toLowerCase(),
@@ -249,9 +280,14 @@ router.post('/submit', authenticate, async (req, res) => {
           score,
           status: 'issued',
           type: enrollment.type,
-          submittedAt: new Date(),
-          issuedAt: new Date()
+          issueDate: now,
+          expiryDate: expiryDate,
+          verifyUrl: verifyUrl,
+          submittedAt: now,
+          issuedAt: now
         });
+
+        console.log('[EXAM] Expiry set: ' + (expiryDate ? expiryDate.toISOString() : 'never') + ' (from ' + expiryPeriodStr + ')');
         
         enrollment.certificateId = certificateCode;
         
