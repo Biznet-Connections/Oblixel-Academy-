@@ -2479,6 +2479,92 @@ window.completeModuleAndReturn = async (courseId, moduleId, score) => {
 };
 
 // ==================== FINAL EXAM PAGE ====================
+// ==================== ANTI-CHEAT ====================
+let _antiCheatActive = false;
+let _tabSwitchCount = 0;
+let _antiCheatHandlers = null;
+const TAB_SWITCH_LIMIT = 3;
+
+function _blockCopy(e) {
+  e.preventDefault();
+  if (e.clipboardData) { try { e.clipboardData.setData('text/plain', ''); } catch (_) {} }
+  if (typeof showToast === 'function') showToast('Copying is disabled during the exam', 'warning');
+  return false;
+}
+function _blockSelect(e) { e.preventDefault(); return false; }
+function _blockContext(e) {
+  e.preventDefault();
+  if (typeof showToast === 'function') showToast('Right-click is disabled during the exam', 'warning');
+  return false;
+}
+function _blockDrag(e) { e.preventDefault(); return false; }
+function _blockKeys(e) {
+  const k = (e.key || '').toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && ['c','x','a','s','p','u'].includes(k)) {
+    e.preventDefault();
+    if (typeof showToast === 'function') showToast('Keyboard shortcut disabled during exam', 'warning');
+    return false;
+  }
+  if (k === 'printscreen') { try { navigator.clipboard.writeText(''); } catch (_) {} }
+  return true;
+}
+function _onVisibilityChange() {
+  if (!_antiCheatActive) return;
+  if (document.hidden) {
+    _tabSwitchCount++;
+    if (typeof showToast === 'function') showToast('Warning: tab switch detected (' + _tabSwitchCount + '/' + TAB_SWITCH_LIMIT + ')', 'error');
+    if (_tabSwitchCount >= TAB_SWITCH_LIMIT) _autoSubmitForCheating('Left the exam tab ' + _tabSwitchCount + ' times');
+  }
+}
+function _onWindowBlur() {}
+function startAntiCheat() {
+  if (_antiCheatActive) return;
+  _antiCheatActive = true;
+  _tabSwitchCount = 0;
+  _antiCheatHandlers = { copy: _blockCopy, cut: _blockCopy, selectstart: _blockSelect, contextmenu: _blockContext, dragstart: _blockDrag, keydown: _blockKeys, visibilitychange: _onVisibilityChange, blur: _onWindowBlur };
+  document.addEventListener('copy', _antiCheatHandlers.copy, true);
+  document.addEventListener('cut', _antiCheatHandlers.cut, true);
+  document.addEventListener('selectstart', _antiCheatHandlers.selectstart, true);
+  document.addEventListener('contextmenu', _antiCheatHandlers.contextmenu, true);
+  document.addEventListener('dragstart', _antiCheatHandlers.dragstart, true);
+  document.addEventListener('keydown', _antiCheatHandlers.keydown, true);
+  document.addEventListener('visibilitychange', _antiCheatHandlers.visibilitychange);
+  window.addEventListener('blur', _antiCheatHandlers.blur);
+  console.log('[ANTI-CHEAT] Active. Tab-switch limit: ' + TAB_SWITCH_LIMIT);
+}
+function stopAntiCheat() {
+  if (!_antiCheatActive) return;
+  _antiCheatActive = false;
+  if (_antiCheatHandlers) {
+    document.removeEventListener('copy', _antiCheatHandlers.copy, true);
+    document.removeEventListener('cut', _antiCheatHandlers.cut, true);
+    document.removeEventListener('selectstart', _antiCheatHandlers.selectstart, true);
+    document.removeEventListener('contextmenu', _antiCheatHandlers.contextmenu, true);
+    document.removeEventListener('dragstart', _antiCheatHandlers.dragstart, true);
+    document.removeEventListener('keydown', _antiCheatHandlers.keydown, true);
+    document.removeEventListener('visibilitychange', _antiCheatHandlers.visibilitychange);
+    window.removeEventListener('blur', _antiCheatHandlers.blur);
+    _antiCheatHandlers = null;
+  }
+  console.log('[ANTI-CHEAT] Deactivated.');
+}
+function _autoSubmitForCheating(reason) {
+  console.warn('[ANTI-CHEAT] Auto-submit: ' + reason);
+  stopAntiCheat();
+  if (typeof showToast === 'function') showToast('Exam ended: ' + reason, 'error');
+  setTimeout(() => {
+    const submitBtn = document.getElementById('nextBtn');
+    if (submitBtn && submitBtn.textContent && submitBtn.textContent.toLowerCase().includes('submit')) submitBtn.click();
+    else {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const sb = btns.find(b => b.textContent && b.textContent.toLowerCase().includes('submit'));
+      if (sb) sb.click();
+    }
+  }, 1500);
+}
+window.startAntiCheat = startAntiCheat;
+window.stopAntiCheat = stopAntiCheat;
+
 function renderExamPage(courseId, examData) {
   hideAIWidget();
   const questions = examData.questions;
@@ -2487,6 +2573,7 @@ function renderExamPage(courseId, examData) {
   let timeLeft = examData.timeLimit || 3600;
   let timerInterval;
   const root = document.getElementById('app-root');
+  if (typeof window.startAntiCheat === 'function') window.startAntiCheat();
   function renderQuestion() {
     if (currentIndex >= questions.length) { submitFinalExam(); return; }
     const q = questions[currentIndex];
@@ -2532,6 +2619,7 @@ function renderExamPage(courseId, examData) {
     }, 1000);
   }
   async function submitFinalExam() {
+  if (typeof window.stopAntiCheat === 'function') window.stopAntiCheat();
     clearInterval(timerInterval);
     const timeSpent = (examData.timeLimit || 3600) - timeLeft;
     root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4 text-lg">Submitting your exam...</p></div>';
