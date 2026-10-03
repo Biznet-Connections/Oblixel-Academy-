@@ -697,7 +697,8 @@ function __brandSvg__(name) {
   const n = (name || '').toLowerCase();
   if (n === 'google') return '<svg viewBox="0 0 24 24" width="36" height="36"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>';
   if (n === 'aws') return '<svg viewBox="0 0 48 24" width="48" height="24"><text x="0" y="16" font-family="Arial Black,Arial" font-weight="900" font-size="16" fill="#232F3E">aws</text><path d="M2 19c8 5 26 5 36 0" stroke="#FF9900" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M36 18l4 1-2 3z" fill="#FF9900"/></svg>';
-  if (n === 'cisco') return '<svg viewBox="0 0 80 32" width="48" height="32"><text x="0" y="22" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="#1BA0D7" letter-spacing="0.5">cisco</text><rect x="0" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="10" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="20" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="30" y="24" width="6" height="2" fill="#1BA0D7"/><rect x="40" y="24" width="6" height="2" fill="#1BA0D7"/></svg>';
+  if (n === 'cisco') return '<svg viewBox="0 0 90 40" width="72" height="32" xmlns="http://www.w3.org/2000/svg"><text x="45" y="34" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="16" fill="#1BA0D7" letter-spacing="1">cisco</text><g fill="#1BA0D7"><rect x="14" y="18" width="2" height="8"/><rect x="20" y="14" width="2" height="12"/><rect x="26" y="10" width="2" height="16"/><rect x="32" y="14" width="2" height="12"/><rect x="38" y="10" width="2" height="16"/><rect x="44" y="6" width="2" height="20"/><rect x="50" y="10" width="2" height="16"/><rect x="56" y="14" width="2" height="12"/><rect x="62" y="10" width="2" height="16"/><rect x="68" y="14" width="2" height="12"/><rect x="74" y="18" width="2" height="8"/></g></svg>';
+  if (n === 'oracle') return '<svg viewBox="0 0 120 32" width="96" height="28" xmlns="http://www.w3.org/2000/svg"><text x="0" y="24" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="22" fill="#C74634" letter-spacing="0.5">ORACLE</text></svg>';
   if (n === 'meta') return '<svg viewBox="0 0 40 24" width="40" height="24"><path fill="#0064E1" d="M8 6c-3 0-5 3-5 6s2 6 5 6c2 0 3-1 4-3l3-5c1-2 2-3 4-3 3 0 5 3 5 6s-2 6-5 6c-2 0-3-1-4-3l-3-5c-1-2-2-3-4-3zm-4 6c0-2 1-4 4-4 1 0 2 .5 3 2l3 5c1 1.5 2 2 3 2 2 0 4-1.5 4-4s-2-4-4-4c-1 0-2 .5-3 2l-3 5c-1 1.5-2 2-3 2-3 0-4-2-4-4z"/></svg>';
   if (n === 'microsoft') return '<svg viewBox="0 0 24 24" width="32" height="32"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="13" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="13" width="10" height="10" fill="#00A4EF"/><rect x="13" y="13" width="10" height="10" fill="#FFB900"/></svg>';
   if (n === 'ibm') return '<svg viewBox="0 0 40 20" width="40" height="20"><text x="0" y="15" font-family="Arial Black,Arial" font-weight="900" font-size="15" fill="#052FAD" letter-spacing="1">IBM</text></svg>';
@@ -716,7 +717,13 @@ const __heroPhotos__ = [
   'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1920&q=80&fit=crop'
+  'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80&fit=crop'
 ];
 
 let __heroInterval__ = null;
@@ -771,6 +778,7 @@ function renderLandingPage() {
     { name: "Meta", icon: "fab fa-meta", url: "https://meta.com", color: "#0064E1" },
     { name: "Microsoft", icon: "fab fa-microsoft", url: "https://microsoft.com", color: "#00A4EF" },
     { name: "Cisco", icon: "fab fa-cisco", url: "https://cisco.com", color: "#1BA0D7" },
+    { name: "Oracle", icon: "fas fa-database", url: "https://oracle.com", color: "#C74634" },
     { name: "IBM", icon: "fab fa-ibm", url: "https://ibm.com", color: "#052FAD" },
     { name: "Harvard", icon: "fas fa-university", url: "https://harvard.edu", color: "#A51C30" },
     { name: "MIT", icon: "fas fa-link", url: "https://mit.edu", color: "#A31F34" },
@@ -794,6 +802,12 @@ function renderLandingPage() {
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[5]}')"></div>
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[6]}')"></div>
         <div class="hero-slide" style="background-image:url('${__heroPhotos__[7]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[8]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[9]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[10]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[11]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[12]}')"></div>
+        <div class="hero-slide" style="background-image:url('${__heroPhotos__[13]}')"></div>
         <div class="hero-overlay"></div>
         <div class="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6">
           <div class="max-w-2xl" data-aos="fade-right">
@@ -807,7 +821,7 @@ function renderLandingPage() {
       </section>
       <section class="py-6 sm:py-10"><div class="glass rounded-3xl py-3 sm:py-6 marquee"><div class="marquee-content">${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}</div></div></section>
       <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(cert => { const enrolled = currentUser && isAlreadyEnrolled(cert.id); const coursePrice = cert.price || cert.examPrice || 0; return `<div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 card-hover" data-aos="fade-up"><div class="flex justify-between items-start"><i class="fa-solid ${cert.icon || 'fa-certificate'} text-3xl sm:text-4xl text-purple-400"></i><span class="text-xs glass px-2 sm:px-3 py-1 rounded-full">${cert.category || 'Certification'}</span></div><h3 class="text-lg sm:text-2xl font-bold mt-3 sm:mt-4">${escapeHtml(cert.name)}</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p><div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div><p class="text-xs mt-2 text-cyan-400 font-medium">💰 Course Fee: $${coursePrice}</p><div class="mt-4"><button onclick="window.handleEnrollClick('${cert.id}')" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:bg-purple-500 py-2 rounded-xl text-sm font-medium transition">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button></div></div>`; }).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
-      <section class="py-10 sm:py-16"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-4xl font-black">🌍 Global Partners</h2></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">${globalPartners.map(p => `<a href="${p.url}" target="_blank" rel="noopener noreferrer" class="glass rounded-2xl p-3 sm:p-5 text-center transition hover:scale-105"><span style="display:inline-flex;align-items:center;justify-content:center;height:40px">${__brandSvg__(p.name)}</span><h3 class="font-bold text-xs sm:text-sm mt-2">${p.name}</h3></a>`).join('')}</div></section>
+      <section class="py-10 sm:py-16"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-4xl font-black">🌍 Global Partners</h2></div><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-5">${globalPartners.map(p => `<a href="${p.url}" target="_blank" rel="noopener noreferrer" class="glass rounded-2xl p-3 sm:p-5 text-center transition hover:scale-105"><span style="display:inline-flex;align-items:center;justify-content:center;height:40px">${__brandSvg__(p.name)}</span><h3 class="font-bold text-xs sm:text-sm mt-2">${p.name}</h3></a>`).join('')}</div></section>
       <footer class="border-t border-white/10 py-6 sm:py-12 mt-6 sm:mt-10"><div class="flex flex-wrap justify-center gap-3 sm:gap-6 mb-3 sm:mb-6 text-xl sm:text-2xl"><a href="https://www.facebook.com/obliXel" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-youtube"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="https://wa.me/263714587259" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a></div><p class="text-center text-gray-500 text-xs sm:text-sm">© 2026 obliXel Academy — The future of professional certification</p></footer>
     </div>
   `;
