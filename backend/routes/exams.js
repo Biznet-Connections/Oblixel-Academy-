@@ -117,7 +117,7 @@ router.post('/start', authenticate, async (req, res) => {
       });
     }
 
-    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
+    let questions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0 });
     if (questions.length < EXAM_TOTAL_QUESTIONS) {
       const fallbackQuestions = getFallbackQuestions(courseId);
       questions = [...questions, ...fallbackQuestions];
@@ -195,7 +195,7 @@ router.post('/submit', authenticate, async (req, res) => {
     if (questions.length === 0) {
       console.log('[EXAM] No questions in session, fetching all from DB');
       
-      let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase() });
+      let dbQuestions = await ExamQuestion.find({ courseId: courseId.toLowerCase(), moduleId: 0 });
       
       if (dbQuestions.length === 0) {
         console.log('[EXAM] No DB questions, using fallback');
