@@ -648,7 +648,30 @@ function renderPage(page) {
 // ==================== AI WIDGET VISIBILITY ====================
 function showAIWidget() { const aiBtn = document.getElementById('aiChatButton'); if (aiBtn) aiBtn.classList.remove('hidden'); }
 function hideAIWidget() { const aiBtn = document.getElementById('aiChatButton'); if (aiBtn) aiBtn.classList.add('hidden'); }
+// ==================== RETURN-TO (intended destination after signin) ====================
+function __setReturnTo__(payload) {
+  try { sessionStorage.setItem('returnTo', JSON.stringify(payload)); } catch (_) {}
+}
+function __consumeReturnTo__() {
+  try {
+    const raw = sessionStorage.getItem('returnTo');
+    if (!raw) return null;
+    sessionStorage.removeItem('returnTo');
+    return JSON.parse(raw);
+  } catch (_) { return null; }
+}
+function __clearReturnTo__() {
+  try { sessionStorage.removeItem('returnTo'); } catch (_) {}
+}
+
 window.handleEnrollClick = function (courseId) {
+    // Gate: require sign-in first — remember the intended course
+    if (!currentUser) {
+      __setReturnTo__({ action: 'enroll', courseId: courseId });
+      if (typeof showToast === 'function') showToast('Please sign in to continue with enrollment', 'warning');
+      renderPage('login');
+      return;
+    }
     // Find course data from cache
     const course = (typeof coursesData !== 'undefined' && coursesData.find(c => c.courseId === courseId || c.id === courseId)) || null;
     if (!course) {
@@ -758,7 +781,7 @@ function renderRegister() {
     if (password.length < 5) { showToast('Password must be at least 5 characters', 'error'); return; }
     try {
       await register(name, email, password);
-      showToast('Account created! Please login', 'success');
+      showToast('Account created! Please sign in to continue', 'success');
       renderPage('login');
     } catch (error) {
       showToast(error.message || 'Registration failed', 'error');
@@ -835,6 +858,16 @@ function renderLogin() {
       updateAuthUI();
       updateNavbarStyle();
       await loadCourses();
+      // Honor returnTo (deeplink back to enroll)
+      const __ret = __consumeReturnTo__();
+      if (__ret && __ret.action === 'enroll' && __ret.courseId) {
+        console.log('[RETURN-TO] resuming enroll for', __ret.courseId);
+        renderPage('landing');
+        setTimeout(() => {
+          if (typeof window.handleEnrollClick === 'function') window.handleEnrollClick(__ret.courseId);
+        }, 250);
+        return;
+      }
       renderPage('dashboard');
     } catch (error) {
       showToast(error.message || 'Login failed', 'error');
