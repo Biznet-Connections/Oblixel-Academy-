@@ -40,7 +40,8 @@ const COURSE_EXAM_CONFIG = {
   ncp:  { questions: 30, timeLimitSec: 60 * 60 },
   clp:  { questions: 20, timeLimitSec: 45 * 60 },
   oca:  { questions: 20, timeLimitSec: 45 * 60 },
-  ocp:  { questions: 40, timeLimitSec: 90 * 60 }
+  ocp:  { questions: 40, timeLimitSec: 90 * 60 },
+  aip:  { questions: 40, timeLimitSec: 30 * 60 }
 };
 const DEFAULT_EXAM_CONFIG = { questions: 25, timeLimitSec: 60 * 60 };
 
@@ -49,9 +50,13 @@ function getExamConfig(courseId) {
 }
 
 function getCooldownHours(attemptCount) {
-  if (attemptCount <= 1) return 24;
-  if (attemptCount <= 2) return 72;
-  return 168;
+  return 72; // flat 3 days for every final exam fail
+}
+
+function calculateRetakeFee(course) {
+  const base = course.pathPrice || course.examPrice || 0;
+  const fee = Math.round(base * 0.30);
+  return Math.max(15, fee); // minimum $15 retake fee
 }
 
 function generateCertificateCode(courseId) {
@@ -164,6 +169,19 @@ router.post('/start', authenticate, async (req, res) => {
       });
     }
 
+    // __retakeFeeGate — require payment before retaking after a fail
+    if (enrollment.status === 'failed' && enrollment.retakeFeeRequired && !enrollment.retakeFeePaid) {
+      const courseDoc = await Course.findOne({ courseId: courseId.toLowerCase() });
+      const fee = calculateRetakeFee(courseDoc || {});
+      return res.status(402).json({
+        error: 'Retake fee required',
+        retakeFeeRequired: true,
+        feeAmount: fee,
+        currency: 'USD',
+        message: 'You failed your previous attempt. Pay $' + fee + ' to retake this exam.'
+      });
+    }
+
     const course = await Course.findOne({ courseId: courseId.toLowerCase() });
     const totalModules = course ? course.totalModules : 8;
     const completedCount = await ModuleProgress.countDocuments({ 
@@ -202,6 +220,14 @@ router.post('/start', authenticate, async (req, res) => {
       options: q.options,
       correct: q.correct
     }));
+
+    // __consumeRetake — paid users get exactly one attempt
+    if (enrollment.retakeFeePaid) {
+      enrollment.retakeFeePaid = false;
+      enrollment.retakeFeeRequired = false;
+      await enrollment.save();
+      console.log('[EXAM] Consumed retake fee for ' + req.user.email + ' on ' + courseId);
+    }
 
     const session = await ExamSession.create({
       userId,
@@ -370,6 +396,7 @@ router.post('/submit', authenticate, async (req, res) => {
         cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
+        enrollment.retakeFeeRequired = true; // __setRetakeOnFail
         console.log(`[EXAM] ❌ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
       }
       await enrollment.save();

@@ -5,6 +5,22 @@ const Payment = require('../models/Payment');
 const Voucher = require('../models/Voucher');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
+
+﻿async function __applyRetakePayment(payment) {
+  if (payment.type !== 'retake') return;
+  try {
+    const Enrollment = require('../models/Enrollment');
+    const enr = await Enrollment.findOne({ userId: payment.userId, courseId: payment.courseId });
+    if (!enr) { console.log('[RETAKE] No enrollment'); return; }
+    enr.retakeFeePaid = true;
+    enr.retakeFeeRequired = false;
+    enr.lastRetakePaymentId = payment.sessionId;
+    enr.totalRetakeFeesPaid = (enr.totalRetakeFeesPaid || 0) + (payment.amount || 0);
+    await enr.save();
+    console.log('[RETAKE] Unlocked attempt for', payment.courseId, 'user', payment.userId);
+  } catch (e) { console.error('[RETAKE] Error:', e.message); }
+}
+
 const User = require('../models/User');
 const authenticate = require('../middleware/auth');
 const linkwa = require('../utils/linkwa');
@@ -101,10 +117,32 @@ router.post('/create-checkout', authenticate, async (req, res) => {
 
   try {
     const course = await Course.findOne({ courseId: courseId.toLowerCase(), isActive: true });
-    if (!course) return res.status(404).json({ error: 'Course not found' });
-
-    const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
+    if (!course) return res.status(404).json({ error: 'Course not found' });const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
     if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+
+        // __retakeCheckout
+    if (type === 'retake') {
+      if (!existing) return res.status(400).json({ error: 'Must be enrolled' });
+      if (!existing.retakeFeeRequired) return res.status(400).json({ error: 'No retake fee required' });
+      const base = course.pathPrice || course.examPrice || 0;
+      const retakeFee = Math.max(15, Math.round(base * 0.30));
+      const sessionId = uuidv4();
+      await Payment.create({
+        sessionId,
+        userId,
+        courseId: courseId.toLowerCase(),
+        type: 'retake',
+        originalAmount: retakeFee,
+        discountAmount: 0,
+        amount: retakeFee,
+        status: 'pending',
+        paymentMethod: 'linkwa',
+        billingInfo: billingInfo || { firstName: req.user.name || 'Student', lastName: '', email: req.user.email, phone: '', country: 'Zimbabwe' }
+      });
+      return res.json({ sessionId, amount: retakeFee, courseId: courseId.toLowerCase(), type: 'retake', retake: true });
+    }
+
+
 
     let amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
     let discount = 0;
@@ -325,6 +363,10 @@ router.get('/status/:sessionId', async (req, res) => {
         payment.linkwaPaymentReference = pRef;
         await payment.save();
 
+        // __retakeHookConfirm
+        if (payment.type === 'retake') {
+          await __applyRetakePayment(payment);
+        } else {
         const course = await Course.findOne({ courseId: payment.courseId });
         if (course) {
           await enrollUser({
@@ -336,6 +378,7 @@ router.get('/status/:sessionId', async (req, res) => {
             voucherCode: null,
             paymentMethod: 'linkwa'
           });
+        }
         }
       }
     }
@@ -397,6 +440,10 @@ async function handleLinkwaWebhook(rawBodyBuffer, signature) {
   if (body.payment_reference) payment.linkwaPaymentReference = body.payment_reference;
   await payment.save();
 
+  // __retakeHookWebhook
+  if (payment.type === 'retake') {
+    await __applyRetakePayment(payment);
+  } else {
   const course = await Course.findOne({ courseId: payment.courseId });
   if (course) {
     await enrollUser({
@@ -408,6 +455,7 @@ async function handleLinkwaWebhook(rawBodyBuffer, signature) {
       voucherCode: null,
       paymentMethod: 'linkwa'
     });
+  }
   }
 
   console.log('[WEBHOOK] ✅ Enrolled user via Linkwa webhook');

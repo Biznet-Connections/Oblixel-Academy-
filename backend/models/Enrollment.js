@@ -26,7 +26,13 @@ const enrollmentSchema = new mongoose.Schema({
   voucherCode: { type: String, default: null },
   amountPaid: { type: Number, default: 0 },
   originalPrice: { type: Number, default: 0 },
-  certificateId: { type: String, default: null }
+  certificateId: { type: String, default: null },
+  // Retake fee system
+  retakeFeeRequired: { type: Boolean, default: false },
+  retakeFeePaid: { type: Boolean, default: false },
+  retakeFeeAmount: { type: Number, default: 0 },
+  totalRetakeFeesPaid: { type: Number, default: 0 },
+  lastRetakePaymentId: { type: String, default: null }
 }, { timestamps: true });
 
 enrollmentSchema.index({ userId: 1, courseId: 1 }, { unique: true });

@@ -173,7 +173,15 @@ async function apiRequest(endpoint, options = {}) {
   try {
     const response = await fetch(url, { ...options, headers });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || data.message || 'Request failed');
+    if (!response.ok) {
+      // __apiRequestBodyPreserved — attach response body to error
+      var err = new Error(data.error || data.message || 'Request failed');
+      if (data && typeof data === 'object') {
+        Object.keys(data).forEach(function(k) { err[k] = data[k]; });
+      }
+      err.status = response.status;
+      throw err;
+    }
     return data;
   } catch (error) {
     debugLog(`API Error: ${error.message}`);
@@ -290,16 +298,89 @@ async function completeModule(courseId, moduleId, quizScore) {
 }
 
 // ==================== EXAM API CALLS ====================
+// __showRetakePaymentScreen — pay-to-retake UI
+window.__showRetakePaymentScreen = function(courseId, feeAmount) {
+  var course = (typeof coursesData !== "undefined" && coursesData.find(function(c) { return c.courseId === courseId || c.id === courseId; })) || {};
+  var courseName = course.name || String(courseId).toUpperCase();
+  var existing = document.getElementById("retakeModal");
+  if (existing) existing.remove();
+  var modal = document.createElement("div");
+  modal.id = "retakeModal";
+  modal.className = "fixed inset-0 bg-black/90 z-[1300] flex items-center justify-center p-4";
+  modal.style.backdropFilter = "blur(6px)";
+  modal.innerHTML =
+    '<div class="glass rounded-3xl p-8 max-w-md w-full text-center fade-in">' +
+      '<div class="text-6xl mb-4">🔁</div>' +
+      '<h2 class="text-2xl font-black mb-2">Retake Fee Required</h2>' +
+      '<p class="text-sm text-gray-300 mb-2">' + courseName + '</p>' +
+      '<p class="text-sm text-gray-400 mb-6">You failed your previous attempt. Pay the retake fee to unlock another attempt.</p>' +
+      '<div class="glass rounded-2xl p-4 mb-6">' +
+        '<p class="text-xs text-gray-400">Retake Fee</p>' +
+        '<p class="text-3xl font-black text-cyan-400">" + D + "' + feeAmount + ' USD</p>' +
+        '<p class="text-xs text-gray-500 mt-1">30% of course fee · minimum " + D + "15</p>' +
+      '</div>' +
+      '<button id="retakePayBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mb-3">Pay " + D + "' + feeAmount + ' to Retake</button>' +
+      '<button id="retakeCancelBtn" class="w-full glass py-3 rounded-xl font-bold text-sm">Cancel</button>' +
+      '<p class="text-xs text-gray-500 mt-4">Secured by Linkwa · EcoCash · InnBucks · Visa/MC</p>' +
+    '</div>';
+  document.body.appendChild(modal);
+  document.getElementById("retakeCancelBtn").onclick = function() { modal.remove(); };
+  document.getElementById("retakePayBtn").onclick = async function() {
+    var btn = document.getElementById("retakePayBtn");
+    btn.disabled = true;
+    btn.textContent = "Starting payment...";
+    try {
+      var token = localStorage.getItem("auth_token");
+      var res = await fetch("/api/payments/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ courseId: courseId, type: "retake" })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to start payment");
+      var lw = await fetch("/api/payments/linkwa/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ sessionId: data.sessionId })
+      });
+      var lwData = await lw.json();
+      if (!lw.ok) throw new Error(lwData.error || "Failed to init");
+      var redirect = lwData.redirectUrl || lwData.shortUrl || lwData.paymentUrl;
+      if (redirect) { window.location.href = redirect; return; }
+      if (typeof showToast === "function") showToast("Payment initiated. Check your phone.", "info");
+      modal.remove();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = "Pay " + D + " to Retake";
+      if (typeof showToast === "function") showToast(err.message || "Failed", "error");
+    }
+  };
+};
+
 async function startExam(courseId) {
-  const examData = await apiRequest('/exams/start', { method: 'POST', body: JSON.stringify({ courseId }) });
-  if (examData && examData.sessionId && Array.isArray(examData.questions)) {
-    renderExamPage(courseId, examData);
-  } else if (examData && examData.message) {
-    showToast(examData.message, 'warning');
-  } else {
-    showToast('Could not start exam. Please try again.', 'error');
+  try {
+    const examData = await apiRequest('/exams/start', { method: 'POST', body: JSON.stringify({ courseId }) });
+    if (examData && examData.sessionId && Array.isArray(examData.questions)) {
+      renderExamPage(courseId, examData);
+    } else if (examData && examData.message) {
+      showToast(examData.message, 'warning');
+    } else {
+      showToast('Could not start exam. Please try again.', 'error');
+    }
+    return examData;
+  } catch (err) {
+    // __retakeUI
+    if (err && err.retakeFeeRequired) {
+      window.__showRetakePaymentScreen(courseId, err.feeAmount);
+      return;
+    }
+    if (err && err.message) {
+      showToast(err.message, 'error');
+    } else {
+      showToast('Failed to start exam', 'error');
+    }
+    throw err;
   }
-  return examData;
 }
 
 async function submitExam(sessionId, courseId, answers, timeSpent) {
