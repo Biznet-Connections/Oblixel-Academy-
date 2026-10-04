@@ -586,12 +586,21 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
     const courseModule = course.modules.find(m => m.moduleId === parseInt(moduleId));
     if (!courseModule) return res.status(404).json({ error: 'Module not found' });
 
+    // __gradeServed25 — load full pool (module + final), grade only questions the user was served
     const ExamQuestion = require('../models/ExamQuestion');
-    const questions = await ExamQuestion.find({
+    const moduleQs = await ExamQuestion.find({
       courseId: id.toLowerCase(),
       moduleId: parseInt(moduleId),
       isActive: { $ne: false }
     }).lean();
+    const finalQs = await ExamQuestion.find({
+      courseId: id.toLowerCase(),
+      moduleId: 0,
+      isActive: { $ne: false }
+    }).lean();
+    const allPool = moduleQs.concat(finalQs);
+    const servedIds = Object.keys(answers).map(String);
+    const questions = allPool.filter(function(q) { return servedIds.indexOf(String(q._id)) !== -1; });
 
     if (!questions.length) return res.status(404).json({ error: 'No questions available' });
 
@@ -636,7 +645,7 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
     }
 
     // Real quiz — save + possibly mark complete
-    const mid = parseInt(moduleId);
+    // (mid already declared above)
     const existing = await ModuleProgress.findOne({
       userId: req.user._id, courseId: id.toLowerCase(), moduleId: mid
     });
