@@ -679,6 +679,18 @@ window.handleEnrollClick = function (courseId) {
       console.warn('[Enroll] Course not found:', courseId);
       return;
     }
+
+    // __skipModalIfEnrolled — if already enrolled, open course directly
+    try {
+      if (typeof isAlreadyEnrolled === "function" && isAlreadyEnrolled(course.courseId || course.id)) {
+        console.log("[Enroll] Already enrolled in", courseId, "- opening course dashboard");
+        if (typeof renderCourseDashboard === "function") {
+          renderCourseDashboard(course.courseId || course.id);
+        }
+        return;
+      }
+    } catch (e) { console.warn("[Enroll] enrollment check failed", e); }
+
     if (typeof window.openEnrollModal === 'function') {
       window.openEnrollModal({
         courseId: course.courseId || course.id,
