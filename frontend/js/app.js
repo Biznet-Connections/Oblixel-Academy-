@@ -1831,21 +1831,8 @@ async function renderCourseDashboard(courseId) {
               ${moduleCardsHtml}
             </div>
 
-            <!-- FINAL EXAM CARD -->
-            <div class="glass rounded-2xl p-5 mt-4 border-2 ${progress.examUnlocked ? 'border-purple-500/60 glow' : 'border-dashed border-gray-700 opacity-70'}">
-              <div class="flex items-center gap-4">
-                <i class="fa-solid fa-trophy text-3xl ${progress.examUnlocked ? 'text-purple-400' : 'text-gray-500'}"></i>
-                <div class="flex-1">
-                  <h3 class="font-black text-lg">Final Exam</h3>
-                  <p class="text-xs text-gray-400 mt-1">
-                    ${progress.examUnlocked
-                      ? '🎉 All modules complete! Exam unlocked. Prove your skills.'
-                      : `Complete all ${totalModules} modules to unlock. Currently ${completedCount}/${totalModules}.`}
-                  </p>
-                </div>
-                ${progress.examUnlocked ? `<button onclick="window.startExamCheck('${courseId}')" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-500 rounded-xl font-bold text-sm">Start Exam</button>` : ''}
-              </div>
-            </div>
+            <!-- __renderExamCard call -->
+            ${__renderExamCard(courseId, progress)}
           </div>
 
           <!-- SIDE PANEL -->
