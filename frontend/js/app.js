@@ -1900,6 +1900,15 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
 // ==================== LESSON DRAWER ====================
 window.openLessonDrawer = function () {
   if (typeof showAIWidget === 'function') showAIWidget();
+
+  // Mount Prof. Kelvin for this module (lazy — only while studying)
+  var _drawer = document.getElementById('lessonDrawer');
+  if (_drawer && typeof window.kelvinMount === 'function') {
+    var _cid = _drawer.dataset.course;
+    var _mid = parseInt(_drawer.dataset.module, 10);
+    var _mname = (_drawer.querySelector('.lesson-drawer-header h2') || {}).textContent || 'Module';
+    window.kelvinMount(_cid, _mid, _mname.replace(/^📖s*/, ''));
+  }
   const backdrop = document.getElementById('lessonDrawerBackdrop');
   const drawer = document.getElementById('lessonDrawer');
   if (!drawer) { console.warn('[Drawer] Not found'); return; }
@@ -1925,6 +1934,7 @@ window.openLessonDrawer = function () {
 
 window.closeLessonDrawer = function () {
   if (typeof hideAIWidget === 'function') hideAIWidget();
+  if (typeof window.kelvinUnmount === 'function') window.kelvinUnmount();
   const backdrop = document.getElementById('lessonDrawerBackdrop');
   const drawer = document.getElementById('lessonDrawer');
   if (!drawer) return;
@@ -2517,10 +2527,7 @@ async function renderModulePage(courseId, moduleId) {
       window.__cleanupModuleProgress = () => window.removeEventListener('scroll', updateProgress);
     }
 
-    // Mount Prof. Kelvin AI teacher
-    if (typeof window.kelvinMount === 'function') {
-      window.kelvinMount(courseId, moduleId, m.name);
-    }
+    // Prof. Kelvin mounted lazily when lesson drawer opens
 
     // Check if video is broken — hide section if so
     if (typeof hideVideoIfBroken === 'function') {
