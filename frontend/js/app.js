@@ -1787,8 +1787,27 @@ window.retryQuiz = async function (courseId, moduleId, moduleName) {
   }
 };
 
+window.__moduleExamGate = function(courseId, moduleId) {
+  if (typeof showToast === "function") {
+    showToast("📋 Please pass this module exam (70%+) before moving to the next module", "warning");
+  }
+  var allBtns = document.querySelectorAll("button[onclick]");
+  for (var i = 0; i < allBtns.length; i++) {
+    var oc = allBtns[i].getAttribute("onclick") || "";
+    if (oc.indexOf("startModuleQuiz") !== -1 && oc.indexOf("false") !== -1) {
+      allBtns[i].scrollIntoView({ behavior: "smooth", block: "center" });
+      allBtns[i].classList.add("ring-2", "ring-yellow-400");
+      setTimeout(function() { allBtns[i].classList.remove("ring-2", "ring-yellow-400"); }, 2500);
+      break;
+    }
+  }
+};
+
 // ==================== START MODULE QUIZ (v2) ====================
 window.startModuleQuiz = async function (courseId, moduleId, isPractice) {
+  if (!isPractice && typeof window.startAntiCheat === "function") {
+    window.startAntiCheat();
+  }
   try {
     const token = localStorage.getItem('auth_token');
     const url = `/api/courses/${courseId}/modules/${moduleId}/quiz` + (isPractice ? '?practice=1' : '');
@@ -1829,7 +1848,7 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
       <div class="glass rounded-3xl p-6 md:p-8 max-w-2xl w-full my-8">
         <div class="flex items-center justify-between mb-6">
           <span class="text-xs px-3 py-1 ${isPractice ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'} rounded-full">
-            ${isPractice ? '📝 Practice' : '🎯 Real Quiz'}
+            ${isPractice ? '📝 Practice' : '🎯 Module Exam'}
           </span>
           <div class="flex items-center gap-3">
             <span class="text-sm text-gray-400">${currentIdx + 1} / ${questions.length}</span>
@@ -1870,6 +1889,8 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
   window.__quizPrev = () => { if (currentIdx > 0) { currentIdx--; render(); } };
 
   window.__quizSubmit = async () => {
+  // submitAntiCheatWired
+  if (typeof window.stopAntiCheat === "function") window.stopAntiCheat();
     const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch(`/api/courses/${courseId}/modules/${moduleId}/quiz/submit`, {
@@ -1908,6 +1929,8 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
 
 
   window.__quizClose = (answeredCount, totalQuestions, wasPractice) => {
+  // closeAntiCheatWired
+  if (typeof window.stopAntiCheat === "function") window.stopAntiCheat();
     const hasProgress = answeredCount > 0 && answeredCount < totalQuestions;
     if (hasProgress) {
       if (!confirm('You have unanswered questions. Exit anyway? Progress will not be saved.')) return;
@@ -1974,7 +1997,7 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
     overlay.innerHTML = `
       <div class="glass rounded-3xl p-6 md:p-8 max-w-2xl w-full">
         <div class="flex items-center justify-between mb-6">
-          <span class="text-xs px-3 py-1 bg-purple-500/20 rounded-full">${isPractice ? '📝 Practice' : '🎯 Real Quiz'}</span>
+          <span class="text-xs px-3 py-1 bg-purple-500/20 rounded-full">${isPractice ? '📝 Practice' : '🎯 Module Exam'}</span>
           <span class="text-sm text-gray-400">${currentIdx + 1} / ${shuffled.length}</span>
         </div>
 
@@ -2675,13 +2698,13 @@ async function renderModulePage(courseId, moduleId) {
 
         <!-- Quiz -->
         <div class="glass rounded-3xl p-6 mb-6">
-          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-pencil text-cyan-400 mr-2"></i>Practice & Test</h2>
+          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-pencil text-cyan-400 mr-2"></i>Module Exam</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button onclick="window.startModuleQuiz('${courseId}', ${moduleId}, true)" class="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-bold text-sm transition">
               📝 Practice Quiz<br><span class="text-xs text-gray-400 font-normal">Unlimited tries · no score</span>
             </button>
             <button onclick="window.startModuleQuiz('${courseId}', ${moduleId}, false)" class="py-3 bg-gradient-to-r from-purple-600 to-cyan-500 rounded-2xl font-bold text-sm glow">
-              🎯 Real Quiz<br><span class="text-xs opacity-80 font-normal">${prog.attempts ? `${prog.attempts} attempt(s) so far` : 'Awards XP · 70% to pass'}</span>
+              🎯 Module Exam<br><span class="text-xs opacity-80 font-normal">${prog.attempts ? `${prog.attempts} attempt(s) so far` : 'Pass with 70% to unlock the next module · 70% to pass'}</span>
             </button>
           </div>
           ${prog.quizScore !== null ? `<p class="text-xs text-gray-400 mt-3 text-center">Best score: <span class="text-emerald-400 font-bold">${prog.bestScore || prog.quizScore}%</span></p>` : ''}
@@ -2718,7 +2741,7 @@ async function renderModulePage(courseId, moduleId) {
           <button onclick="window.leaveModule('${courseId}')" class="glass px-6 py-3 rounded-2xl font-bold text-sm">All Modules</button>
           ${m.moduleId === 15 && prog.completed
             ? `<button onclick="window.startExamCheck('${courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">🎯 Take Final Exam</button>`
-            : (m.moduleId < 15 ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId + 1})" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Next →</button>` : '<span></span>')}
+            : (m.moduleId < 15 ? `${m.moduleId < 15 ? (prog.completed ? `<button onclick="window.leaveModule('${courseId}', ${m.moduleId + 1})" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Next →</button>` : `<button onclick="window.__moduleExamGate('${courseId}', ${m.moduleId})" class="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl font-bold text-sm text-gray-400 cursor-not-allowed">🔒 Pass exam to continue</button>`) : '<span></span>'}` : '<span></span>')}
         </div>
       </div>
     `;
