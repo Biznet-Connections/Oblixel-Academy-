@@ -1976,7 +1976,7 @@ async function renderCourseDashboard(courseId) {
               <h4 class="font-bold text-sm leading-tight mb-1">${escapeHtml(m.name)}</h4>
               <div class="flex items-center gap-3 text-xs text-gray-400 mt-2 flex-wrap">
                 <span><i class="fa-regular fa-clock mr-1"></i>${m.estimatedMinutes || 30} min</span>
-                <span><i class="fa-solid fa-bolt text-cyan-400 mr-1"></i>${m.xpReward || 50} XP</span>
+                
                 ${isCompleted && score !== null ? `<span class="text-emerald-400"><i class="fa-solid fa-trophy mr-1"></i>${score}%</span>` : ''}
               </div>
               ${!isUnlocked ? '<p class="text-xs text-gray-500 mt-2 italic">Complete previous module to unlock</p>' : ''}
@@ -2028,7 +2028,7 @@ async function renderCourseDashboard(courseId) {
               <div class="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <span class="text-gray-300"><i class="fa-solid fa-layer-group text-cyan-400 mr-1"></i>${totalModules} modules</span>
                 <span class="text-gray-300"><i class="fa-regular fa-clock text-purple-400 mr-1"></i>${totalHours}h ${totalMins}m total</span>
-                <span class="text-gray-300"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> XP earned</span>
+                
                 ${progress.totalTimeSpent > 0 ? `<span class="text-gray-300"><i class="fa-solid fa-hourglass-half text-emerald-400 mr-1"></i>${timeHours}h ${timeMins}m studied</span>` : ''}
               </div>
             </div>
@@ -2546,7 +2546,7 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
     `;
 
     if (passed && !isPractice) {
-      showToast('Module passed! +XP awarded', 'success');
+      showToast('Module passed!', 'success');
     }
   };
 
@@ -3102,7 +3102,7 @@ async function renderModulePage(courseId, moduleId) {
               <span class="lesson-badge">Module ${m.moduleId} of ${currentModuleProgress?.totalModules || 15}</span>
               <span class="lesson-badge">${m.complexity || 'Beginner'}</span>
               <span class="lesson-badge time">⏱ ${readingMin} min read</span>
-              <span class="lesson-badge xp">⚡ +${m.xpReward || 50} XP</span>
+              
             </div>
             <h1>${escapeHtml(m.name)}</h1>
             <p>${escapeHtml(m.description || '')}</p>
