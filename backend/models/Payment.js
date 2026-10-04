@@ -4,7 +4,7 @@ const paymentSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, unique: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   courseId: { type: String, required: true, lowercase: true },
-  type: { type: String, enum: ['exam_only', 'learning'], default: 'exam_only' },
+  type: { type: String, enum: ['exam_only', 'learning', 'retake'], default: 'exam_only' },
   originalAmount: { type: Number, required: true },
   discountAmount: { type: Number, default: 0 },
   amount: { type: Number, required: true },
