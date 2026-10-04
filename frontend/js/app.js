@@ -709,6 +709,41 @@ function __brandSvg__(name) {
 }
 
 // ==================== HERO SLIDESHOW ====================
+
+// Auto-tag course cards with background class
+function __tagCourseCards() {
+  try {
+    var cards = document.querySelectorAll('[onclick*="renderCourseDashboard"]');
+    cards.forEach(function(card) {
+      var onclick = card.getAttribute('onclick') || '';
+      var match = onclick.match(/renderCourseDashboard\(['"]([^'"]+)['"]\)/);
+      if (match) {
+        var id = match[1].toLowerCase();
+        if (id === 'ncp' && !card.classList.contains('course-card-ncp')) card.classList.add('course-card-ncp');
+        if (id === 'ccp' && !card.classList.contains('course-card-ccp')) card.classList.add('course-card-ccp');
+        if ((id === 'clp' || id === 'oca' || id === 'ocp' || id === 'ocp-core') && !card.classList.contains('course-card-clp')) card.classList.add('course-card-clp');
+      }
+    });
+  } catch (e) {}
+}
+window.__tagCourseCards = __tagCourseCards;
+
+// Run after any render
+var __origRenderPage = window.renderPage;
+if (typeof __origRenderPage === 'function' && !__origRenderPage.__tagged) {
+  var _wrap = function(page) {
+    var r = __origRenderPage.apply(this, arguments);
+    setTimeout(__tagCourseCards, 150);
+    return r;
+  };
+  _wrap.__tagged = true;
+  window.renderPage = _wrap;
+}
+
+// Also run periodically as a safety net
+setInterval(__tagCourseCards, 1500);
+
+
 // Kick off hero preload as soon as the script loads
 try { setTimeout(function() { if (typeof window.__preloadHeroImages === 'function') window.__preloadHeroImages(); }, 0); } catch (_) {}
 
@@ -758,12 +793,42 @@ function __startHeroSlideshow__() {
   var slides = document.querySelectorAll('.hero-slide');
   if (slides.length === 0) return;
   var current = 0;
+
+  // Preload the very first image and make it active immediately if not already
+  var firstImg = new Image();
+  firstImg.onload = function() {
+    if (!slides[0].classList.contains('active')) slides[0].classList.add('active');
+  };
+  firstImg.src = __heroPhotos__[0];
+
   __heroInterval__ = setInterval(function() {
-    slides[current].classList.remove('active');
-    current = (current + 1) % slides.length;
-    slides[current].classList.add('active');
+    var next = (current + 1) % slides.length;
+    var nextImg = new Image();
+    // Only swap once the next photo is fully downloaded — prevents flash
+    nextImg.onload = function() {
+      slides[current].classList.remove('active');
+      slides[next].classList.add('active');
+      current = next;
+    };
+    nextImg.onerror = function() {
+      // Skip broken image — don't switch, try the next one on the following tick
+      console.warn('[HERO] Skipping broken image', __heroPhotos__[next]);
+    };
+    nextImg.src = __heroPhotos__[next];
   }, 5000);
-  console.log('[HERO] Slideshow started with', slides.length, 'photos');
+
+  console.log('[HERO] Slideshow started with', slides.length, 'photos (smooth mode)');
+}
+
+// Preload all images once page is idle so transitions are instant
+function __smoothHeroSwap() {
+  if (window.__heroPreloaded) return;
+  window.__heroPreloaded = true;
+  __heroPhotos__.forEach(function(url) {
+    var img = new Image();
+    img.src = url;
+  });
+  console.log('[HERO] Background preload started for', __heroPhotos__.length, 'images');
 }
 
 function __stopHeroSlideshow__() {
@@ -776,6 +841,39 @@ function __stopHeroSlideshow__() {
 
 window.__stopHeroSlideshow__ = __stopHeroSlideshow__;
 
+
+// Course card backgrounds
+(function() {
+  if (document.getElementById('course-card-bg-css')) return;
+  var style = document.createElement('style');
+  style.id = 'course-card-bg-css';
+  style.textContent = 
+    '.course-card-ncp { position: relative; overflow: hidden; }' +
+    '.course-card-ncp::before {' +
+      'content: ""; position: absolute; inset: 0;' +
+      'background-image: url("https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1200&q=70&fit=crop");' +
+      'background-size: cover; background-position: center;' +
+      'opacity: 0.18; z-index: 0; pointer-events: none;' +
+    '}' +
+    '.course-card-ncp > * { position: relative; z-index: 1; }' +
+    '.course-card-ccp { position: relative; overflow: hidden; }' +
+    '.course-card-ccp::before {' +
+      'content: ""; position: absolute; inset: 0;' +
+      'background-image: url("https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=70&fit=crop");' +
+      'background-size: cover; background-position: center;' +
+      'opacity: 0.15; z-index: 0; pointer-events: none;' +
+    '}' +
+    '.course-card-ccp > * { position: relative; z-index: 1; }' +
+    '.course-card-clp { position: relative; overflow: hidden; }' +
+    '.course-card-clp::before {' +
+      'content: ""; position: absolute; inset: 0;' +
+      'background-image: url("https://images.unsplash.com/photo-1544197150-2b5f6c4e8d8c?w=1200&q=70&fit=crop");' +
+      'background-size: cover; background-position: center;' +
+      'opacity: 0.15; z-index: 0; pointer-events: none;' +
+    '}' +
+    '.course-card-clp > * { position: relative; z-index: 1; }';
+  document.head.appendChild(style);
+})();
 
 // Hero slideshow CSS
 (function() {
@@ -855,6 +953,7 @@ function renderLandingPage() {
   document.getElementById('seeAllCoursesBtn')?.addEventListener('click', () => renderPage('courses'));
   document.getElementById('guestSignupBtn')?.addEventListener('click', (e) => { e.preventDefault(); renderPage('register'); });
   showAIWidget();
+  if (typeof __smoothHeroSwap === 'function') __smoothHeroSwap();
   if (typeof __preloadHeroImages === 'function') __preloadHeroImages();
   if (typeof __startHeroSlideshow__ === 'function') __startHeroSlideshow__();
 }
