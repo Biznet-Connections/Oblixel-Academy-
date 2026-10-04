@@ -1473,7 +1473,8 @@ async function renderCertificates() {
               <i class="fa-solid fa-certificate text-4xl text-cyan-400"></i>
             </div>
             <div class="mt-3 flex gap-3 flex-wrap">
-              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificate('${cer.certificateId}')"><i class="fa-solid fa-download"></i> Download Certificate</button>
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificatePDF('${cer.certificateId}')" title="Download as PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificate('${cer.certificateId}')" title="Download as Image (PNG)"><i class="fa-solid fa-image"></i> Image</button>
               <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.shareToLinkedIn('${cer.certificateId}')"><i class="fa-brands fa-linkedin"></i> Share</button>
               <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.verifyCertificate('${cer.certificateId}')"><i class="fa-solid fa-check-circle"></i> Verify</button>
             </div>
@@ -3500,6 +3501,106 @@ window.openCheckout = async (courseId) => {
 
 // ==================== DOWNLOAD CERTIFICATE ====================
 window.downloadCertificate = function(certificateId) { window.location.href = '/certificate-generator.html?id=' + certificateId; };
+// __downloadCertPDF — render certificate as PDF (or fallback to PNG)
+window.downloadCertificatePDF = async function(certificateId) {
+  try {
+    if (typeof showToast === "function") showToast("Preparing your certificate...", "info");
+
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch("/api/certificates/" + certificateId + "/download", {
+      headers: token ? { Authorization: "Bearer " + token } : {}
+    });
+    if (!res.ok) throw new Error("Failed to load certificate");
+    const data = await res.json();
+
+    const cert = data.certificate;
+    const tpl = data.template || {};
+    const pos = tpl.positions || {};
+    const sty = tpl.styles || {};
+
+    // Build a hidden container at exact canvas size for consistent rendering
+    const wrap = document.createElement("div");
+    wrap.id = "certExportWrap";
+    wrap.style.cssText = "position:fixed;left:-99999px;top:0;width:1600px;height:1132px;background:#fff;font-family:Georgia,serif;";
+
+    const inner = document.createElement("div");
+    inner.style.cssText = "position:relative;width:1600px;height:1132px;background:#ffffff;" +
+      (tpl.imageUrl ? "background-image:url('" + tpl.imageUrl + "');background-size:100% 100%;background-repeat:no-repeat;" : "");
+
+    function addText(text, x, y, size, color, weight) {
+      if (!text) return;
+      const el = document.createElement("div");
+      el.style.cssText = "position:absolute;left:" + (x / 1600 * 100) + "%;top:" + (y / 1132 * 100) + "%;" +
+        "transform:translate(-50%,-50%);font-size:" + (size || 32) + "px;color:" + (color || "#1a1a1a") + ";" +
+        "font-weight:" + (weight || "normal") + ";font-family:" + (sty.fontFamily || "Georgia") + ";white-space:nowrap;";
+      el.textContent = text;
+      inner.appendChild(el);
+    }
+
+    addText(cert.studentName, pos.nameX || 800, pos.nameY || 455, sty.nameFontSize || 52, sty.nameFontColor || "#1a1a1a", "700");
+    addText(cert.courseName, pos.courseX || 800, pos.courseY || 620, sty.courseFontSize || 36, sty.courseFontColor || "#1a1a1a", "normal");
+    addText(cert.issueDate, pos.dateX || 470, pos.dateY || 885, sty.dateFontSize || 28, sty.dateFontColor || "#1a1a1a", "normal");
+    if (cert.expiryDate) addText(cert.expiryDate, pos.expiryDateX || 470, pos.expiryDateY || 920, sty.expiryDateFontSize || 24, sty.expiryDateFontColor || "#1a1a1a", "normal");
+    addText(cert.certificateId, pos.certIdX || 1180, pos.certIdY || 885, sty.certIdFontSize || 28, sty.certIdFontColor || "#1a1a1a", "normal");
+    if (cert.verifyUrl) addText(cert.verifyUrl, pos.verifyUrlX || 1180, pos.verifyUrlY || 920, sty.verifyUrlFontSize || 20, sty.verifyUrlFontColor || "#1a1a1a", "normal");
+
+    // Signature
+    if (tpl.signatureImage) {
+      const sig = document.createElement("img");
+      sig.src = tpl.signatureImage;
+      const scale = pos.signatureScale || 1.0;
+      sig.style.cssText = "position:absolute;left:" + ((pos.signatureX || 800) / 1600 * 100) + "%;top:" + ((pos.signatureY || 980) / 1132 * 100) + "%;" +
+        "transform:translate(-50%,-50%) scale(" + scale + ");max-width:300px;max-height:120px;";
+      inner.appendChild(sig);
+    }
+
+    // Custom texts
+    if (Array.isArray(tpl.customTexts)) {
+      tpl.customTexts.forEach(function(ct) {
+        if (!ct.text) return;
+        addText(ct.text, ct.x, ct.y, ct.fontSize || 24, ct.fontColor || "#1a1a1a", "normal");
+      });
+    }
+
+    wrap.appendChild(inner);
+    document.body.appendChild(wrap);
+
+    // Wait for images to load
+    await new Promise(function(r) { setTimeout(r, 400); });
+
+    // Filename (safe)
+    const safeName = (cert.studentName || "Certificate").replace(/[^a-zA-Z0-9]/g, "-");
+    const safeCourse = (cert.courseName || "Course").replace(/[^a-zA-Z0-9]/g, "-");
+    const baseName = safeCourse + "-" + safeName + "-" + certificateId;
+
+    // Try PDF generation
+    if (window.html2canvas && window.jspdf) {
+      const canvas = await window.html2canvas(inner, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const { jsPDF } = window.jspdf;
+      // A4 landscape: 297 x 210 mm
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      pdf.addImage(imgData, "JPEG", 0, 0, 297, 210);
+      pdf.save(baseName + ".pdf");
+      if (typeof showToast === "function") showToast("📄 PDF downloaded!", "success");
+    } else {
+      // Fallback: PNG
+      const canvas = await window.html2canvas(inner, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
+      const link = document.createElement("a");
+      link.download = baseName + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      if (typeof showToast === "function") showToast("📄 Downloaded as image (PDF unavailable)", "info");
+    }
+
+    wrap.remove();
+  } catch (err) {
+    console.error("[PDF] Error:", err);
+    if (typeof showToast === "function") showToast("Failed to generate PDF: " + err.message, "error");
+  }
+};
+
+
 
 // ==================== HANDLE CERTIFICATE FILE UPLOAD FROM GALLERY ====================
 async function handleCertFileSelect(event) {
