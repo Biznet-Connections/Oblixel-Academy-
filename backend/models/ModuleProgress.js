@@ -9,6 +9,7 @@ const moduleProgressSchema = new mongoose.Schema({
   completed: { type: Boolean, default: false },
   quizScore: { type: Number, default: null },
   bestScore: { type: Number, default: null },
+  servedQuestionIds: { type: [String], default: [] },
   completedAt: Date,
 
   // Attempts

@@ -511,31 +511,57 @@ router.get('/:id/modules/:moduleId/quiz', authenticate, async (req, res) => {
     const enrollment = await Enrollment.findOne({ userId: req.user._id, courseId: id.toLowerCase() });
     if (!enrollment) return res.status(403).json({ error: 'Not enrolled in this course' });
 
-    // Load questions from ExamQuestion
+    // __quizShuffle20 — Load all module questions, serve 20 random (no repeat per user)
     const ExamQuestion = require('../models/ExamQuestion');
-    const questions = await ExamQuestion.find({
+    const allQuestions = await ExamQuestion.find({
       courseId: id.toLowerCase(),
       moduleId: parseInt(moduleId),
       isActive: { $ne: false }
     }).lean();
 
-    if (!questions.length) {
+    if (!allQuestions.length) {
       return res.json({ questions: [], message: 'No quiz questions available for this module yet.' });
     }
 
-    // Shuffle questions
-    const shuffled = questions.sort(() => Math.random() - 0.5);
-
-    // Strip correct answer (unless practice mode)
     const isPractice = req.query.practice === '1';
-    const payload = shuffled.map(q => ({
-      id: q._id,
-      text: q.text,
-      options: q.options,
-      correct: isPractice ? q.correct : undefined
-    }));
+    const mid = parseInt(moduleId);
+    const TARGET = 20;
 
-    res.json({ questions: payload, total: payload.length });
+    // Practice mode — shuffle and return up to 20 (or all if fewer)
+    if (isPractice) {
+      const shuffledP = allQuestions.sort(() => Math.random() - 0.5).slice(0, Math.min(TARGET, allQuestions.length));
+      const payloadP = shuffledP.map(q => ({ id: q._id, text: q.text, options: q.options, correct: q.correct }));
+      return res.json({ questions: payloadP, total: payloadP.length, mode: 'practice' });
+    }
+
+    // Real exam — no-repeat per user via servedQuestionIds
+    const userProgress = await ModuleProgress.findOne({ userId: req.user._id, courseId: id.toLowerCase(), moduleId: mid });
+    let served = (userProgress && userProgress.servedQuestionIds) ? userProgress.servedQuestionIds.map(String) : [];
+
+    // Filter to unseen
+    let unseen = allQuestions.filter(q => !served.includes(String(q._id)));
+
+    // If pool exhausted (unseen < TARGET), reset served and start a fresh cycle
+    if (unseen.length < TARGET) {
+      served = [];
+      unseen = allQuestions.slice();
+      // But still try to avoid the last batch if possible by removing them from served set
+    }
+
+    // Shuffle unseen and take 20
+    unseen.sort(() => Math.random() - 0.5);
+    const picked = unseen.slice(0, Math.min(TARGET, unseen.length));
+
+    // Save served IDs to ModuleProgress (up to the last N=20, reset if wrapping)
+    const newServed = served.concat(picked.map(q => String(q._id))).slice(-60); // keep last 60
+    await ModuleProgress.findOneAndUpdate(
+      { userId: req.user._id, courseId: id.toLowerCase(), moduleId: mid },
+      { $set: { servedQuestionIds: newServed, lastAccessed: new Date() } },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+
+    const payload = picked.map(q => ({ id: q._id, text: q.text, options: q.options }));
+    res.json({ questions: payload, total: payload.length, mode: 'exam', poolSize: allQuestions.length });
   } catch (error) {
     console.error('[QUIZ] Get quiz error:', error.message);
     res.status(500).json({ error: 'Failed to load quiz' });
@@ -591,6 +617,12 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
         { $inc: { practiceAttempts: 1 }, $set: { lastAccessed: new Date() } },
         { upsert: true, setDefaultsOnInsert: true }
       );
+      // Practice mode: always show breakdown
+      const breakdown = questions.map(q => ({
+        id: String(q._id),
+        correct: q.correct,
+        yourAnswer: answers[String(q._id)] !== undefined ? answers[String(q._id)] : null
+      }));
       return res.json({
         success: true,
         practice: true,
@@ -598,7 +630,8 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
         correct,
         total: questions.length,
         passed,
-        passScore
+        passScore,
+        breakdown
       });
     }
 

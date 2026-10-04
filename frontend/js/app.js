@@ -1830,6 +1830,30 @@ window.startModuleQuiz = async function (courseId, moduleId, isPractice) {
 };
 
 // ============= NEW QUIZ OVERLAY (uses new endpoints) =============
+
+// __renderQuizResult — score-only on fail, no correct answers revealed
+window.__renderQuizResult = function(score, passed, correct, total) {
+  var pct = Math.round(score);
+  var color = passed ? 'text-emerald-400' : 'text-red-400';
+  var html = '<div class="text-center p-6">';
+  html += '<div class="text-6xl mb-4">' + (passed ? '🎉' : '📖') + '</div>';
+  html += '<h2 class="text-3xl font-black mb-2">' + (passed ? 'Passed!' : 'Not Yet') + '</h2>';
+  html += '<p class="text-4xl font-black ' + color + ' mb-2">' + pct + '%%</p>';
+  html += '<p class="text-sm text-gray-400 mb-6">' + correct + ' of ' + total + ' correct</p>';
+  if (!passed) {
+    html += '<p class="text-sm text-gray-300 mb-6">Review the module content and try again. Correct answers are hidden on failed attempts — this helps you actually learn the material.</p>';
+  }
+  html += '<button onclick="window.__closeQuizResult()" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold">Close</button>';
+  html += '</div>';
+  return html;
+};
+
+window.__closeQuizResult = function() {
+  var el = document.getElementById('quizOverlay');
+  if (el) el.remove();
+  if (typeof window.stopAntiCheat === 'function') window.stopAntiCheat();
+};
+
 function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
   const overlay = document.createElement('div');
   overlay.id = 'quizOverlay';
@@ -1902,6 +1926,15 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
         body: JSON.stringify({ answers, isPractice })
       });
       const data = await res.json();
+    // __renderQuizResultHook — score-only on fail
+    if (!isPractice && !data.passed) {
+      var _ovEl = document.getElementById("quizOverlay");
+      if (_ovEl) {
+        _ovEl.innerHTML = window.__renderQuizResult(data.score || 0, false, data.correct || 0, data.total || 0);
+      }
+      return;
+    }
+
       if (!res.ok) throw new Error(data.error || 'Submit failed');
 
       const passed = data.passed;
