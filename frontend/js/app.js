@@ -1899,6 +1899,7 @@ function renderQuizUI(overlay, questions, courseId, moduleId, isPractice) {
 
 // ==================== LESSON DRAWER ====================
 window.openLessonDrawer = function () {
+  if (typeof showAIWidget === 'function') showAIWidget();
   const backdrop = document.getElementById('lessonDrawerBackdrop');
   const drawer = document.getElementById('lessonDrawer');
   if (!drawer) { console.warn('[Drawer] Not found'); return; }
@@ -1923,6 +1924,7 @@ window.openLessonDrawer = function () {
 };
 
 window.closeLessonDrawer = function () {
+  if (typeof hideAIWidget === 'function') hideAIWidget();
   const backdrop = document.getElementById('lessonDrawerBackdrop');
   const drawer = document.getElementById('lessonDrawer');
   if (!drawer) return;
@@ -2464,15 +2466,6 @@ async function renderModulePage(courseId, moduleId) {
           ${prog.quizScore !== null ? `<p class="text-xs text-gray-400 mt-3 text-center">Best score: <span class="text-emerald-400 font-bold">${prog.bestScore || prog.quizScore}%</span></p>` : ''}
         </div>
 
-        <!-- Notes -->
-        <div class="glass rounded-3xl p-6 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-black"><i class="fa-solid fa-note-sticky text-emerald-400 mr-2"></i>Your Notes</h2>
-            <span id="notesSaveStatus" class="text-xs text-gray-500"></span>
-          </div>
-          <textarea id="moduleNotes" class="w-full min-h-[200px] bg-black/30 border border-white/10 rounded-2xl p-4 text-sm font-mono resize-y focus:border-cyan-400 focus:outline-none" placeholder="Write your notes here... (auto-saves as you type)">${prog.notes ? escapeHtml(prog.notes) : ''}</textarea>
-        </div>
-
         <!-- Final Exam CTA (only on last module) -->
         ${m.moduleId === 15 ? `
         <div class="glass rounded-3xl p-6 mb-6 border-2 ${prog.completed ? 'border-purple-500/50 glow' : 'border-dashed border-white/20'}">
@@ -2523,30 +2516,6 @@ async function renderModulePage(courseId, moduleId) {
       window.addEventListener('scroll', updateProgress);
       window.__cleanupModuleProgress = () => window.removeEventListener('scroll', updateProgress);
     }
-
-    // ---- Notes auto-save ----
-    const notesEl = document.getElementById('moduleNotes');
-    const statusEl = document.getElementById('notesSaveStatus');
-    let notesSaveTimer = null;
-    notesEl.addEventListener('input', () => {
-      statusEl.textContent = 'Typing...';
-      if (notesSaveTimer) clearTimeout(notesSaveTimer);
-      notesSaveTimer = setTimeout(async () => {
-        statusEl.textContent = 'Saving...';
-        try {
-          await apiRequest(`/courses/${courseId}/modules/${moduleId}/notes`, {
-            method: 'POST',
-            body: JSON.stringify({ notes: notesEl.value })
-          });
-          statusEl.textContent = '✓ Saved';
-          statusEl.className = 'text-xs text-emerald-400';
-          setTimeout(() => { statusEl.textContent = ''; }, 2000);
-        } catch (e) {
-          statusEl.textContent = '⚠ Save failed';
-          statusEl.className = 'text-xs text-red-400';
-        }
-      }, 2000);
-    });
 
     // Mount Prof. Kelvin AI teacher
     if (typeof window.kelvinMount === 'function') {
