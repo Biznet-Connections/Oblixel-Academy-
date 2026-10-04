@@ -1733,37 +1733,91 @@ console.log('🚀 Loading Part 2 (Course Dashboard, Exams, Checkout, Admin Panel
 // ==================== COURSE DASHBOARD ====================
 // ==================== NEW COURSE DASHBOARD (v2) ====================
 ﻿// __renderExamCard - dashboard exam card for each state
+// __prettyExamCard — dashboard exam state cards (prettier + clickable)
 function __renderExamCard(courseId, progress) {
   var es = progress.examStatus || {};
   var state = es.state || 'not_attempted';
   var fee = es.retakeFeeAmount || 15;
   var cdH = es.cooldownHoursLeft || 0;
   var cdM = es.cooldownMinutesLeft || 0;
-  // __cooldownTextFixed
   var totalMins = cdH * 60 + cdM;
   var days = Math.floor(totalMins / 1440);
   var hrs = Math.floor((totalMins % 1440) / 60);
   var mins = totalMins % 60;
   var cdText = days > 0 ? (days + 'd ' + hrs + 'h') : (hrs > 0 ? (hrs + 'h ' + mins + 'm') : (mins + 'm'));
+  var retakeTimeIso = es.cooldownUntil || '';
 
   if (state === 'passed') {
-    return `<div class="glass rounded-2xl p-5 border-2 border-emerald-500/60"><div class="flex items-center gap-4"><div class="text-4xl">🎓</div><div class="flex-1"><h3 class="font-black text-lg">Certified!</h3><p class="text-xs text-gray-400 mt-1">You passed with ${es.score || 0}%. Certificate is available.</p></div><button onclick="renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm">View Certificate</button></div></div>`;
+    return '<div class="glass rounded-2xl p-5 border-2 border-emerald-500/60 relative overflow-hidden">' +
+      '<div class="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>' +
+      '<div class="flex items-center gap-4 relative">' +
+        '<div class="text-4xl">🎓</div>' +
+        '<div class="flex-1">' +
+          '<h3 class="font-black text-lg text-emerald-400">Certified!</h3>' +
+          '<p class="text-xs text-gray-300 mt-1">You passed with <strong class="text-white">' + (es.score || 0) + '%</strong>. Your certificate is ready.</p>' +
+        '</div>' +
+        '<button onclick="renderPage(\'certificates\')" class="bg-gradient-to-r from-emerald-500 to-green-500 px-4 py-2 rounded-xl font-bold text-sm">View Certificate</button>' +
+      '</div>' +
+    '</div>';
   }
 
   if (state === 'failed_cooldown') {
-    return `<div class="glass rounded-2xl p-5 border-2 border-amber-500/50"><div class="flex items-center gap-4"><div class="text-4xl">⏳</div><div class="flex-1"><h3 class="font-black text-lg text-amber-400">Cooldown Active</h3><p class="text-xs text-gray-300 mt-1">You scored ${es.score || 0}%. Retake available in <strong class="text-white">${cdText}</strong></p></div></div></div>`;
+    return '<div class="glass rounded-2xl p-5 border-2 border-amber-500/50 relative overflow-hidden cursor-pointer hover:border-amber-400 transition" onclick="__showCooldownFullScreen(\'' + courseId + '\', ' + (es.score || 0) + ', \'' + retakeTimeIso + '\', ' + fee + ')">' +
+      '<div class="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none"></div>' +
+      '<div class="flex items-center gap-4 relative">' +
+        '<div class="text-4xl">⏳</div>' +
+        '<div class="flex-1">' +
+          '<h3 class="font-black text-lg text-amber-400">Cooldown Active</h3>' +
+          '<p class="text-xs text-gray-300 mt-1">You scored <strong class="text-white">' + (es.score || 0) + '%</strong>. Retake available in <strong class="text-amber-300">' + cdText + '</strong></p>' +
+          '<p class="text-xs text-gray-500 mt-1">Tap to see details</p>' +
+        '</div>' +
+        '<div class="text-amber-400 text-2xl">→</div>' +
+      '</div>' +
+    '</div>';
   }
 
   if (state === 'failed_fee_required') {
-    return `<div class="glass rounded-2xl p-5 border-2 border-red-500/50"><div class="flex items-center gap-4"><div class="text-4xl">💰</div><div class="flex-1"><h3 class="font-black text-lg text-red-400">Retake Fee Required</h3><p class="text-xs text-gray-300 mt-1">You scored ${es.score || 0}%. Pay the retake fee to unlock another attempt.</p><p class="text-xs text-cyan-400 mt-1"><strong>${fee} USD</strong></p></div><button onclick="__showRetakePaymentScreen('${courseId}', ${fee})" class="bg-gradient-to-r from-red-600 to-orange-500 px-4 py-2 rounded-xl font-bold text-sm">Pay ${fee}</button></div></div>`;
+    return '<div class="glass rounded-2xl p-5 border-2 border-red-500/50 relative overflow-hidden">' +
+      '<div class="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent pointer-events-none"></div>' +
+      '<div class="flex items-center gap-4 relative">' +
+        '<div class="text-4xl">💰</div>' +
+        '<div class="flex-1">' +
+          '<h3 class="font-black text-lg text-red-400">Retake Fee Required</h3>' +
+          '<p class="text-xs text-gray-300 mt-1">You scored <strong class="text-white">' + (es.score || 0) + '%</strong>. Pay the retake fee to unlock your next attempt.</p>' +
+          '<p class="text-xs text-cyan-400 mt-1"><strong>¥' + fee + ' USD</strong> · 30% of course fee</p>' +
+        '</div>' +
+        '<button onclick="__showRetakePaymentScreen(\'' + courseId + '\', ' + fee + ')" class="bg-gradient-to-r from-red-600 to-orange-500 px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap">Pay &#36;' + fee + '</button>' +
+      '</div>' +
+    '</div>';
   }
 
   if (state === 'failed_paid_ready') {
-    return `<div class="glass rounded-2xl p-5 border-2 border-cyan-500/60 glow"><div class="flex items-center gap-4"><div class="text-4xl">✅</div><div class="flex-1"><h3 class="font-black text-lg text-cyan-400">Ready to Retake</h3><p class="text-xs text-gray-300 mt-1">Payment received. You have 1 attempt ready.</p></div><button onclick="window.startExamCheck('${courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm glow">Start Final Exam</button></div></div>`;
+    return '<div class="glass rounded-2xl p-5 border-2 border-cyan-500/60 glow relative overflow-hidden">' +
+      '<div class="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent pointer-events-none"></div>' +
+      '<div class="flex items-center gap-4 relative">' +
+        '<div class="text-4xl">✅</div>' +
+        '<div class="flex-1">' +
+          '<h3 class="font-black text-lg text-cyan-400">Ready to Retake</h3>' +
+          '<p class="text-xs text-gray-300 mt-1">Payment received. You have <strong class="text-white">1 attempt</strong> ready.</p>' +
+        '</div>' +
+        '<button onclick="window.startExamCheck(\'' + courseId + '\')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm glow whitespace-nowrap">Start Final Exam</button>' +
+      '</div>' +
+    '</div>';
   }
 
   if (progress.examUnlocked) {
-    return `<div class="glass rounded-2xl p-5 border-2 border-purple-500/60 glow"><div class="flex items-center gap-4"><div class="text-4xl">🎓</div><div class="flex-1"><h3 class="font-black text-lg">Final Exam Ready!</h3><p class="text-xs text-gray-300 mt-1">All 15 modules complete.</p><p class="text-xs text-gray-400 mt-1">40 questions · 30 minutes · 70% to pass</p></div><button onclick="window.startExamCheck('${courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm glow">Start Final Exam</button></div></div>`;
+    return '<div class="glass rounded-2xl p-5 border-2 border-purple-500/60 glow relative overflow-hidden">' +
+      '<div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-cyan-500/5 pointer-events-none"></div>' +
+      '<div class="flex items-center gap-4 relative">' +
+        '<div class="text-4xl">🎓</div>' +
+        '<div class="flex-1">' +
+          '<h3 class="font-black text-lg">Final Exam Ready!</h3>' +
+          '<p class="text-xs text-gray-300 mt-1">All modules complete. Take the exam to earn your certificate.</p>' +
+          '<p class="text-xs text-gray-400 mt-1">📋 40 questions · ⏱ 30 minutes · 🎯 70% to pass</p>' +
+        '</div>' +
+        '<button onclick="window.startExamCheck(\'' + courseId + '\')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm glow whitespace-nowrap">Start Final Exam</button>' +
+      '</div>' +
+    '</div>';
   }
 
   return '';
