@@ -117,8 +117,8 @@ router.post('/create-checkout', authenticate, async (req, res) => {
 
   try {
     const course = await Course.findOne({ courseId: courseId.toLowerCase(), isActive: true });
-    if (!course) return res.status(404).json({ error: 'Course not found' });const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
-    if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+    if (!course) return res.status(404).json({ error: 'Course not found' });
+    const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
 
         // __retakeCheckout
     if (type === 'retake') {
@@ -141,6 +141,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
       });
       return res.json({ sessionId, amount: retakeFee, courseId: courseId.toLowerCase(), type: 'retake', retake: true });
     }
+    if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
 
 
 
