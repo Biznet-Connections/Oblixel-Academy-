@@ -511,6 +511,22 @@ router.get('/:id/modules/:moduleId/quiz', authenticate, async (req, res) => {
     const enrollment = await Enrollment.findOne({ userId: req.user._id, courseId: id.toLowerCase() });
     if (!enrollment) return res.status(403).json({ error: 'Not enrolled in this course' });
 
+    // __moduleCooldownCheck — block if user is in cooldown for this module
+    const _mid = parseInt(moduleId);
+    const _isPractice = req.query.practice === '1';
+    if (!_isPractice) {
+      const _mp = await ModuleProgress.findOne({ userId: req.user._id, courseId: id.toLowerCase(), moduleId: _mid });
+      if (_mp && _mp.moduleCooldownUntil && _mp.moduleCooldownUntil > new Date()) {
+        const _remaining = Math.ceil((_mp.moduleCooldownUntil - new Date()) / 1000);
+        return res.json({
+          cooldown: true,
+          retryAt: _mp.moduleCooldownUntil,
+          secondsRemaining: _remaining,
+          message: 'You failed 2 attempts. Retake available in ' + Math.ceil(_remaining / 60) + ' minutes.'
+        });
+      }
+    }
+
     // __quizShuffle20 — Load all module questions, serve 20 random (no repeat per user)
     const ExamQuestion = require('../models/ExamQuestion');
     let allQuestions = await ExamQuestion.find({
@@ -673,6 +689,21 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
     let xpToAward = 0;
     if (passed && !wasCompleted) xpToAward = xpReward;
 
+    // Cooldown logic: only count fail streaks
+    let newModuleExamAttempts = existing?.moduleExamAttempts || 0;
+    let newCooldownUntil = existing?.moduleCooldownUntil || null;
+    if (passed) {
+      newModuleExamAttempts = 0;
+      newCooldownUntil = null;
+    } else {
+      newModuleExamAttempts++;
+      if (newModuleExamAttempts >= 2) {
+        newCooldownUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+        newModuleExamAttempts = 0; // reset counter after penalty applied
+        console.log('[QUIZ] Cooldown set for user ' + req.user._id + ' module ' + mid + ' until ' + newCooldownUntil);
+      }
+    }
+
     await ModuleProgress.findOneAndUpdate(
       { userId: req.user._id, courseId: id.toLowerCase(), moduleId: mid },
       {
@@ -682,7 +713,9 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
           bestScore,
           completedAt: passed && !wasCompleted ? new Date() : (existing?.completedAt || null),
           lastAccessed: new Date(),
-          xpEarned: previouslyEarnedXP + xpToAward
+          xpEarned: previouslyEarnedXP + xpToAward,
+          moduleExamAttempts: newModuleExamAttempts,
+          moduleCooldownUntil: newCooldownUntil
         },
         $inc: { attempts: 1 }
       },

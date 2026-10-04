@@ -15,6 +15,8 @@ const moduleProgressSchema = new mongoose.Schema({
   // Attempts
   attempts: { type: Number, default: 0 },
   practiceAttempts: { type: Number, default: 0 },
+  moduleExamAttempts: { type: Number, default: 0 }, // fails since last pass
+  moduleCooldownUntil: { type: Date, default: null },
 
   // Study tracking
   timeSpent: { type: Number, default: 0 },

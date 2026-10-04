@@ -1817,6 +1817,20 @@ window.startModuleQuiz = async function (courseId, moduleId, isPractice) {
     const data = await res.json();
 
     if (!res.ok) throw new Error(data.error || 'Failed to load quiz');
+    if (data.cooldown) {
+      // __cooldownUI — module exam cooldown active
+      const mins = Math.ceil((data.secondsRemaining || 0) / 60);
+      const retryAt = data.retryAt ? new Date(data.retryAt) : null;
+      const timeStr = retryAt ? retryAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      const overlay = document.createElement("div");
+      overlay.id = "quizOverlay";
+      overlay.className = "fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4";
+      overlay.innerHTML = '<div class="glass rounded-3xl p-8 max-w-md text-center"><div class="text-6xl mb-4">⏳</div><h2 class="text-2xl font-black mb-2">Cooldown Active</h2><p class="text-gray-300 mb-4">' + (data.message || "Please wait before retrying this module exam.") + '</p><p class="text-sm text-gray-400 mb-6">Retake available at <strong class="text-white">' + timeStr + '</strong> (~' + mins + ' min from now)</p><p class="text-xs text-gray-500 mb-6">Use the time to re-read the module content. Failing twice quickly triggers a 2-hour cooldown.</p><button onclick="document.getElementById(\'quizOverlay\').remove()" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold">Got it</button></div>';
+      document.body.appendChild(overlay);
+      if (typeof window.stopAntiCheat === "function") window.stopAntiCheat();
+      return;
+    }
+
     if (!data.questions || !data.questions.length) {
       showToast('No quiz questions available for this module yet.', 'info');
       return;
@@ -1902,14 +1916,14 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
           <button onclick="window.__quizPrev()" class="glass px-6 py-3 rounded-2xl font-bold text-sm" ${currentIdx === 0 ? 'disabled style="opacity:.4"' : ''}>← Prev</button>
           ${currentIdx === questions.length - 1
             ? `<button onclick="window.__quizSubmit()" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Submit ✓</button>`
-            : `<button onclick="window.__quizNext()" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow">Next →</button>`}
+            : `<button onclick="window.__quizNext()" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-2xl font-bold text-sm glow" ${selected === null || selected === undefined ? 'disabled style="opacity:.4;cursor:not-allowed"': ''}>Next →</button>`}
         </div>
       </div>
     `;
   }
 
   window.__quizPick = (qid, i) => { answers[qid] = i; render(); };
-  window.__quizNext = () => { if (currentIdx < questions.length - 1) { currentIdx++; render(); } };
+  window.__quizNext = () => { var q = questions[currentIdx]; var sel = q ? answers[q.id] : undefined; if (sel === null || sel === undefined) { if (typeof showToast === "function") showToast("Please select an answer before continuing", "warning"); return; } if (currentIdx < questions.length - 1) { currentIdx++; render(); } };
   window.__quizPrev = () => { if (currentIdx > 0) { currentIdx--; render(); } };
 
   window.__quizSubmit = async () => {
