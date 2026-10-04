@@ -1823,6 +1823,86 @@ function __renderExamCard(courseId, progress) {
   return '';
 }
 
+// __showCooldownFullScreen — pretty full-screen cooldown with live ticking countdown
+window.__showCooldownFullScreen = function(courseId, score, retakeTimeIso, fee) {
+  var root = document.getElementById('app-root');
+  if (!root) return;
+  var course = (typeof coursesData !== 'undefined' && coursesData.find(function(c) { return c.id === courseId || c.courseId === courseId; })) || {};
+  var courseName = course.name || String(courseId).toUpperCase();
+  var target = retakeTimeIso ? new Date(retakeTimeIso).getTime() : 0;
+  if (!target || target <= Date.now()) {
+    if (typeof window.startExamCheck === 'function') window.startExamCheck(courseId);
+    return;
+  }
+
+  var initialTotalMs = Math.max(1, target - Date.now());
+  var timerHandle = null;
+
+  function pad(n) { return n < 10 ? ('0' + n) : String(n); }
+
+  function render() {
+    var msLeft = Math.max(0, target - Date.now());
+    var t = Math.max(0, Math.floor(msLeft / 1000));
+    var d = Math.floor(t / 86400);
+    var h = Math.floor((t % 86400) / 3600);
+    var m = Math.floor((t % 3600) / 60);
+    var s = t % 60;
+    var hoursText = d > 0 ? (d + 'd ' + h + 'h ' + m + 'm') : (h > 0 ? (h + 'h ' + m + 'm') : (m + 'm'));
+    var bigText = d > 0
+      ? (d + 'd ' + pad(h) + ':' + pad(m) + ':' + pad(s))
+      : (pad(h) + ':' + pad(m) + ':' + pad(s));
+    var pct = Math.min(100, Math.max(0, 100 - (msLeft / initialTotalMs) * 100));
+
+    root.innerHTML = '<div class="max-w-2xl mx-auto fade-in py-8">' +
+      '<div class="glass rounded-3xl p-8 text-center relative overflow-hidden">' +
+        '<div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-purple-500/10 pointer-events-none"></div>' +
+        '<div class="relative">' +
+          '<div class="text-6xl mb-4 animate-pulse">⏳</div>' +
+          '<h2 class="text-3xl font-black mb-2">Cooldown Active</h2>' +
+          '<p class="text-sm text-gray-300 mb-6">' + courseName + '</p>' +
+          '<div class="mb-6">' +
+            '<p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Your Score</p>' +
+            '<p class="text-5xl font-black text-red-400">' + score + '%</p>' +
+          '</div>' +
+          '<div class="glass rounded-2xl p-6 mb-4 border-2 border-amber-500/40">' +
+            '<p class="text-sm text-amber-400 font-bold mb-3">⏱ Time Remaining</p>' +
+            '<p class="text-5xl font-black text-white mb-3 font-mono">' + bigText + '</p>' +
+            '<div class="w-full bg-gray-700/50 h-2 rounded-full overflow-hidden mb-3">' +
+              '<div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-1000" style="width: ' + pct + '%"></div>' +
+            '</div>' +
+            '<p class="text-xs text-gray-400">Roughly ' + hoursText + ' remaining</p>' +
+          '</div>' +
+          '<div class="glass rounded-2xl p-5 mb-6 text-left border-2 border-red-500/40">' +
+            '<p class="text-sm font-black text-red-400 mb-2">💰 Retake Fee (after cooldown)</p>' +
+            '<p class="text-3xl font-black text-cyan-400">&#36;' + fee + ' USD</p>' +
+            '<p class="text-xs text-gray-500 mt-1">30% of course fee · Required to unlock next attempt</p>' +
+          '</div>' +
+          '<div class="glass rounded-2xl p-4 mb-6">' +
+            '<p class="text-xs text-gray-400">💡 Use this time to review the module content and prepare for your retake.</p>' +
+          '</div>' +
+          '<button onclick="if (window.__cooldownStop) window.__cooldownStop(); window.renderPage(\'dashboard\')" class="w-full glass px-6 py-3 rounded-xl font-bold">← Back to Dashboard</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.__cooldownStop = function() {
+    if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  };
+
+  render();
+  timerHandle = setInterval(function() {
+    if (Date.now() >= target) {
+      clearInterval(timerHandle);
+      timerHandle = null;
+      if (typeof showToast === 'function') showToast('⏳ Cooldown expired! You can retake now.', 'success');
+      if (typeof window.startExamCheck === 'function') window.startExamCheck(courseId);
+      return;
+    }
+    render();
+  }, 1000);
+};
+
 async function renderCourseDashboard(courseId) {
   hideAIWidget();
   if (!currentUser) { renderPage('login'); return; }
