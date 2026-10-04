@@ -1836,7 +1836,7 @@ window.startModuleQuiz = async function (courseId, moduleId, isPractice) {
       return;
     }
 
-    renderModuleQuizOverlay(courseId, moduleId, data.questions, isPractice);
+    renderModuleQuizOverlay(courseId, moduleId, data.questions, isPractice, 600); // 10 min
   } catch (e) {
     console.error('[Quiz] Error:', e);
     showToast('Failed to start quiz: ' + e.message, 'error');
@@ -1868,9 +1868,44 @@ window.__closeQuizResult = function() {
   if (typeof window.stopAntiCheat === 'function') window.stopAntiCheat();
 };
 
-function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
+function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice, timeLimitSeconds) {
   const overlay = document.createElement('div');
   overlay.id = 'quizOverlay';
+  // ---- 10-minute module exam timer ----
+  var _examSecondsLeft = (typeof timeLimitSeconds === "number" && timeLimitSeconds > 0) ? timeLimitSeconds : 600;
+  var _examTimerId = null;
+  var _isPracticeMode = isPractice === true;
+  function _startExamTimer() {
+    if (_isPracticeMode) return;
+    if (_examTimerId) clearInterval(_examTimerId);
+    _examTimerId = setInterval(function() {
+      _examSecondsLeft--;
+      var el = document.getElementById("moduleExamTimer");
+      if (el) {
+        var m = Math.floor(_examSecondsLeft / 60);
+        var s = _examSecondsLeft % 60;
+        el.innerText = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+        if (_examSecondsLeft <= 60) el.style.color = "#f87171";
+      }
+      if (_examSecondsLeft <= 0) {
+        clearInterval(_examTimerId);
+        _examTimerId = null;
+        if (typeof window.__quizSubmit === "function") {
+          if (typeof showToast === "function") showToast("⏰ Time is up! Submitting your answers...", "warning");
+          setTimeout(function() { window.__quizSubmit(); }, 800);
+        }
+      }
+    }, 1000);
+  }
+  function _stopExamTimer() { if (_examTimerId) { clearInterval(_examTimerId); _examTimerId = null; } }
+  // Cleanup on close
+  var _origQuizClose = window.__quizClose;
+  window.__quizClose = function() { _stopExamTimer(); if (typeof _origQuizClose === "function") return _origQuizClose.apply(this, arguments); };
+  // Cleanup on submit
+  var _origQuizSubmit = window.__quizSubmit;
+  window.__quizSubmit = function() { _stopExamTimer(); if (typeof _origQuizSubmit === "function") return _origQuizSubmit.apply(this, arguments); };
+  _startExamTimer();
+
   overlay.className = 'fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto';
   document.body.appendChild(overlay);
 
@@ -1890,6 +1925,7 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice) {
           </span>
           <div class="flex items-center gap-3">
             <span class="text-sm text-gray-400">${currentIdx + 1} / ${questions.length}</span>
+          ${!isPractice ? '<span id="moduleExamTimer" class="text-sm font-mono font-bold text-cyan-400 ml-3">10:00</span>' : ''}
             <button onclick="window.__quizClose(${Object.keys(answers).length}, ${questions.length}, ${isPractice})" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-red-500/30 text-white flex items-center justify-center transition" title="Close quiz">
               <i class="fa-solid fa-xmark"></i>
             </button>
@@ -2751,7 +2787,7 @@ async function renderModulePage(courseId, moduleId) {
               📝 Practice Quiz<br><span class="text-xs text-gray-400 font-normal">Unlimited tries · no score</span>
             </button>
             <button onclick="window.startModuleQuiz('${courseId}', ${moduleId}, false)" class="py-3 bg-gradient-to-r from-purple-600 to-cyan-500 rounded-2xl font-bold text-sm glow">
-              🎯 Module Exam<br><span class="text-xs opacity-80 font-normal">${prog.attempts ? `${prog.attempts} attempt(s) so far` : 'Pass with 70% to unlock the next module · 70% to pass'}</span>
+              📋 Module Exam<br><span class="text-xs opacity-80 font-normal">${prog.moduleCooldownUntil && new Date(prog.moduleCooldownUntil) > new Date() ? '🔒 Cooldown — retake in ' + Math.ceil((new Date(prog.moduleCooldownUntil) - new Date()) / 60000) + ' min' : (prog.moduleExamAttempts >= 1 ? '⚠️ ' + prog.moduleExamAttempts + ' fail' + (prog.moduleExamAttempts > 1 ? 's' : '') + ' — one more = 2h cooldown' : 'Pass with 70% to unlock · 10 min exam')}</span>
             </button>
           </div>
           ${prog.quizScore !== null ? `<p class="text-xs text-gray-400 mt-3 text-center">Best score: <span class="text-emerald-400 font-bold">${prog.bestScore || prog.quizScore}%</span></p>` : ''}
