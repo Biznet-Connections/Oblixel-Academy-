@@ -433,21 +433,15 @@ window.__showRetakePaymentScreen = function(courseId, feeAmount) {
     btn.textContent = "Starting payment...";
     try {
       var token = localStorage.getItem("auth_token");
-      var res = await fetch("/api/payments/create-checkout", {
+      // __retakeFixApplied — single call to /initiate
+      var res = await fetch("/api/payments/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
         body: JSON.stringify({ courseId: courseId, type: "retake" })
       });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start payment");
-      var lw = await fetch("/api/payments/linkwa/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ sessionId: data.sessionId })
-      });
-      var lwData = await lw.json();
-      if (!lw.ok) throw new Error(lwData.error || "Failed to init");
-      var redirect = lwData.redirectUrl || lwData.shortUrl || lwData.paymentUrl;
+      var redirect = data.checkoutUrl || data.shortUrl || data.redirectUrl || data.paymentUrl;
       if (redirect) { window.location.href = redirect; return; }
       if (typeof showToast === "function") showToast("Payment initiated. Check your phone.", "info");
       modal.remove();
