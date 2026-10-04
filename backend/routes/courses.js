@@ -212,8 +212,26 @@ router.get('/:id/modules/:moduleId/progress', authenticate, async (req, res) => 
       moduleId: parseInt(moduleId)
     }).lean();
 
+    // __moduleLock__ — check if previous module is completed
+    const mid = parseInt(moduleId);
+    let locked = false;
+    let lockedReason = null;
+    if (mid > 1) {
+      const prev = await ModuleProgress.findOne({
+        userId,
+        courseId: id.toLowerCase(),
+        moduleId: mid - 1
+      }).lean();
+      if (!prev || !prev.completed) {
+        locked = true;
+        lockedReason = 'Complete Module ' + (mid - 1) + ' first';
+      }
+    }
+
     res.json({
       module: courseModule,
+      locked,
+      lockedReason,
       progress: progress || {
         completed: false,
         quizScore: null,
