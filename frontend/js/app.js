@@ -708,6 +708,48 @@ function __brandSvg__(name) {
   return '';
 }
 
+// ==================== MODULE HEADER BACKGROUNDS ====================
+var __moduleHeaderBg = {
+  aip:      'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1600&q=75&fit=crop',
+  ncp:      'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1600&q=75&fit=crop',
+  ccp:      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=75&fit=crop',
+  clp:      'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1600&q=75&fit=crop',
+  oca:      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1600&q=75&fit=crop',
+  'ocp-core': 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=75&fit=crop',
+  wdp:      'https://images.unsplash.com/photo-1547658719-da2b51169166?w=1600&q=75&fit=crop',
+  pmp:      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1600&q=75&fit=crop',
+  csp:      'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=1600&q=75&fit=crop'
+};
+
+function __getModuleHeaderBg(courseId) {
+  if (!courseId) return '';
+  return __moduleHeaderBg[String(courseId).toLowerCase()] || '';
+}
+window.__getModuleHeaderBg = __getModuleHeaderBg;
+
+// Inject CSS for module header background
+(function() {
+  if (document.getElementById('module-head-bg-css')) return;
+  var s = document.createElement('style');
+  s.id = 'module-head-bg-css';
+  s.textContent =
+    '.module-header-bg { position: relative; overflow: hidden; }' +
+    '.module-header-bg .module-bg-img {' +
+      'position: absolute; inset: 0;' +
+      'background-size: cover; background-position: center;' +
+      'opacity: 0.18; z-index: 0; pointer-events: none;' +
+    '}' +
+    '.module-header-bg .module-bg-overlay {' +
+      'position: absolute; inset: 0;' +
+      'background: linear-gradient(135deg, rgba(26,11,61,0.55) 0%, rgba(10,46,61,0.45) 100%);' +
+      'z-index: 1; pointer-events: none;' +
+    '}' +
+    '.module-header-bg > *:not(.module-bg-img):not(.module-bg-overlay) {' +
+      'position: relative; z-index: 2;' +
+    '}';
+  document.head.appendChild(s);
+})();
+
 // ==================== HERO SLIDESHOW ====================
 
 // Auto-tag course cards with background class
@@ -2436,7 +2478,9 @@ async function renderModulePage(courseId, moduleId) {
       const doneIds = progressData.progress.modules.filter(p => p.completed).map(p => p.moduleId);
       const missing = prereqs.filter(p => !doneIds.includes(p));
       if (missing.length > 0) {
-        root.innerHTML = `<div class="glass rounded-3xl p-10 text-center max-w-lg mx-auto mt-10">
+        root.innerHTML = `<div class="glass rounded-3xl p-10 text-center max-w-lg mx-auto mt-10 module-header-bg">
+          <div class="module-bg-img" style="background-image:url('${__getModuleHeaderBg(courseId)}')"></div>
+          <div class="module-bg-overlay"></div>
           <i class="fa-solid fa-lock text-4xl text-amber-400 mb-4"></i>
           <h2 class="text-xl font-black mb-2">Module Locked</h2>
           <p class="text-gray-400 text-sm mb-6">Complete prerequisite modules: <strong>${missing.map(x => 'M' + x).join(', ')}</strong></p>
