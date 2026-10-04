@@ -250,6 +250,45 @@ router.post('/initiate', authenticate, async (req, res) => {
     if (!course) return res.status(404).json({ error: 'Course not found' });
 
     const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
+
+    // __initRetakeBranch — handle retake payment before already-enrolled rejection
+    if (type === 'retake') {
+      if (!existing) return res.status(400).json({ error: 'Must be enrolled to pay retake' });
+      if (!existing.retakeFeeRequired) return res.status(400).json({ error: 'No retake fee required' });
+      const base = course.pathPrice || course.examPrice || 0;
+      const retakeFee = Math.max(15, Math.round(base * 0.30));
+      const retakeSessionId = `OMX-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const retakeAppUrl = process.env.APP_URL || 'http://localhost:5001';
+      const retakeReturnUrl = retakeAppUrl + '/payment-complete?reference=' + retakeSessionId;
+      console.log('[INITIATE-RETAKE] Amount:', retakeFee, 'Course:', course.courseId);
+      const retakeLink = await linkwa.createPaymentLink({
+        amount: retakeFee,
+        name: course.name + ' — Retake Fee',
+        description: 'Retake fee for ' + course.name,
+        returnUrl: retakeReturnUrl,
+        phone: phone || req.user.phone,
+        email: req.user.email,
+        imageUrl: retakeAppUrl + '/favicon.svg'
+      });
+      if (!retakeLink.success) return res.status(400).json({ error: retakeLink.message || 'Linkwa failed' });
+      await Payment.create({
+        sessionId: retakeSessionId,
+        userId,
+        courseId: courseId.toLowerCase(),
+        type: 'retake',
+        originalAmount: retakeFee,
+        discountAmount: 0,
+        amount: retakeFee,
+        status: 'pending',
+        paymentMethod: 'linkwa',
+        linkwaCheckoutUrl: retakeLink.checkoutUrl,
+        linkwaExternalLinkId: retakeLink.externalPaymentLinkId,
+        linkwaShortUrl: retakeLink.shortUrl || null,
+        billingInfo: { firstName: req.user.name || 'Student', lastName: '', email: req.user.email, phone: phone || req.user.phone || '', country: 'Zimbabwe' }
+      });
+      return res.json({ success: true, sessionId: retakeSessionId, shortUrl: retakeLink.shortUrl, checkoutUrl: retakeLink.checkoutUrl, amount: retakeFee, type: 'retake' });
+    }
+
     if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
 
     const amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
