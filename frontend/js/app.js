@@ -709,6 +709,9 @@ function __brandSvg__(name) {
 }
 
 // ==================== HERO SLIDESHOW ====================
+// Kick off hero preload as soon as the script loads
+try { setTimeout(function() { if (typeof window.__preloadHeroImages === 'function') window.__preloadHeroImages(); }, 0); } catch (_) {}
+
 const __heroPhotos__ = [
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=80&fit=crop',
@@ -725,6 +728,28 @@ const __heroPhotos__ = [
   'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80&fit=crop'
 ];
+
+const __preloadHeroImages = function() {
+  try {
+    var loaded = 0;
+    __heroPhotos__.forEach(function(url, i) {
+      var img = new Image();
+      img.onload = function() {
+        loaded++;
+        if (i === 0) {
+          // First image loaded — immediately make it visible if not already
+          var first = document.querySelector('.hero-slide');
+          if (first && !first.classList.contains('active')) first.classList.add('active');
+        }
+      };
+      img.onerror = function() { console.warn('[HERO] Failed to preload', url); };
+      img.src = url;
+    });
+    console.log('[HERO] Preloading ' + __heroPhotos__.length + ' images');
+  } catch (e) { console.warn('[HERO] Preload error', e); }
+};
+
+window.__preloadHeroImages = __preloadHeroImages;
 
 let __heroInterval__ = null;
 
@@ -830,6 +855,7 @@ function renderLandingPage() {
   document.getElementById('seeAllCoursesBtn')?.addEventListener('click', () => renderPage('courses'));
   document.getElementById('guestSignupBtn')?.addEventListener('click', (e) => { e.preventDefault(); renderPage('register'); });
   showAIWidget();
+  if (typeof __preloadHeroImages === 'function') __preloadHeroImages();
   if (typeof __startHeroSlideshow__ === 'function') __startHeroSlideshow__();
 }
 
