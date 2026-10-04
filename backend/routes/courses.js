@@ -161,6 +161,40 @@ router.get('/:id/progress', authenticate, async (req, res) => {
     const completedCount = completedModuleIds.length;
     const examUnlocked = completedCount >= totalModules && totalModules > 0;
 
+    // __examStatus — rich status for the dashboard
+    const enrollment = await Enrollment.findOne({ userId, courseId: id.toLowerCase() });
+    let examStatus = { state: 'not_attempted', score: null, bestScore: null };
+    if (enrollment) {
+      const base = course.pathPrice || course.examPrice || 0;
+      const retakeFeeAmount = Math.max(15, Math.round(base * 0.30));
+      const nowMs = Date.now();
+      const cdMs = enrollment.cooldownUntil ? new Date(enrollment.cooldownUntil).getTime() : 0;
+      const inCooldown = cdMs > nowMs;
+      const cooldownHoursLeft = inCooldown ? Math.ceil((cdMs - nowMs) / (1000 * 60 * 60)) : 0;
+      const cooldownMinutesLeft = inCooldown ? Math.ceil((cdMs - nowMs) / (1000 * 60)) : 0;
+      const baseStatus = {
+        score: enrollment.score ?? null,
+        bestScore: enrollment.bestScore ?? null,
+        examAttempts: enrollment.examAttempts || 0,
+        cooldownUntil: enrollment.cooldownUntil || null,
+        cooldownHoursLeft,
+        cooldownMinutesLeft,
+        retakeFeeRequired: !!enrollment.retakeFeeRequired,
+        retakeFeePaid: !!enrollment.retakeFeePaid,
+        retakeFeeAmount,
+        totalRetakeFeesPaid: enrollment.totalRetakeFeesPaid || 0
+      };
+      let state = 'not_attempted';
+      if (enrollment.status === 'certified' || enrollment.status === 'passed_waiting') state = 'passed';
+      else if (enrollment.status === 'failed') {
+        if (inCooldown) state = 'failed_cooldown';
+        else if (enrollment.retakeFeePaid) state = 'failed_paid_ready';
+        else if (enrollment.retakeFeeRequired) state = 'failed_fee_required';
+        else state = 'failed_cooldown';
+      }
+      examStatus = Object.assign({ state }, baseStatus);
+    }
+
     // Next module
     let nextModuleId = null;
     let nextModuleName = null;
@@ -176,6 +210,7 @@ router.get('/:id/progress', authenticate, async (req, res) => {
         completedCount,
         totalModules,
         modules: modulesStatus,
+        examStatus,  // __examStatusInResponse
         examUnlocked,
         nextModuleId,
         nextModuleName: nextModuleName || (examUnlocked ? 'Final Exam Ready!' : 'Continue learning'),
