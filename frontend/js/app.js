@@ -1836,7 +1836,7 @@ window.startModuleQuiz = async function (courseId, moduleId, isPractice) {
       return;
     }
 
-    renderModuleQuizOverlay(courseId, moduleId, data.questions, isPractice, 600); // 10 min
+    renderModuleQuizOverlay(courseId, moduleId, data.questions, isPractice, 300); // 5 min
   } catch (e) {
     console.error('[Quiz] Error:', e);
     showToast('Failed to start quiz: ' + e.message, 'error');
@@ -1869,10 +1869,53 @@ window.__closeQuizResult = function() {
 };
 
 function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice, timeLimitSeconds) {
-  const overlay = document.createElement('div');
+  // ---- Bomb timer sound (Web Audio API) ----
+  var _audioCtx = null;
+  function _getAudioCtx() {
+    if (!_audioCtx) {
+      try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+    }
+    return _audioCtx;
+  }
+  function _playTick(intensity) {
+    // intensity: 1 = normal, 2 = urgent, 3 = critical
+    var ctx = _getAudioCtx();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = intensity === 3 ? 1200 : (intensity === 2 ? 900 : 700);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
+  function _playBombBoom() {
+    var ctx = _getAudioCtx();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    // Low-frequency boom
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.7);
+  }
+
+const overlay = document.createElement('div');
   overlay.id = 'quizOverlay';
   // ---- 10-minute module exam timer ----
-  var _examSecondsLeft = (typeof timeLimitSeconds === "number" && timeLimitSeconds > 0) ? timeLimitSeconds : 600;
+  var _examSecondsLeft = (typeof timeLimitSeconds === "number" && timeLimitSeconds > 0) ? timeLimitSeconds : 300;
   var _examTimerId = null;
   var _isPracticeMode = isPractice === true;
   function _startExamTimer() {
@@ -1880,6 +1923,11 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice, time
     if (_examTimerId) clearInterval(_examTimerId);
     _examTimerId = setInterval(function() {
       _examSecondsLeft--;
+      // Sound: tick every second during last 60s, boom on last 10s
+      if (_examSecondsLeft <= 60 && _examSecondsLeft > 0) {
+        var _intensity = _examSecondsLeft <= 10 ? 3 : (_examSecondsLeft <= 30 ? 2 : 1);
+        _playTick(_intensity);
+      }
       var el = document.getElementById("moduleExamTimer");
       if (el) {
         var m = Math.floor(_examSecondsLeft / 60);
@@ -1888,6 +1936,7 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice, time
         if (_examSecondsLeft <= 60) el.style.color = "#f87171";
       }
       if (_examSecondsLeft <= 0) {
+        _playBombBoom();
         clearInterval(_examTimerId);
         _examTimerId = null;
         if (typeof window.__quizSubmit === "function") {
@@ -1925,7 +1974,7 @@ function renderModuleQuizOverlay(courseId, moduleId, questions, isPractice, time
           </span>
           <div class="flex items-center gap-3">
             <span class="text-sm text-gray-400">${currentIdx + 1} / ${questions.length}</span>
-          ${!isPractice ? '<span id="moduleExamTimer" class="text-sm font-mono font-bold text-cyan-400 ml-3">10:00</span>' : ''}
+          ${!isPractice ? '<span id="moduleExamTimer" class="text-sm font-mono font-bold text-cyan-400 ml-3">05:00</span>' : ''}
             <button onclick="window.__quizClose(${Object.keys(answers).length}, ${questions.length}, ${isPractice})" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-red-500/30 text-white flex items-center justify-center transition" title="Close quiz">
               <i class="fa-solid fa-xmark"></i>
             </button>
@@ -2787,7 +2836,7 @@ async function renderModulePage(courseId, moduleId) {
               📝 Practice Quiz<br><span class="text-xs text-gray-400 font-normal">Unlimited tries · no score</span>
             </button>
             <button onclick="window.startModuleQuiz('${courseId}', ${moduleId}, false)" class="py-3 bg-gradient-to-r from-purple-600 to-cyan-500 rounded-2xl font-bold text-sm glow">
-              📋 Module Exam<br><span class="text-xs opacity-80 font-normal">${prog.moduleCooldownUntil && new Date(prog.moduleCooldownUntil) > new Date() ? '🔒 Cooldown — retake in ' + Math.ceil((new Date(prog.moduleCooldownUntil) - new Date()) / 60000) + ' min' : (prog.moduleExamAttempts >= 1 ? '⚠️ ' + prog.moduleExamAttempts + ' fail' + (prog.moduleExamAttempts > 1 ? 's' : '') + ' — one more = 2h cooldown' : 'Pass with 70% to unlock · 10 min exam')}</span>
+              📋 Module Exam<br><span class="text-xs opacity-80 font-normal">${prog.moduleCooldownUntil && new Date(prog.moduleCooldownUntil) > new Date() ? '🔒 Cooldown — retake in ' + Math.ceil((new Date(prog.moduleCooldownUntil) - new Date()) / 60000) + ' min' : (prog.moduleExamAttempts >= 1 ? '⚠️ ' + prog.moduleExamAttempts + ' fail' + (prog.moduleExamAttempts > 1 ? 's' : '') + ' — one more = 2h cooldown' : 'Pass with 70% to unlock · 5 min exam')}</span>
             </button>
           </div>
           ${prog.quizScore !== null ? `<p class="text-xs text-gray-400 mt-3 text-center">Best score: <span class="text-emerald-400 font-bold">${prog.bestScore || prog.quizScore}%</span></p>` : ''}
