@@ -418,10 +418,10 @@ window.__showRetakePaymentScreen = function(courseId, feeAmount) {
       '<p class="text-sm text-gray-400 mb-6">You failed your previous attempt. Pay the retake fee to unlock another attempt.</p>' +
       '<div class="glass rounded-2xl p-4 mb-6">' +
         '<p class="text-xs text-gray-400">Retake Fee</p>' +
-        '<p class="text-3xl font-black text-cyan-400">" + D + "' + feeAmount + ' USD</p>' +
-        '<p class="text-xs text-gray-500 mt-1">30% of course fee · minimum " + D + "15</p>' +
+        '<p class="text-3xl font-black text-cyan-400">$' + feeAmount + ' USD</p>' +
+        '<p class="text-xs text-gray-500 mt-1">30% of course fee · minimum $15</p>' +
       '</div>' +
-      '<button id="retakePayBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mb-3">Pay " + D + "' + feeAmount + ' to Retake</button>' +
+      '<button id="retakePayBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mb-3">Pay $' + feeAmount + ' to Retake</button>' +
       '<button id="retakeCancelBtn" class="w-full glass py-3 rounded-xl font-bold text-sm">Cancel</button>' +
       '<p class="text-xs text-gray-500 mt-4">Secured by Linkwa · EcoCash · InnBucks · Visa/MC</p>' +
     '</div>';
@@ -453,7 +453,7 @@ window.__showRetakePaymentScreen = function(courseId, feeAmount) {
       modal.remove();
     } catch (err) {
       btn.disabled = false;
-      btn.textContent = "Pay " + D + " to Retake";
+      btn.textContent = "Pay $ to Retake";
       if (typeof showToast === "function") showToast(err.message || "Failed", "error");
     }
   };
