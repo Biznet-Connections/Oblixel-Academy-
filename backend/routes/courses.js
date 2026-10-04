@@ -513,11 +513,26 @@ router.get('/:id/modules/:moduleId/quiz', authenticate, async (req, res) => {
 
     // __quizShuffle20 — Load all module questions, serve 20 random (no repeat per user)
     const ExamQuestion = require('../models/ExamQuestion');
-    const allQuestions = await ExamQuestion.find({
+    let allQuestions = await ExamQuestion.find({
       courseId: id.toLowerCase(),
       moduleId: parseInt(moduleId),
       isActive: { $ne: false }
     }).lean();
+
+    // If module pool is smaller than target, pull filler from final pool (moduleId 0)
+    if (allQuestions.length < 25) {
+      const needed = 25 - allQuestions.length;
+      const filler = await ExamQuestion.find({
+        courseId: id.toLowerCase(),
+        moduleId: 0,
+        isActive: { $ne: false }
+      }).lean();
+      const existingIds = allQuestions.map(function(q) { return String(q._id); });
+      const usable = filler.filter(function(q) { return existingIds.indexOf(String(q._id)) === -1; });
+      usable.sort(function() { return Math.random() - 0.5; });
+      allQuestions = allQuestions.concat(usable.slice(0, needed));
+      console.log("[QUIZ] module " + moduleId + " pool: " + (allQuestions.length - usable.slice(0, needed).length) + " + " + usable.slice(0, needed).length + " filler = " + allQuestions.length);
+    }
 
     if (!allQuestions.length) {
       return res.json({ questions: [], message: 'No quiz questions available for this module yet.' });
@@ -525,7 +540,7 @@ router.get('/:id/modules/:moduleId/quiz', authenticate, async (req, res) => {
 
     const isPractice = req.query.practice === '1';
     const mid = parseInt(moduleId);
-    const TARGET = 20;
+    const TARGET = 25;
 
     // Practice mode — shuffle and return up to 20 (or all if fewer)
     if (isPractice) {
