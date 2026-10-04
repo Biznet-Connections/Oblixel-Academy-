@@ -299,6 +299,108 @@ async function completeModule(courseId, moduleId, quizScore) {
 
 // ==================== EXAM API CALLS ====================
 // __showRetakePaymentScreen — pay-to-retake UI
+// __showExamStartScreen — unified handler for exam start responses
+window.__showExamStartScreen = function(courseId, response) {
+  var root = document.getElementById('app-root');
+  if (!root) return;
+  var course = (typeof coursesData !== 'undefined' && coursesData.find(function(c) { return c.id === courseId || c.courseId === courseId; })) || {};
+  var coursePrice = course.pathPrice || course.examPrice || 50;
+  var fee = response.feeAmount || Math.max(15, Math.round(coursePrice * 0.30));
+
+  // STATE 1: COOLDOWN
+  if (response.error === 'Cooldown') {
+    var retakeMs = response.retakeTime ? new Date(response.retakeTime).getTime() : 0;
+    var msLeft = Math.max(0, retakeMs - Date.now());
+    var totalMins = Math.floor(msLeft / 60000);
+    var days = Math.floor(totalMins / 1440);
+    var hrs = Math.floor((totalMins % 1440) / 60);
+    var mins = totalMins % 60;
+    var cdText = days > 0 ? (days + 'd ' + hrs + 'h ' + mins + 'm') : (hrs > 0 ? (hrs + 'h ' + mins + 'm') : (mins + 'm'));
+    var dt = new Date(retakeMs);
+    var dateStr = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+    var timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    root.innerHTML = '<div class="max-w-2xl mx-auto fade-in py-8">' +
+      '<div class="glass rounded-3xl p-8 text-center">' +
+        '<div class="text-6xl mb-4">⏳</div>' +
+        '<h2 class="text-3xl font-black mb-2">Cooldown Active</h2>' +
+        '<p class="text-5xl font-black text-red-400 mb-2">' + (response.score || 0) + '%</p>' +
+        '<p class="text-sm text-gray-400 mb-6">You failed your previous attempt. Retake is locked for now.</p>' +
+        '<div class="glass rounded-2xl p-5 mb-4 text-left border-2 border-amber-500/40">' +
+          '<p class="text-lg font-black text-amber-400 mb-2">⏳ Retake Available In</p>' +
+          '<p class="text-3xl font-black text-white mb-1">' + cdText + ' remaining</p>' +
+          '<p class="text-sm text-gray-300">' + dateStr + ' at ' + timeStr + '</p>' +
+        '</div>' +
+        '<div class="glass rounded-2xl p-5 mb-6 text-left border-2 border-red-500/40">' +
+          '<p class="text-lg font-black text-red-400 mb-2">💰 Retake Fee</p>' +
+          '<p class="text-3xl font-black text-cyan-400">&#36;' + fee + ' USD</p>' +
+          '<p class="text-xs text-gray-500 mt-1">Required after cooldown expires (30% of course fee)</p>' +
+        '</div>' +
+        '<button onclick="window.renderPage(\'dashboard\')" class="w-full glass px-6 py-3 rounded-xl font-bold">← Back to Dashboard</button>' +
+      '</div>' +
+    '</div>';
+    if (typeof showToast === 'function') showToast('⏳ Cooldown active. Retake in ' + cdText, 'warning');
+    return;
+  }
+
+  // STATE 2: RETAKE FEE REQUIRED
+  if (response.retakeFeeRequired) {
+    if (typeof window.__showRetakePaymentScreen === 'function') {
+      window.__showRetakePaymentScreen(courseId, fee);
+    }
+    return;
+  }
+
+  // STATE 4: ALREADY PASSED
+  if (response.error === 'Already passed') {
+    var certCode = response.certificateCode || '';
+    var score = response.score || 0;
+    root.innerHTML = '<div class="max-w-2xl mx-auto fade-in py-8">' +
+      '<div class="glass rounded-3xl p-8 text-center">' +
+        '<div class="text-6xl mb-4">🎉</div>' +
+        '<h2 class="text-3xl font-black mb-2">Already Certified!</h2>' +
+        '<p class="text-5xl font-black gradient-text mb-2">' + score + '%</p>' +
+        '<p class="text-sm text-gray-300 mb-6">You already passed this exam. Your certificate is ready.</p>' +
+        (certCode ? ('<div class="glass rounded-2xl p-5 mb-6 text-left"><p class="text-xs text-gray-400 mb-1">🔑 Certificate ID</p><p class="text-lg font-mono font-bold text-cyan-400">' + certCode + '</p></div>') : '') +
+        '<button onclick="window.renderPage(\'certificates\')" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-xl font-bold mb-3">📄 View Certificate</button>' +
+        '<button onclick="window.renderPage(\'dashboard\')" class="w-full glass px-6 py-3 rounded-xl font-bold">← Back to Dashboard</button>' +
+      '</div>' +
+    '</div>';
+    return;
+  }
+
+  // STATE 5: NOT ALL MODULES DONE
+  if (response.error === 'Not all modules done') {
+    var comp = response.completed || 0;
+    var tot = response.total || 15;
+    var pct = tot > 0 ? Math.round((comp / tot) * 100) : 0;
+    var nextMod = comp + 1;
+    root.innerHTML = '<div class="max-w-2xl mx-auto fade-in py-8">' +
+      '<div class="glass rounded-3xl p-8 text-center">' +
+        '<div class="text-6xl mb-4">🔒</div>' +
+        '<h2 class="text-3xl font-black mb-2">Final Exam Locked</h2>' +
+        '<p class="text-sm text-gray-300 mb-6">Complete all ' + tot + ' modules first.</p>' +
+        '<p class="text-sm text-gray-400 mb-4">You have completed ' + comp + ' of ' + tot + ' modules.</p>' +
+        '<div class="glass rounded-2xl p-5 mb-6 text-left">' +
+          '<p class="text-xs text-gray-400 mb-2">Progress</p>' +
+          '<div class="w-full bg-gray-700 h-3 rounded-full"><div class="bg-gradient-to-r from-purple-600 to-cyan-500 h-3 rounded-full" style="width: ' + pct + '%"></div></div>' +
+          '<p class="text-xs text-gray-400 mt-2">' + pct + '%</p>' +
+        '</div>' +
+        (nextMod <= tot ? ('<button onclick="window.renderModulePage(\'' + courseId + '\', ' + nextMod + ')" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-3 rounded-xl font-bold mb-3">Resume Module ' + nextMod + ' →</button>') : '') +
+        '<button onclick="window.renderPage(\'dashboard\')" class="w-full glass px-6 py-3 rounded-xl font-bold">← Back to Dashboard</button>' +
+      '</div>' +
+    '</div>';
+    return;
+  }
+
+  // FALLBACK
+  if (response.message) {
+    if (typeof showToast === 'function') showToast(response.message, 'warning');
+  } else {
+    if (typeof showToast === 'function') showToast('Could not start exam', 'error');
+  }
+};
+
+
 window.__showRetakePaymentScreen = function(courseId, feeAmount) {
   var course = (typeof coursesData !== "undefined" && coursesData.find(function(c) { return c.courseId === courseId || c.id === courseId; })) || {};
   var courseName = course.name || String(courseId).toUpperCase();
@@ -358,28 +460,18 @@ window.__showRetakePaymentScreen = function(courseId, feeAmount) {
 };
 
 async function startExam(courseId) {
+  // __wireExamStart — route ALL responses through __showExamStartScreen
   try {
     const examData = await apiRequest('/exams/start', { method: 'POST', body: JSON.stringify({ courseId }) });
     if (examData && examData.sessionId && Array.isArray(examData.questions)) {
       renderExamPage(courseId, examData);
-    } else if (examData && examData.message) {
-      showToast(examData.message, 'warning');
     } else {
-      showToast('Could not start exam. Please try again.', 'error');
+      window.__showExamStartScreen(courseId, examData || {});
     }
     return examData;
   } catch (err) {
-    // __retakeUI
-    if (err && err.retakeFeeRequired) {
-      window.__showRetakePaymentScreen(courseId, err.feeAmount);
-      return;
-    }
-    if (err && err.message) {
-      showToast(err.message, 'error');
-    } else {
-      showToast('Failed to start exam', 'error');
-    }
-    throw err;
+    window.__showExamStartScreen(courseId, err || {});
+    return;
   }
 }
 
@@ -1602,7 +1694,7 @@ async function renderProfile() {
             </div>
           </div>
           <div class="stats-grid mt-6">
-            <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-cyan-400">${user.xp || 0}</h3><p class="text-xs">XP</p></div>
+            
             <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-purple-400">${user.level || 1}</h3><p class="text-xs">Level</p></div>
             <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-yellow-400">$${formatMoney(user.totalSpent || 0)}</h3><p class="text-xs">Spent</p></div>
             <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-green-400">${user.streak || 0}</h3><p class="text-xs">Day Streak</p></div>
@@ -1647,7 +1739,12 @@ function __renderExamCard(courseId, progress) {
   var fee = es.retakeFeeAmount || 15;
   var cdH = es.cooldownHoursLeft || 0;
   var cdM = es.cooldownMinutesLeft || 0;
-  var cdText = cdH >= 24 ? Math.floor(cdH / 24) + 'd ' + (cdH % 24) + 'h' : (cdH > 0 ? cdH + 'h ' + cdM + 'm' : cdM + 'm');
+  // __cooldownTextFixed
+  var totalMins = cdH * 60 + cdM;
+  var days = Math.floor(totalMins / 1440);
+  var hrs = Math.floor((totalMins % 1440) / 60);
+  var mins = totalMins % 60;
+  var cdText = days > 0 ? (days + 'd ' + hrs + 'h') : (hrs > 0 ? (hrs + 'h ' + mins + 'm') : (mins + 'm'));
 
   if (state === 'passed') {
     return `<div class="glass rounded-2xl p-5 border-2 border-emerald-500/60"><div class="flex items-center gap-4"><div class="text-4xl">🎓</div><div class="flex-1"><h3 class="font-black text-lg">Certified!</h3><p class="text-xs text-gray-400 mt-1">You passed with ${es.score || 0}%. Certificate is available.</p></div><button onclick="renderPage('certificates')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-4 py-2 rounded-xl font-bold text-sm">View Certificate</button></div></div>`;
@@ -1797,7 +1894,7 @@ async function renderCourseDashboard(courseId) {
               <div class="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <span class="text-gray-300"><i class="fa-solid fa-layer-group text-cyan-400 mr-1"></i>${totalModules} modules</span>
                 <span class="text-gray-300"><i class="fa-regular fa-clock text-purple-400 mr-1"></i>${totalHours}h ${totalMins}m total</span>
-                <span class="text-gray-300"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i>${totalXP} XP earned</span>
+                <span class="text-gray-300"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> XP earned</span>
                 ${progress.totalTimeSpent > 0 ? `<span class="text-gray-300"><i class="fa-solid fa-hourglass-half text-emerald-400 mr-1"></i>${timeHours}h ${timeMins}m studied</span>` : ''}
               </div>
             </div>
@@ -1862,7 +1959,7 @@ async function renderCourseDashboard(courseId) {
               <div class="space-y-3 text-sm">
                 <div class="flex justify-between"><span class="text-gray-400">Modules done</span><span class="font-bold">${completedCount}/${totalModules}</span></div>
                 <div class="flex justify-between"><span class="text-gray-400">Time studied</span><span class="font-bold">${timeHours}h ${timeMins}m</span></div>
-                <div class="flex justify-between"><span class="text-gray-400">XP earned</span><span class="font-bold text-cyan-400">${totalXP}</span></div>
+                
                 <div class="flex justify-between"><span class="text-gray-400">Exam status</span><span class="font-bold ${progress.examUnlocked ? 'text-emerald-400' : 'text-gray-500'}">${progress.examUnlocked ? 'Unlocked' : 'Locked'}</span></div>
               </div>
             </div>
@@ -2160,7 +2257,7 @@ const overlay = document.createElement('div');
           <p class="text-lg font-bold mb-2 ${passed ? 'text-emerald-400' : 'text-amber-400'}">
             ${passed ? '🎉 ' + (isPractice ? 'Great practice!' : 'Module Passed!') : '😅 Need ' + data.passScore + '% to pass'}
           </p>
-          ${data.xpAwarded ? `<p class="text-sm text-cyan-400 mb-4"><i class="fa-solid fa-bolt mr-1"></i> +${data.xpAwarded} XP earned</p>` : ''}
+          
           <button onclick="document.getElementById('quizOverlay').remove(); window.renderModulePage('${courseId}', ${moduleId});" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold">
             ${passed ? 'Continue →' : 'Back to Module'}
           </button>
