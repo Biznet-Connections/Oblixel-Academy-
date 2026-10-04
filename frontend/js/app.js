@@ -2321,14 +2321,50 @@ async function renderModulePage(courseId, moduleId) {
       }
     }
 
-    // ---- Video embed ----
+    // ---- Video embed (supports multiple videos) ----
     let videoEmbed = '';
-    if (m.videoUrl) {
-      const ytMatch = m.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
-      if (ytMatch) {
-        videoEmbed = `<iframe class="w-full aspect-video rounded-2xl" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen loading="lazy"></iframe>`;
-      } else {
-        videoEmbed = `<a href="${m.videoUrl}" target="_blank" class="block w-full py-8 text-center glass rounded-2xl"><i class="fa-solid fa-play text-3xl text-purple-400 mb-2"></i><br>Watch on external site →</a>`;
+    let videoGridEmbed = '';
+
+    // Build list of videos from m.videos array OR m.videoUrl (legacy)
+    var videoList = [];
+    if (Array.isArray(m.videos) && m.videos.length > 0) {
+      videoList = m.videos.map(function(v, i) {
+        var ytId = v.youtubeId || '';
+        if (!ytId && v.url) {
+          var mm = String(v.url).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
+          ytId = mm ? mm[1] : '';
+        }
+        return { youtubeId: ytId, title: v.title || ('Video ' + (i + 1)), channel: v.channel || '' };
+      }).filter(function(v) { return v.youtubeId; });
+    } else if (m.videoUrl) {
+      var mm2 = String(m.videoUrl).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
+      if (mm2) videoList.push({ youtubeId: mm2[1], title: 'Lesson Video', channel: '' });
+    }
+
+    if (videoList.length > 0) {
+      // Primary video = first one (large embed)
+      var first = videoList[0];
+      videoEmbed = '<iframe class="w-full aspect-video rounded-2xl" src="https://www.youtube.com/embed/' + first.youtubeId + '" frameborder="0" allowfullscreen loading="lazy"></iframe>';
+
+      // Grid of all videos (thumbnails) — clickable
+      if (videoList.length > 1) {
+        var cards = videoList.map(function(v, i) {
+          var active = i === 0 ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/10 hover:border-cyan-400/50';
+          return '<button type="button" onclick="window.__swapModuleVideo(\'' + v.youtubeId + '\', this)" ' +
+            'class="video-swap-card text-left glass rounded-2xl overflow-hidden border-2 ' + active + ' transition">' +
+              '<div style="position:relative;">' +
+                '<img src="https://img.youtube.com/vi/' + v.youtubeId + '/mqdefault.jpg" alt="" style="width:100%;display:block;aspect-ratio:16/9;object-fit:cover;">' +
+                '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">' +
+                  '<i class="fa-solid fa-play" style="color:white;font-size:24px;"></i>' +
+                '</div>' +
+              '</div>' +
+              '<div class="p-3">' +
+                '<p class="text-xs font-bold text-white truncate">' + (v.title || '').replace(/</g, '&lt;') + '</p>' +
+                (v.channel ? '<p class="text-[10px] text-gray-400 mt-0.5">' + v.channel + '</p>' : '') +
+              '</div>' +
+            '</button>';
+        }).join('');
+        videoGridEmbed = '<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">' + cards + '</div>';
       }
     }
 
@@ -2456,8 +2492,14 @@ async function renderModulePage(courseId, moduleId) {
         <!-- Video -->
         ${videoEmbed ? `
         <div class="glass rounded-3xl p-6 mb-6" id="videoSection">
-          <h2 class="text-lg font-black mb-4"><i class="fa-solid fa-play text-cyan-400 mr-2"></i>Watch the Lesson</h2>
-          ${videoEmbed}
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 class="text-lg font-black"><i class="fa-solid fa-play text-cyan-400 mr-2"></i>Watch the Lesson</h2>
+            ${videoList.length > 1 ? '<span class="text-xs text-gray-400">' + videoList.length + ' videos</span>' : ''}
+          </div>
+          <div id="primaryVideoPlayer">
+            ${videoEmbed}
+          </div>
+          ${videoGridEmbed}
         </div>` : ''}
 
 
@@ -2540,6 +2582,23 @@ async function renderModulePage(courseId, moduleId) {
     root.innerHTML = `<div class="glass rounded-3xl p-12 text-center max-w-lg mx-auto mt-10"><p class="text-red-400 mb-4">Failed to load module: ${error.message}</p><button onclick="window.renderCourseDashboard('${courseId}')" class="bg-purple-600 px-6 py-2 rounded-xl">← Back</button></div>`;
   }
 }
+window.__swapModuleVideo = function(youtubeId, btn) {
+  var player = document.getElementById('primaryVideoPlayer');
+  if (player) {
+    player.innerHTML = '<iframe class="w-full aspect-video rounded-2xl" src="https://www.youtube.com/embed/' + youtubeId + '?autoplay=1" frameborder="0" allowfullscreen></iframe>';
+    player.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  // Update active border on cards
+  document.querySelectorAll('.video-swap-card').forEach(function(c) {
+    c.classList.remove('border-cyan-400', 'ring-2', 'ring-cyan-400/40');
+    c.classList.add('border-white/10');
+  });
+  if (btn) {
+    btn.classList.remove('border-white/10');
+    btn.classList.add('border-cyan-400', 'ring-2', 'ring-cyan-400/40');
+  }
+};
+
 window.leaveModule = function (courseId, nextModuleId) {
   if (typeof window.kelvinUnmount === 'function') window.kelvinUnmount();
   if (window.__cleanupModule) { window.__cleanupModule(); window.__cleanupModule = null; }
