@@ -1852,7 +1852,7 @@ window.__renderQuizResult = function(score, passed, correct, total) {
   var html = '<div class="text-center p-6">';
   html += '<div class="text-6xl mb-4">' + (passed ? '🎉' : '📖') + '</div>';
   html += '<h2 class="text-3xl font-black mb-2">' + (passed ? 'Passed!' : 'Not Yet') + '</h2>';
-  html += '<p class="text-4xl font-black ' + color + ' mb-2">' + pct + '%%</p>';
+  html += '<p class="text-4xl font-black ' + color + ' mb-2">' + pct + '%</p>';
   html += '<p class="text-sm text-gray-400 mb-6">' + correct + ' of ' + total + ' correct</p>';
   if (!passed) {
     html += '<p class="text-sm text-gray-300 mb-6">Review the module content and try again. Correct answers are hidden on failed attempts — this helps you actually learn the material.</p>';

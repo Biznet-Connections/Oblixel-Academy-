@@ -631,14 +631,20 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
     }).lean();
     const allPool = moduleQs.concat(finalQs);
     const servedIds = Object.keys(answers).map(String);
-    const questions = allPool.filter(function(q) { return servedIds.indexOf(String(q._id)) !== -1; });
+    // Match by either _id or id field (handles string/ObjectId differences)
+    const byId = {};
+    allPool.forEach(function(q) { byId[String(q._id)] = q; });
+    const questions = servedIds.map(function(sid) { return byId[sid]; }).filter(Boolean);
 
-    if (!questions.length) return res.status(404).json({ error: 'No questions available' });
+    if (!questions.length) {
+      console.log('[QUIZ] No questions matched. Answers keys:', servedIds.slice(0,3), 'Pool size:', allPool.length, 'Sample pool id:', allPool[0] && String(allPool[0]._id));
+      return res.status(400).json({ error: 'Answers do not match any known questions. Please retake the exam.' });
+    }
 
     // Grade
     let correct = 0;
     let attempted = 0;
-    questions.forEach(q => {
+    questions.forEach(function(q) {
       const ans = answers[String(q._id)];
       if (ans !== undefined && ans !== null) {
         attempted++;
@@ -676,7 +682,7 @@ router.post('/:id/modules/:moduleId/quiz/submit', authenticate, async (req, res)
     }
 
     // Real quiz — save + possibly mark complete
-    // (mid already declared above)
+    const mid = parseInt(moduleId);
     const existing = await ModuleProgress.findOne({
       userId: req.user._id, courseId: id.toLowerCase(), moduleId: mid
     });
