@@ -726,7 +726,7 @@ function updateAuthUI() {
   if (currentUser) {
     if (authDiv) authDiv.classList.add('hidden');
     if (userControls) userControls.classList.remove('hidden');
-    if (avatar) { const av = currentUser.avatar; const nm = currentUser.name || ''; const initial = (av && av !== 'U' && av.trim()) ? av : (nm.trim().charAt(0) || 'U').toUpperCase(); avatar.innerText = initial; }
+    if (avatar) avatar.innerText = currentUser.avatar || currentUser.name?.charAt(0) || 'U';
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (mobileLogoutBtn) mobileLogoutBtn.classList.remove('hidden');
     if (aiBtn) aiBtn.classList.add('hidden');
@@ -1679,7 +1679,7 @@ async function renderProfile() {
         <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
         <div class="glass rounded-3xl p-6">
           <div class="flex items-center gap-5 flex-wrap">
-            <div class="w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-3xl font-black">${(user.avatar && user.avatar !== 'U' && user.avatar.trim()) ? user.avatar : (user.name || '').trim().charAt(0).toUpperCase()}</div>
+            <div class="w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-3xl font-black">${user.avatar || user.name.charAt(0)}</div>
             <div>
               <h1 class="text-2xl font-black">${escapeHtml(user.fullName || user.name)}</h1>
               <p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? (user.isMainAdmin ? '👑 Main Admin' : 'Admin') : 'Student'}</p>
