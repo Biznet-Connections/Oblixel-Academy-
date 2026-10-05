@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const voucherSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true, uppercase: true, trim: true },
@@ -7,12 +7,6 @@ const voucherSchema = new mongoose.Schema({
   discountValue: { type: Number, default: 0, min: 0, max: 100 },
   maxUses: { type: Number, default: 1, min: 1 },
   usedCount: { type: Number, default: 0, min: 0 },
-  redemptions: [{
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    courseId: { type: String, default: '' },
-    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
-    usedAt: { type: Date, default: Date.now }
-  }],
   active: { type: Boolean, default: true },
   expiresAt: { type: Date, default: () => new Date(Date.now() + 30*24*60*60*1000) }
 }, { timestamps: true });

@@ -216,10 +216,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
 
     await Voucher.findOneAndUpdate(
       { code: voucherCode.toUpperCase(), $expr: { $lt: ['$usedCount', '$maxUses'] } },
-      { 
-        $inc: { usedCount: 1 },
-        $push: { redemptions: { userId, courseId: courseId.toLowerCase(), usedAt: new Date() } }
-      }
+      { $inc: { usedCount: 1 } }
     );
     const uv = await Voucher.findOne({ code: voucherCode.toUpperCase() });
     if (uv && uv.usedCount >= uv.maxUses) { uv.active = false; await uv.save(); }

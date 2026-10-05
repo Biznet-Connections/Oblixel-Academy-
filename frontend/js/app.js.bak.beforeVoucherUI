@@ -5068,15 +5068,11 @@ function renderAdminCoursesTab() {
 }
 
 function renderAdminVouchersTab() {
-  const isMain = window._adminIsMain;
   let h = '';
   h += '<div class="admin-panel">';
   h += '<div class="admin-toolbar" style="justify-content:space-between;">';
   h += '<div class="admin-panel-title" style="margin:0"><i class="fa-solid fa-ticket"></i> Vouchers (' + _adminState.vouchers.length + ')</div>';
   h += '<div style="display:flex;gap:8px;">';
-  if (isMain) {
-    h += '<button class="admin-btn admin-btn-danger" id="adminResetVouchersBtn"><i class="fa-solid fa-trash"></i> Reset All</button>';
-  }
   h += '<button class="admin-btn admin-btn-ghost" id="adminBatchVoucherBtn"><i class="fa-solid fa-box"></i> Batch</button>';
   h += '<button class="admin-btn" id="adminCreateVoucherBtn"><i class="fa-solid fa-plus"></i> Create</button>';
   h += '</div>';
@@ -5225,8 +5221,6 @@ function wireAdminTabActions() {
   if (createVoucherBtn) createVoucherBtn.addEventListener('click', () => showCreateVoucherModal());
   const batchVoucherBtn = document.getElementById('adminBatchVoucherBtn');
   if (batchVoucherBtn) batchVoucherBtn.addEventListener('click', () => showBatchVoucherModal());
-  const resetVouchersBtn = document.getElementById('adminResetVouchersBtn');
-  if (resetVouchersBtn) resetVouchersBtn.addEventListener('click', showResetVouchersModal);
 
   // Cert sub-tabs
   document.querySelectorAll('[data-cert-sub]').forEach(btn => {
@@ -5385,37 +5379,17 @@ function renderAdminVouchersTableContent() {
   }
 
   let h = '<table class="admin-table-pro"><thead><tr>';
-  h += '<th>Code</th><th>Discount</th><th>Course</th><th>Usage</th><th>Status</th><th>Expires</th><th style="text-align:right">Actions</th>';
+  h += '<th>Code</th><th>Discount</th><th>Course</th><th>Used</th><th>Expires</th><th style="text-align:right">Actions</th>';
   h += '</tr></thead><tbody>';
 
   for (const v of vouchers) {
     const disc = v.discountType === 'free' ? '🎁 FREE' : (v.discountValue + (v.discountType === 'percentage' ? '%' : ' USD'));
     const courseName = v.courseId === 'all' ? 'All Courses' : ((_adminState.courses.find(c => c.id === v.courseId) || {}).name || v.courseId);
-    const used = v.usedCount || 0;
-    const max = v.maxUses || 1;
-
-    // Usage display — bar + count
-    const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
-    const barColor = used >= max ? 'var(--a-danger)' : used > 0 ? 'var(--a-warning)' : 'var(--a-success)';
-
-    // Status badge
-    let statusBadge = '';
-    if (!v.active) statusBadge = '<span class="admin-pill warn">Inactive</span>';
-    else if (used >= max) statusBadge = '<span class="admin-pill warn">USED</span>';
-    else if (used > 0) statusBadge = '<span class="admin-pill warn">Partial</span>';
-    else statusBadge = '<span class="admin-pill ok">Available</span>';
-
-    // Expired?
-    if (v.expiresAt && new Date(v.expiresAt) < new Date()) {
-      statusBadge = '<span class="admin-pill warn">Expired</span>';
-    }
-
     h += '<tr>';
-    h += '<td data-label="Code"><span style="font-family:monospace;color:var(--a-accent-hi);font-weight:600;">' + escapeHtml(v.code) + '</span></td>';
+    h += '<td data-label="Code"><span style="font-family:monospace;color:var(--a-accent-hi)">' + escapeHtml(v.code) + '</span></td>';
     h += '<td data-label="Discount">' + disc + '</td>';
     h += '<td data-label="Course">' + escapeHtml(courseName) + '</td>';
-    h += '<td data-label="Usage"><div style="display:flex;align-items:center;gap:8px;min-width:100px;"><div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + barColor + ';transition:width 0.3s;"></div></div><span style="font-size:12px;color:var(--a-text);font-weight:600;white-space:nowrap;">' + used + '/' + max + '</span></div></td>';
-    h += '<td data-label="Status">' + statusBadge + '</td>';
+    h += '<td data-label="Used">' + (v.usedCount || 0) + '/' + (v.maxUses || 1) + '</td>';
     h += '<td data-label="Expires">' + (v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never') + '</td>';
     h += '<td data-label="Actions" style="text-align:right;"><button class="admin-row-menu-btn" data-voucher-menu="' + v._id + '"><i class="fa-solid fa-ellipsis"></i></button></td>';
     h += '</tr>';
@@ -6000,14 +5974,7 @@ function handleAdminCourseAction(action, course) {
 function openAdminVoucherMenu(btnEl, voucherId) {
   closeAllAdminMenus();
   const rect = btnEl.getBoundingClientRect();
-  const voucher = _adminState.vouchers.find(v => v._id === voucherId);
-  if (!voucher) return;
-  const used = voucher.usedCount || 0;
-
-  let h = '<div class="admin-menu-popover" style="top:' + Math.min(rect.bottom + 4, window.innerHeight - 220) + 'px;left:' + Math.min(rect.right - 240, window.innerWidth - 250) + 'px;">';
-  h += '<button class="admin-menu-item" data-action="copy-code"><i class="fa-solid fa-copy"></i>Copy code</button>';
-  h += '<button class="admin-menu-item" data-action="view-usage"><i class="fa-solid fa-list-check"></i>View usage' + (used > 0 ? ' (' + used + ')' : '') + '</button>';
-  h += '<div class="admin-menu-divider"></div>';
+  let h = '<div class="admin-menu-popover" style="top:' + Math.min(rect.bottom + 4, window.innerHeight - 120) + 'px;left:' + Math.min(rect.right - 240, window.innerWidth - 250) + 'px;">';
   h += '<button class="admin-menu-item danger" data-action="delete-voucher"><i class="fa-solid fa-trash"></i>Delete voucher</button>';
   h += '</div>';
   document.body.insertAdjacentHTML('beforeend', h);
@@ -6015,66 +5982,9 @@ function openAdminVoucherMenu(btnEl, voucherId) {
   menu.addEventListener('click', (e) => {
     const item = e.target.closest('.admin-menu-item');
     if (!item) return;
-    const action = item.getAttribute('data-action');
-    if (action === 'copy-code') {
-      if (window.copyToClipboard) copyToClipboard(voucher.code);
-      else { navigator.clipboard.writeText(voucher.code); showToast('Copied: ' + voucher.code, 'success'); }
-    } else if (action === 'view-usage') {
-      showAdminVoucherUsageModal(voucher);
-    } else if (action === 'delete-voucher') {
-      if (window.deleteVoucherItem) deleteVoucherItem(voucherId);
-    }
+    if (item.getAttribute('data-action') === 'delete-voucher' && window.deleteVoucherItem) deleteVoucherItem(voucherId);
     closeAllAdminMenus();
   });
-}
-
-async function showAdminVoucherUsageModal(voucher) {
-  let h = '<div id="adminVoucherUsageModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:640px;width:100%;max-height:85vh;overflow-y:auto;margin:0;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
-  h += '<div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-ticket"></i> Voucher Usage — <span style="font-family:monospace;color:var(--a-accent-hi);">' + escapeHtml(voucher.code) + '</span></div>';
-  h += '<button class="admin-icon-btn" onclick="document.getElementById(\'adminVoucherUsageModal\').remove()"><i class="fa-solid fa-xmark"></i></button>';
-  h += '</div>';
-  h += '<div id="adminVoucherUsageContent" style="font-size:13px;color:var(--a-meta);">Loading usage...</div>';
-  h += '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-
-  try {
-    const data = await apiRequest('/admin/vouchers/' + encodeURIComponent(voucher.code) + '/usage');
-    const wrap = document.getElementById('adminVoucherUsageContent');
-    const v = data.voucher || {};
-    const usage = data.usage || [];
-
-    let inner = '';
-    // Info cards
-    inner += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">';
-    inner += '<div class="admin-kpi"><div class="admin-kpi-label">Used</div><div class="admin-kpi-value">' + (v.usedCount || 0) + '/' + (v.maxUses || 1) + '</div></div>';
-    inner += '<div class="admin-kpi"><div class="admin-kpi-label">Redeemed</div><div class="admin-kpi-value">' + (data.usageCount || 0) + '</div></div>';
-    inner += '<div class="admin-kpi"><div class="admin-kpi-label">Course</div><div class="admin-kpi-value" style="font-size:14px;">' + escapeHtml(v.courseId === 'all' ? 'All' : (v.courseId || '—')) + '</div></div>';
-    inner += '</div>';
-
-    if (!usage.length) {
-      inner += '<div style="padding:32px;text-align:center;background:var(--a-elevated);border-radius:10px;">';
-      inner += '<i class="fa-solid fa-inbox" style="font-size:32px;color:var(--a-muted);margin-bottom:10px;display:block;"></i>';
-      inner += '<p style="color:var(--a-muted);">No redemptions yet for this voucher.</p>';
-      inner += '<p style="color:var(--a-muted);font-size:11px;margin-top:6px;">Redemptions are tracked from now on. Past usages before this update won\'t appear.</p>';
-      inner += '</div>';
-    } else {
-      inner += '<table class="admin-table-pro"><thead><tr><th>Student</th><th>Course</th><th>Discount</th><th>When</th></tr></thead><tbody>';
-      for (const u of usage) {
-        inner += '<tr>';
-        inner += '<td data-label="Student"><strong style="color:var(--a-text)">' + escapeHtml(u.userName) + '</strong><div style="font-size:11px;color:var(--a-muted);">' + escapeHtml(u.userEmail) + '</div></td>';
-        inner += '<td data-label="Course">' + escapeHtml(u.courseId || '—') + '</td>';
-        inner += '<td data-label="Discount"><strong style="color:var(--a-success)">-$' + formatMoney(u.discountAmount || 0) + '</strong></td>';
-        inner += '<td data-label="When">' + (u.completedAt ? new Date(u.completedAt).toLocaleString() : '—') + '</td>';
-        inner += '</tr>';
-      }
-      inner += '</tbody></table>';
-    }
-    wrap.innerHTML = inner;
-  } catch (e) {
-    document.getElementById('adminVoucherUsageContent').innerHTML = '<p style="color:var(--a-danger)">Failed to load: ' + e.message + '</p>';
-  }
 }
 
 function closeAllAdminMenus() {
@@ -6980,29 +6890,3 @@ document.addEventListener('keydown', (e) => {
     }
   } catch (e) { console.warn('[Retry handler] error', e); }
 })();
-
-// ==================== RESET VOUCHERS MODAL ====================
-function showResetVouchersModal() {
-  let h = '<div id="resetVouchersModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:440px;width:100%;margin:0;border-color:rgba(239,68,68,0.4);">';
-  h += '<div class="admin-panel-title" style="color:var(--a-danger);"><i class="fa-solid fa-triangle-exclamation" style="color:var(--a-danger);"></i> Reset ALL Vouchers?</div>';
-  h += '<p style="font-size:13px;color:var(--a-meta);margin-bottom:14px;">This will permanently delete <strong style="color:var(--a-danger);">all ' + _adminState.vouchers.length + ' vouchers</strong>. This cannot be undone.</p>';
-  h += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Type RESET to confirm</label><input id="resetVouchersInput" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;" placeholder="RESET" autocomplete="off"></div>';
-  h += '<div style="display:flex;gap:8px;justify-content:flex-end;">';
-  h += '<button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'resetVouchersModal\').remove()">Cancel</button>';
-  h += '<button class="admin-btn admin-btn-danger" id="resetVouchersConfirmBtn"><i class="fa-solid fa-trash"></i> Delete All</button>';
-  h += '</div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-
-  document.getElementById('resetVouchersConfirmBtn').addEventListener('click', async () => {
-    const val = document.getElementById('resetVouchersInput').value.trim();
-    if (val !== 'RESET') { showToast('Type RESET exactly', 'error'); return; }
-    try {
-      const r = await apiRequest('/admin/vouchers/reset-all', { method: 'POST', body: JSON.stringify({ confirm: 'RESET' }) });
-      showToast(r.message || 'All vouchers deleted', 'success');
-      document.getElementById('resetVouchersModal').remove();
-      renderAdmin();
-    } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-  });
-}
-window.showResetVouchersModal = showResetVouchersModal;
