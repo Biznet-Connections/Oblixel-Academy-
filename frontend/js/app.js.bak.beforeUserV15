@@ -1341,281 +1341,89 @@ function renderLogin() {
 }
 
 // ==================== DASHBOARD PAGE ====================
-// ==================== DASHBOARD v15 (Sidebar + Next Step) ====================
 async function renderDashboard() {
   if (!currentUser) { renderPage('login'); return; }
-  hideAIWidget();
+  showAIWidget();
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading dashboard...</p></div>';
-
   try {
     const profileData = await getUserProfile();
     const user = profileData.user;
     const stats = profileData.stats;
     const enrollmentsData = profileData.enrollments || [];
     userEnrollmentsCache = enrollmentsData;
-
+    
+    // Sync currentUser with latest profile data for legal name
     if (user.hasProvidedLegalName !== undefined) {
       currentUser.hasProvidedLegalName = user.hasProvidedLegalName;
       currentUser.firstName = user.firstName || '';
       currentUser.lastName = user.lastName || '';
       currentUser.fullName = user.fullName || '';
     }
-
-    let earned = [];
-    try {
-      const certificatesData = await getMyCertificates();
-      earned = certificatesData.earned || [];
-    } catch (e) {}
-
-    const streak = user.streak || 0;
-    const xp = user.xp || 0;
-    const level = user.level || 1;
-    const firstName = (user.name || '').split(' ')[0] || 'there';
-
-    // Current hour greeting
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
-    // ================ NEXT STEP LOGIC ================
-    let nextStep = null;
-    if (enrollmentsData.length === 0) {
-      nextStep = {
-        icon: 'fa-rocket',
-        label: 'Your Next Step',
-        title: 'Enroll in your first course',
-        desc: 'Browse 25+ certifications and start earning today.',
-        actionLabel: 'Browse Courses',
-        actionIcon: 'fa-arrow-right',
-        onClick: "window.renderPage('courses')"
-      };
-    } else {
-      // Find most-recently-active enrollment
-      const active = enrollmentsData.find(e => e.status === 'enrolled') || enrollmentsData[0];
-      const pct = active.progress || 0;
-      nextStep = {
-        icon: 'fa-play',
-        label: 'Continue Learning',
-        title: active.courseName,
-        desc: `${active.moduleProgress?.completedModules || active.moduleProgress?.completedCount || 0} of ${active.moduleProgress?.totalModules || 8} modules · ${pct}% complete`,
-        actionLabel: 'Continue',
-        actionIcon: 'fa-arrow-right',
-        onClick: `window.renderCourseDashboard('${active.courseId}')`
-      };
-    }
-
-    // ================ RECOMMENDED ================
-    const enrolledIds = enrollmentsData.map(e => e.courseId);
-    const recommended = (coursesData || []).filter(c => !enrolledIds.includes(c.id)).slice(0, 8);
-
-    // ================ ACHIEVEMENTS ================
-    const achievements = [
-      { id: 'streak7', icon: '🔥', label: '7-day streak', unlocked: streak >= 7 },
-      { id: 'level2', icon: '⭐', label: 'Reach Level 2', unlocked: level >= 2 },
-      { id: 'first_course', icon: '📚', label: 'First Course', unlocked: enrollmentsData.length > 0 },
-      { id: 'first_cert', icon: '🏅', label: 'First Certificate', unlocked: earned.length > 0 },
-      { id: 'verified', icon: '✅', label: 'Verified Name', unlocked: !!currentUser.hasProvidedLegalName },
-      { id: 'five_certs', icon: '🏆', label: '5 Certificates', unlocked: earned.length >= 5 }
-    ];
-
-    // ================ RENDER ================
-    let h = '<div class="user-shell">';
-
-    // SIDEBAR (desktop)
-    h += renderUserSidebar('home');
-
-    // MAIN CONTENT
-    h += '<main style="min-width:0">';
-    h += '<div class="user-content">';
-
-    // HERO
-    h += '<div class="u-hero">';
-    h += '<div class="u-hero-greeting">' + greeting + ', ' + escapeHtml(firstName) + ' 👋</div>';
-    h += '<div class="u-hero-stats">';
-    h += '<span class="u-hero-stat streak"><i class="fa-solid fa-fire"></i> ' + streak + '-day streak</span>';
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat xp"><i class="fa-solid fa-bolt"></i> ' + xp.toLocaleString() + ' XP</span>';
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat level"><i class="fa-solid fa-medal"></i> Level ' + level + '</span>';
-    h += '</div>';
-    h += '</div>';
-
-    // LEGAL NAME BANNER (kept, but restyled)
-    if (!currentUser.hasProvidedLegalName) {
-      h += '<div style="margin-bottom:16px;padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;font-size:13px;color:#fbbf24;">';
-      h += '<i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>';
-      h += 'Update your legal name for certificates. <a href="#" onclick="window.showLegalNameModal();return false;" style="color:#a78bfa;font-weight:600;text-decoration:underline;">Update Now →</a>';
-      h += '</div>';
-    }
-
-    // NEXT STEP (the hero CTA)
-    if (nextStep) {
-      h += '<div class="u-nextstep">';
-      h += '<div class="u-nextstep-icon"><i class="fa-solid ' + nextStep.icon + '"></i></div>';
-      h += '<div class="u-nextstep-body">';
-      h += '<div class="u-nextstep-label">' + nextStep.label + '</div>';
-      h += '<div class="u-nextstep-title">' + escapeHtml(nextStep.title) + '</div>';
-      h += '<div class="u-nextstep-desc">' + escapeHtml(nextStep.desc) + '</div>';
-      h += '</div>';
-      h += '<div class="u-nextstep-action"><button class="u-btn u-btn-lg" onclick="' + nextStep.onClick + '"><i class="fa-solid ' + nextStep.actionIcon + '"></i> ' + nextStep.actionLabel + '</button></div>';
-      h += '</div>';
-    }
-
-    // 2-COLUMN: Quick Actions + Continue/Stats
-    h += '<div class="u-grid-2">';
-
-    // QUICK ACTIONS
-    h += '<div class="u-panel">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-bolt"></i> Quick Actions</div></div>';
-    h += '<div class="u-quick-grid">';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'courses\')"><i class="fa-solid fa-book-open"></i> Browse Courses</div>';
-    h += '<div class="u-quick-item" onclick="window.openAskAI ? window.openAskAI() : renderPage(\'dashboard\')"><i class="fa-solid fa-comments"></i> Ask AI</div>';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'certificates\')"><i class="fa-solid fa-certificate"></i> Certificates</div>';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'profile\')"><i class="fa-solid fa-user"></i> Profile</div>';
-    h += '</div>';
-    h += '</div>';
-
-    // CONTINUE LEARNING (or Get Started if empty)
-    h += '<div class="u-panel">';
-    if (enrollmentsData.length > 0) {
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-clock"></i> Continue Learning</div><a class="u-panel-link" onclick="window.renderPage(\'courses\')">View all →</a></div>';
-      enrollmentsData.slice(0, 3).forEach(e => {
-        const pct = e.progress || 0;
-        h += '<div class="u-course-active">';
-        h += '<div class="u-course-icon"><i class="fa-solid ' + (e.courseIcon || 'fa-certificate') + '"></i></div>';
-        h += '<div class="u-course-body">';
-        h += '<div class="u-course-name">' + escapeHtml(e.courseName) + '</div>';
-        h += '<div class="u-course-meta">' + (e.moduleProgress?.completedCount || 0) + '/' + (e.moduleProgress?.totalModules || 8) + ' modules · ' + pct + '%</div>';
-        h += '<div class="u-progress-bar"><div class="u-progress-fill" style="width:' + pct + '%"></div></div>';
-        h += '</div>';
-        h += '<button class="u-btn" onclick="window.renderCourseDashboard(\'' + e.courseId + '\')"><i class="fa-solid fa-play"></i></button>';
-        h += '</div>';
-      });
-    } else {
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-clock"></i> Continue Learning</div></div>';
-      h += '<div class="u-empty"><i class="fa-solid fa-book-open"></i>No active courses yet.<br>Enroll in your first course to begin!</div>';
-    }
-    h += '</div>';
-
-    h += '</div>'; // end grid-2
-
-    // RECOMMENDED (horizontal scroll)
-    if (recommended.length > 0) {
-      h += '<div class="u-panel" style="margin-bottom:20px;">';
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-star"></i> Recommended for You</div><a class="u-panel-link" onclick="window.renderPage(\'courses\')">See all →</a></div>';
-      h += '<div class="u-scroll-row">';
-      recommended.forEach(c => {
-        const cp = c.price || c.examPrice || 0;
-        h += '<div class="u-course-card" onclick="window.handleEnrollClick(\'' + c.id + '\')">';
-        h += '<div class="u-course-card-icon"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '"></i></div>';
-        h += '<div class="u-course-card-title">' + escapeHtml(c.name) + '</div>';
-        h += '<div class="u-course-card-cat">' + escapeHtml(c.category || 'Certification') + '</div>';
-        h += '<div class="u-course-card-price">$' + cp + '</div>';
-        h += '</div>';
-      });
-      h += '</div>';
-      h += '</div>';
-    }
-
-    // ACHIEVEMENTS
-    h += '<div class="u-panel">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-trophy"></i> Achievements</div><span style="font-size:11px;color:var(--u-muted);">' + achievements.filter(a => a.unlocked).length + '/' + achievements.length + ' unlocked</span></div>';
-    h += '<div class="u-achievements">';
-    achievements.forEach(a => {
-      h += '<div class="u-achievement ' + (a.unlocked ? 'unlocked' : 'locked') + '">';
-      h += '<span class="u-achievement-icon">' + a.icon + '</span>';
-      h += '<div class="u-achievement-label">' + escapeHtml(a.label) + '</div>';
-      h += '</div>';
-    });
-    h += '</div>';
-    h += '</div>';
-
-    h += '</div>'; // end user-content
-    h += '</main>';
-    h += '</div>'; // end user-shell
-
-    // MOBILE BOTTOM TABS
-    h += renderUserMobileTabs('home');
-
-    root.innerHTML = h;
-
-    // Wire sidebar + mobile tab clicks
-    wireUserNav();
-
+    
+    const certificatesData = await getMyCertificates();
+    const earned = certificatesData.earned || [];
+    const streak = user.streak || 7;
+    root.innerHTML = `
+      <div class="max-w-7xl mx-auto fade-in">
+        <div class="glass rounded-3xl p-6 mb-6" data-aos="fade-up">
+          <div class="flex justify-between items-start flex-wrap gap-4">
+            <div>
+              <h1 class="text-2xl sm:text-4xl font-black">Welcome back, ${user.name.split(' ')[0]}! 👋</h1>
+              <p class="text-gray-400 text-sm mt-1">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+            <div class="flex gap-3">
+              <div class="glass px-4 py-2 rounded-xl text-center"><i class="fa-solid fa-fire-flame text-orange-500"></i><span class="ml-1 font-bold">${streak} day streak</span></div>
+              <div class="glass px-4 py-2 rounded-xl text-center"><i class="fa-solid fa-chart-line text-purple-400"></i><span class="ml-1">Level ${user.level || 1}</span></div>
+            </div>
+          </div>
+          ${enrollmentsData.length === 0 ? `<div class="mt-3 p-3 bg-purple-500/20 rounded-xl"><p class="text-sm"><i class="fa-regular fa-star text-yellow-400 mr-2"></i>Enroll in your first course to begin your certification journey! 🚀</p></div>` : ''}
+          ${!currentUser.hasProvidedLegalName ? `<div id="legalNameBanner" class="mt-3 p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30"><p class="text-sm text-yellow-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Update your legal name for certificates. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline font-bold">Update Now →</button></p></div>` : `<div class="mt-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30"><p class="text-sm text-green-400"><i class="fa-solid fa-circle-check mr-2"></i>Legal name: <strong>${escapeHtml(currentUser.firstName || "")} ${escapeHtml(currentUser.lastName || "")}</strong> · <a href="https://wa.me/263714587259?text=${encodeURIComponent("Hi obliXel support, I need to change my legal name for certificates.%0A%0AAccount email: " + (currentUser.email || ""))}" target="_blank" class="text-cyan-400 hover:underline font-bold">Need changes? Contact support →</a></p></div>`}
+        </div>
+        <div class="stats-grid mb-8">
+          <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-book-open text-cyan-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">${stats.enrolledCourses || 0}</h3><p class="text-xs text-gray-400">Enrolled</p></div>
+          <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-certificate text-green-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-green-400">${earned.length}</h3><p class="text-xs text-gray-400">Certificates</p></div>
+          <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-dollar-sign text-purple-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">$${formatMoney(user.totalSpent || 0)}</h3><p class="text-xs text-gray-400">Spent</p></div>
+          <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-trophy text-yellow-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">${user.level || 1}</h3><p class="text-xs text-gray-400">Level</p></div>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold mb-4"><i class="fa-regular fa-clock mr-2 text-cyan-400"></i> Continue Learning</h2>
+        <div class="space-y-4 mb-10">
+          ${enrollmentsData.length > 0 ? enrollmentsData.map(e => `
+            <div class="glass rounded-2xl p-5 card-hover continue-learning-card" data-aos="fade-up">
+              <div class="flex justify-between items-start flex-wrap gap-3 mb-3">
+                <div>
+                  <div class="flex items-center gap-2"><i class="fa-solid ${e.courseIcon || 'fa-certificate'} text-purple-400 text-xl"></i><h3 class="text-lg sm:text-xl font-bold">${escapeHtml(e.courseName)}</h3></div>
+                  <p class="text-gray-400 text-xs sm:text-sm mt-1">${e.moduleProgress?.completedCount || 0}/${e.moduleProgress?.totalModules || 8} modules completed</p>
+                </div>
+                <span class="text-xs px-3 py-1 rounded-full ${e.status === 'enrolled' ? 'bg-green-500/20 text-green-400' : e.status === 'certified' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${e.status === 'enrolled' ? 'Active' : e.status === 'certified' ? 'Certified' : 'Failed'}</span>
+              </div>
+              <div class="w-full bg-gray-700 h-2 rounded-full mb-3"><div class="bg-gradient-to-r from-purple-600 to-cyan-500 h-2 rounded-full transition-all" style="width: ${e.progress || 0}%"></div></div>
+              <p class="text-xs text-gray-400 mb-3">Next: ${e.moduleProgress?.nextModuleName || (e.status === 'certified' ? '✅ Certification Complete!' : 'Final Exam Ready!')}</p>
+              <div class="flex gap-3 flex-wrap">
+                <button onclick="window.renderCourseDashboard('${e.courseId}')" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-5 py-2 rounded-xl text-sm font-medium">Continue →</button>
+                ${e.status !== 'certified' ? `<button onclick="window.startExamCheck('${e.courseId}')" class="glass px-5 py-2 rounded-xl text-sm">🎯 Take Final Exam</button>` : ''}
+              </div>
+            </div>
+          `).join('') : '<div class="glass rounded-2xl p-10 text-center"><p>No enrollments yet. <button onclick="renderPage(\'courses\')" class="text-cyan-400 hover:underline">Browse Courses →</button></p></div>'}
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold mb-4"><i class="fa-regular fa-star mr-2 text-yellow-400"></i> Recommended For You</h2>
+        <div class="courses-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+          ${coursesData.filter(c => !enrollmentsData.some(e => e.courseId === c.id)).slice(0, 3).map(c => { const cp = c.price || c.examPrice || 0; return `<div class="glass rounded-2xl p-4 card-hover"><i class="fa-solid ${c.icon || 'fa-certificate'} text-3xl text-purple-400 mb-2"></i><h3 class="font-bold">${escapeHtml(c.name)}</h3><p class="text-gray-400 text-xs mt-1">${escapeHtml(c.description?.substring(0, 60))}...</p><p class="text-xs text-cyan-400 mt-1">💰 Course Fee: $${cp}</p><button onclick="window.handleEnrollClick('${c.id}')" class="w-full mt-3 bg-purple-600/50 hover:bg-purple-600 py-2 rounded-xl text-sm transition">Enroll Now</button></div>`; }).join('')}
+        </div>
+        <div class="glass rounded-2xl p-5">
+          <h2 class="text-lg font-bold mb-3"><i class="fa-solid fa-users mr-2 text-cyan-400"></i> Study Together</h2>
+          <div class="flex items-center gap-2 mb-4"><span class="online-dot"></span><span class="text-sm text-gray-400">42 students online now • 3 active study groups</span></div>
+          <div class="flex gap-3 flex-wrap"><button class="glass px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition">Join Study Group</button><button class="glass px-4 py-2 rounded-xl text-sm hover:bg-white/10 transition">Find Study Partner</button></div>
+        </div>
+      </div>
+    `;
     showAIWidget();
   } catch (error) {
     console.error('Dashboard error:', error);
-    root.innerHTML = '<div class="u-panel" style="margin:40px auto;max-width:480px;text-align:center;padding:40px;"><p style="color:var(--u-danger);">Failed to load dashboard: ' + error.message + '</p><button class="u-btn" style="margin-top:16px;" onclick="renderPage(\'landing\')">Go Home</button></div>';
+    root.innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load dashboard: ${error.message}</p><button onclick="renderPage('landing')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Go Home</button></div>`;
   }
 }
 
-// ==================== SHARED SIDEBAR + MOBILE TABS ====================
-function renderUserSidebar(active) {
-  const isAdmin = currentUser && currentUser.role === 'admin';
-  const tabs = [
-    { id: 'home',         icon: 'fa-house',         label: 'Home' },
-    { id: 'courses',      icon: 'fa-book-open',     label: 'Courses' },
-    { id: 'certificates', icon: 'fa-certificate',   label: 'Certificates' },
-    { id: 'community',    icon: 'fa-users',         label: 'Community' },
-    { id: 'profile',      icon: 'fa-user',          label: 'Me' }
-  ];
-
-  let h = '<aside class="user-sidebar">';
-  h += '<div class="user-sidebar-brand">';
-  h += '<div class="user-sidebar-brand-title">obliXel Academy</div>';
-  h += '<div class="user-sidebar-brand-sub">' + escapeHtml((currentUser && currentUser.name) || 'Student') + '</div>';
-  h += '</div>';
-  h += '<div class="user-nav-section">Menu</div>';
-  tabs.forEach(t => {
-    h += '<div class="user-nav-item' + (t.id === active ? ' active' : '') + '" data-user-nav="' + t.id + '">';
-    h += '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span>';
-    h += '</div>';
-  });
-  h += '<div style="flex:1"></div>';
-  if (isAdmin) {
-    h += '<div class="user-nav-section">Admin</div>';
-    h += '<div class="user-nav-item" data-user-nav="admin"><i class="fa-solid fa-crown"></i><span>Admin Console</span></div>';
-  }
-  h += '<div class="user-nav-section">Account</div>';
-  h += '<div class="user-nav-item" onclick="window.logout && window.logout()"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></div>';
-  h += '</aside>';
-  return h;
-}
-
-function renderUserMobileTabs(active) {
-  const tabs = [
-    { id: 'home',         icon: 'fa-house',         label: 'Home' },
-    { id: 'courses',      icon: 'fa-book-open',     label: 'Courses' },
-    { id: 'certificates', icon: 'fa-certificate',   label: 'Certs' },
-    { id: 'community',    icon: 'fa-users',         label: 'Social' },
-    { id: 'profile',      icon: 'fa-user',          label: 'Me' }
-  ];
-  let h = '<nav class="user-mobile-tabs">';
-  tabs.forEach(t => {
-    h += '<button class="user-mobile-tab' + (t.id === active ? ' active' : '') + '" data-user-nav="' + t.id + '">';
-    h += '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span>';
-    h += '</button>';
-  });
-  h += '</nav>';
-  return h;
-}
-
-function wireUserNav() {
-  document.querySelectorAll('[data-user-nav]').forEach(el => {
-    el.addEventListener('click', () => {
-      const target = el.getAttribute('data-user-nav');
-      if (target === 'home') renderPage('dashboard');
-      else if (target === 'courses') renderPage('courses');
-      else if (target === 'certificates') renderPage('certificates');
-      else if (target === 'community') renderPage('community');
-      else if (target === 'profile') renderPage('profile');
-      else if (target === 'admin') renderPage('admin');
-    });
-  });
-}
-window.renderUserSidebar = renderUserSidebar;
-window.renderUserMobileTabs = renderUserMobileTabs;
-window.wireUserNav = wireUserNav;
 // ==================== LEGAL NAME MODAL ====================
 window.showLegalNameModal = function() {
   const existingFirstName = currentUser.firstName || '';
