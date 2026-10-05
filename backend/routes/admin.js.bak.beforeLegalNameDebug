@@ -989,122 +989,27 @@ router.get('/analytics/activity', async (req, res) => {
 
 // ==================== USER ADMIN POWERS ====================
 
-// Admin override legal name (bypass lock) — VERBOSE DEBUG VERSION
+// Admin override legal name (bypass lock)
 router.post('/users/:userId/override-legal-name', isMainAdmin, async (req, res) => {
-  console.log('\n[ADMIN/OVERRIDE-LEGAL-NAME] === INCOMING ===');
-  console.log('[ADMIN/OVERRIDE-LEGAL-NAME] req.user:', req.user ? req.user.email : 'NO USER');
-  console.log('[ADMIN/OVERRIDE-LEGAL-NAME] req.user.isMainAdmin:', req.user ? req.user.isMainAdmin : 'N/A');
-  console.log('[ADMIN/OVERRIDE-LEGAL-NAME] params.userId:', req.params.userId);
-  console.log('[ADMIN/OVERRIDE-LEGAL-NAME] body:', JSON.stringify(req.body));
-
   try {
-    const { firstName, lastName, reason } = req.body || {};
-    if (!firstName || !lastName) {
-      console.log('[ADMIN/OVERRIDE-LEGAL-NAME] FAIL: missing names');
-      return res.status(400).json({ error: 'First and last name required', got: { firstName, lastName } });
-    }
+    const { firstName, lastName, reason } = req.body;
+    if (!firstName || !lastName) return res.status(400).json({ error: 'First and last name required' });
 
     const user = await User.findById(req.params.userId);
-    if (!user) {
-      console.log('[ADMIN/OVERRIDE-LEGAL-NAME] FAIL: user not found');
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const oldName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-    const oldHasProvided = user.hasProvidedLegalName;
-
+    const oldName = user.fullName || `${user.firstName} ${user.lastName}`;
     user.firstName = firstName.trim();
     user.lastName = lastName.trim();
     user.fullName = `${firstName.trim()} ${lastName.trim()}`;
     user.hasProvidedLegalName = true;
     if (!user.legalNameLockedAt) user.legalNameLockedAt = new Date();
-
     await user.save();
 
-    console.log('[ADMIN/OVERRIDE-LEGAL-NAME] SUCCESS');
-    console.log('  Old name:', JSON.stringify(oldName), '| hasProvided:', oldHasProvided);
-    console.log('  New name:', JSON.stringify(user.fullName), '| hasProvided:', user.hasProvidedLegalName);
-    console.log('  By admin:', req.user.email);
-    console.log('  Reason:', reason || 'n/a');
+    console.log(`[ADMIN] Legal name overridden for ${user.email} by ${req.user.email}. Old: "${oldName}" → New: "${user.fullName}". Reason: ${reason || 'n/a'}`);
 
-    res.json({
-      success: true,
-      message: `Legal name updated for ${user.name || user.email}`,
-      oldName,
-      newName: user.fullName,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      hasProvidedLegalName: user.hasProvidedLegalName
-    });
-  } catch (e) {
-    console.error('[ADMIN/OVERRIDE-LEGAL-NAME] EXCEPTION:', e.message);
-    console.error(e.stack);
-    res.status(500).json({ error: e.message, stack: e.stack });
-  }
-});
-
-// Full user details (for admin view)
-router.get('/users/:userId/full', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId).select('-password -resetCode');
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const enrolled = await Enrollment.countDocuments({ userId: user._id });
-    const payments = await Payment.find({ userId: user._id, status: { $in: ['completed', 'paid'] } });
-    const totalSpent = Math.round(payments.reduce((s, p) => s + (p.amount || 0), 0) * 100) / 100;
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isMainAdmin: user.isMainAdmin,
-        avatar: user.avatar,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        fullName: user.fullName || '',
-        idNumber: user.idNumber || '',
-        phone: user.phone || '',
-        country: user.country || '',
-        hasProvidedLegalName: user.hasProvidedLegalName || false,
-        legalNameLockedAt: user.legalNameLockedAt || null,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        enrolledCourses: enrolled,
-        totalSpent,
-        paymentsCount: payments.length
-      }
-    });
-  } catch (e) {
-    console.error('[ADMIN/USER-FULL] ERROR:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Clear legal name (unlock so user can re-set)
-router.delete('/users/:userId/legal-name', isMainAdmin, async (req, res) => {
-  console.log('\n[ADMIN/CLEAR-LEGAL-NAME] user:', req.params.userId, '| by:', req.user.email);
-  try {
-    const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const oldName = user.fullName || '';
-    user.firstName = '';
-    user.lastName = '';
-    user.fullName = '';
-    user.idNumber = '';
-    user.hasProvidedLegalName = false;
-    user.legalNameLockedAt = null;
-    await user.save();
-
-    console.log('[ADMIN/CLEAR-LEGAL-NAME] Cleared. Old:', JSON.stringify(oldName));
-    res.json({ success: true, message: 'Legal name cleared. User can now set it again.', oldName });
-  } catch (e) {
-    console.error('[ADMIN/CLEAR-LEGAL-NAME] ERROR:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ success: true, message: `Legal name updated for ${user.name}`, newName: user.fullName });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Reset user avatar

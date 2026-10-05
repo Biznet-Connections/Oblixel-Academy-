@@ -6461,160 +6461,27 @@ function showAdminUserDetails(user) {
 }
 
 function showAdminEditLegalNameModal(user) {
-  // Load full user details first for debug visibility
-  let currentUserData = {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    firstName: user.firstName || '',
-    lastName: user.lastName || '',
-    fullName: user.fullName || '',
-    hasProvidedLegalName: user.hasProvidedLegalName || false
-  };
-
   let h = '<div id="adminEditLegalNameModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:520px;width:100%;margin:0;max-height:90vh;overflow-y:auto;">';
+  h += '<div class="admin-panel" style="max-width:480px;width:100%;margin:0;">';
   h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-pen"></i> Edit Legal Name</div><button class="admin-icon-btn" onclick="document.getElementById(\'adminEditLegalNameModal\').remove()"><i class="fa-solid fa-xmark"></i></button></div>';
-
-  // Info banner
-  h += '<div style="padding:10px 12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--a-meta);">';
-  h += '<div><strong style="color:var(--a-text);">' + escapeHtml(currentUserData.name || '') + '</strong></div>';
-  h += '<div>' + escapeHtml(currentUserData.email || '') + '</div>';
-  h += '<div style="margin-top:4px;">Current: <strong style="color:var(--a-text);">' + (currentUserData.hasProvidedLegalName ? escapeHtml(currentUserData.firstName + ' ' + currentUserData.lastName) : '<span style="color:var(--a-warning);">Not set</span>') + '</strong></div>';
-  h += '</div>';
-
-  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">First Name</label><input id="adminLegalFirstName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(currentUserData.firstName) + '" placeholder="First name"></div>';
-  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Last Name</label><input id="adminLegalLastName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(currentUserData.lastName) + '" placeholder="Last name"></div>';
+  h += '<p style="font-size:12.5px;color:var(--a-muted);margin-bottom:14px;">User: <strong style="color:var(--a-text)">' + escapeHtml(user.email) + '</strong></p>';
+  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">First Name</label><input id="adminLegalFirstName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(user.firstName || '') + '"></div>';
+  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Last Name</label><input id="adminLegalLastName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(user.lastName || '') + '"></div>';
   h += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Reason (audit log)</label><input id="adminLegalReason" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" placeholder="e.g., User requested correction"></div>';
-
-  // Debug output area
-  h += '<div id="adminLegalDebug" style="display:none;padding:10px 12px;background:#000;border:1px solid #333;border-radius:8px;font-family:monospace;font-size:11px;color:#0f0;margin-bottom:14px;max-height:180px;overflow-y:auto;white-space:pre-wrap;"></div>';
-
-  h += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">';
-  h += '<button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'adminEditLegalNameModal\').remove()">Cancel</button>';
-  h += '<button class="admin-btn admin-btn-danger" id="adminClearLegalBtn" title="Clear legal name so user can re-set it">Clear Legal Name</button>';
-  h += '<button class="admin-btn" id="adminLegalSaveBtn">Save</button>';
-  h += '</div>';
-
+  h += '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'adminEditLegalNameModal\').remove()">Cancel</button><button class="admin-btn" id="adminLegalSaveBtn">Save</button></div>';
   h += '</div></div>';
   document.body.insertAdjacentHTML('beforeend', h);
-
-  const debugEl = document.getElementById('adminLegalDebug');
-  function debug(msg) {
-    debugEl.style.display = 'block';
-    debugEl.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
-    debugEl.scrollTop = debugEl.scrollHeight;
-    console.log('[LegalNameDebug]', msg);
-  }
-
-  // Load full user data in background
-  (async () => {
-    try {
-      debug('Loading user data from server...');
-      const r = await apiRequest('/admin/users/' + user.id + '/full');
-      if (r && r.user) {
-        currentUserData = r.user;
-        debug('Loaded: ' + JSON.stringify(r.user, null, 2));
-        // Update inputs with fresh data
-        const fn = document.getElementById('adminLegalFirstName');
-        const ln = document.getElementById('adminLegalLastName');
-        if (fn && !fn.value) fn.value = r.user.firstName || '';
-        if (ln && !ln.value) ln.value = r.user.lastName || '';
-      } else {
-        debug('No user data returned');
-      }
-    } catch (e) {
-      debug('Load error: ' + e.message);
-    }
-  })();
-
-  // Save handler with verbose debug
   document.getElementById('adminLegalSaveBtn').addEventListener('click', async () => {
     const firstName = document.getElementById('adminLegalFirstName').value.trim();
     const lastName = document.getElementById('adminLegalLastName').value.trim();
     const reason = document.getElementById('adminLegalReason').value.trim();
-
-    debug('--- SAVE CLICKED ---');
-    debug('firstName=' + JSON.stringify(firstName));
-    debug('lastName=' + JSON.stringify(lastName));
-    debug('userId=' + user.id);
-    debug('reason=' + JSON.stringify(reason));
-
-    if (!firstName || !lastName) {
-      debug('✗ ABORT: names required');
-      showToast('Both first and last name required', 'error');
-      return;
-    }
-
-    const saveBtn = document.getElementById('adminLegalSaveBtn');
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = 'Saving...';
-
+    if (!firstName || !lastName) { showToast('Both names required', 'error'); return; }
     try {
-      const apiUrl = (window.API_BASE_URL || '/api') + '/admin/users/' + user.id + '/override-legal-name';
-      debug('POST → ' + apiUrl);
-
-      const token = localStorage.getItem('auth_token');
-      debug('Token present: ' + !!token);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ firstName, lastName, reason })
-      });
-
-      debug('HTTP ' + response.status + ' ' + response.statusText);
-
-      const text = await response.text();
-      debug('Response body: ' + text);
-
-      let data;
-      try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
-
-      if (!response.ok) {
-        debug('✗ FAILED: ' + (data.error || response.statusText));
-        showToast('Failed (' + response.status + '): ' + (data.error || 'Unknown error'), 'error');
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = 'Save';
-        return;
-      }
-
-      debug('✓ SUCCESS: ' + JSON.stringify(data));
-      showToast('Legal name updated: ' + (data.newName || firstName + ' ' + lastName), 'success');
-
-      // Close modal
+      await apiRequest('/admin/users/' + user.id + '/override-legal-name', { method: 'POST', body: JSON.stringify({ firstName, lastName, reason }) });
+      showToast('Legal name updated', 'success');
       document.getElementById('adminEditLegalNameModal').remove();
-
-      // Force full admin refresh
-      setTimeout(() => {
-        if (typeof renderAdmin === 'function') renderAdmin();
-      }, 400);
-
-    } catch (e) {
-      debug('✗ EXCEPTION: ' + e.message);
-      showToast('Network error: ' + e.message, 'error');
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = 'Save';
-    }
-  });
-
-  // Clear legal name handler
-  document.getElementById('adminClearLegalBtn').addEventListener('click', async () => {
-    if (!confirm('Clear legal name for ' + (currentUserData.name || currentUserData.email) + '?\n\nUser will be able to set it again.')) return;
-    try {
-      debug('DELETE legal name...');
-      await apiRequest('/admin/users/' + user.id + '/legal-name', { method: 'DELETE', body: JSON.stringify({}) });
-      debug('✓ Cleared');
-      showToast('Legal name cleared', 'success');
-      document.getElementById('adminEditLegalNameModal').remove();
-      setTimeout(() => { if (typeof renderAdmin === 'function') renderAdmin(); }, 400);
-    } catch (e) {
-      debug('✗ Clear failed: ' + e.message);
-      showToast('Failed: ' + e.message, 'error');
-    }
+      renderAdmin();
+    } catch (e) { showToast('Failed: ' + e.message, 'error'); }
   });
 }
 
