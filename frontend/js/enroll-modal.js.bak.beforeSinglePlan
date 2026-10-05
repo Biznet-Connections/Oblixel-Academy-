@@ -1,4 +1,4 @@
-﻿// ==================== ENROLL MODAL LOGIC (Single Plan) ====================
+﻿// ==================== ENROLL MODAL LOGIC ====================
 (function () {
 
   var SUPPORT_WHATSAPP = '263714587259';
@@ -46,17 +46,11 @@
   }
 
   var currentCourse = null;
+  var currentPlan = 'exam_only';
   var currentPrice = 0;
-
-  function getCourseFee(course) {
-    // Prefer pathPrice (Full Learning Path), fall back to examPrice
-    var p = Number(course.pathPrice || 0);
-    if (p > 0) return p;
-    return Number(course.examPrice || 0);
-  }
+  var currentOriginalPrice = 0;
 
   window.openEnrollModal = async function (course) {
-    // Fetch fresh course data
     try {
       var res = await fetch('/api/courses');
       if (res.ok) {
@@ -73,7 +67,7 @@
       }
     } catch (e) { console.warn('[Enroll] Could not fetch fresh course', e); }
 
-    if (!course.pathPrice && !course.examPrice && !course.price) {
+    if (!course.examPrice && !course.price) {
       try {
         var token = localStorage.getItem('auth_token');
         var res2 = await fetch('/api/courses/' + course.courseId, {
@@ -90,22 +84,21 @@
     }
 
     currentCourse = course;
-    currentPrice = getCourseFee(course);
+    currentPlan = 'exam_only';
 
     document.getElementById('enrollCourseName').textContent = course.name || 'Course';
+    document.getElementById('enrollExamPrice').textContent = '$' + Number(course.examPrice || 0).toFixed(0);
+    document.getElementById('enrollPathPrice').textContent = '$' + Number(course.pathPrice || course.examPrice || 0).toFixed(0);
 
-    var priceEl = document.getElementById('enrollPathPrice');
-    if (priceEl) {
-      priceEl.textContent = '$' + currentPrice.toFixed(0);
-    }
+    document.querySelectorAll('.enroll-plan-option').forEach(function(el) {
+      el.classList.toggle('selected', el.dataset.plan === 'exam_only');
+    });
 
     switchEnrollTab('linkwa');
     resetVoucherMsg();
     var lm = document.getElementById('enrollLinkwaMsg');
-    if (lm) {
-      lm.classList.remove('show');
-      lm.textContent = '';
-    }
+    lm.classList.remove('show');
+    lm.textContent = '';
 
     updatePayButton();
     injectSupportLink();
@@ -114,6 +107,14 @@
 
   window.closeEnrollModal = function () {
     document.getElementById('enrollModalBackdrop').classList.remove('active');
+  };
+
+  window.selectPlan = function (plan) {
+    currentPlan = plan;
+    document.querySelectorAll('.enroll-plan-option').forEach(function(el) {
+      el.classList.toggle('selected', el.dataset.plan === plan);
+    });
+    updatePayButton();
   };
 
   window.switchEnrollTab = function (tab) {
@@ -127,10 +128,12 @@
 
   function updatePayButton() {
     if (!currentCourse) return;
-    var price = getCourseFee(currentCourse);
+    var price = currentPlan === 'exam_only'
+      ? Number(currentCourse.examPrice || 0)
+      : Number(currentCourse.pathPrice || currentCourse.examPrice || 0);
     currentPrice = price;
-    var el = document.getElementById('enrollPayAmount');
-    if (el) el.textContent = '$' + price.toFixed(2);
+    currentOriginalPrice = price;
+    document.getElementById('enrollPayAmount').textContent = '$' + price.toFixed(2);
   }
 
   window.startLinkwaPayment = async function () {
@@ -164,7 +167,7 @@
         ),
         body: JSON.stringify({
           courseId: currentCourse.courseId,
-          type: 'learning'
+          type: currentPlan
         })
       });
 
@@ -204,7 +207,6 @@
 
   window.resetVoucherMsg = function () {
     var vm = document.getElementById('enrollVoucherMsg');
-    if (!vm) return;
     vm.classList.remove('show');
     vm.textContent = '';
   };
@@ -235,7 +237,7 @@
         ),
         body: JSON.stringify({
           courseId: currentCourse.courseId,
-          type: 'learning',
+          type: currentPlan,
           voucherCode: code
         })
       });
