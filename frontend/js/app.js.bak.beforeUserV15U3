@@ -815,7 +815,10 @@ function renderPage(page) {
   else if (page === 'certificates') renderCertificates();
   else if (page === 'profile') renderProfile();
   else if (page === 'admin') renderAdmin();
-  else if (page === 'community') renderCommunity();
+  else if (page === 'community') {
+    window.open('https://whatsapp.com/channel/0029Vb8ApfmC6Zvo5QJ5LO3R', '_blank');
+    renderPage('dashboard');
+  }
   else if (page === 'login') renderLogin();
   else if (page === 'register') renderRegister();
   else renderLandingPage();
@@ -1739,149 +1742,77 @@ window.startExamCheck = async function(courseId) {
 };
 
 // ==================== COURSES PAGE ====================
-// ==================== COURSES v15 (Shell + Filters) ====================
 async function renderCourses() {
-  if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
   const root = document.getElementById('app-root');
-  root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading courses...</p></div>';
-
-  try {
-    if (!coursesData || coursesData.length === 0) {
-      await loadCourses();
+  if (coursesData.length === 0) { await loadCourses(); }
+  const ncpCourse = coursesData.find(c => c.id === 'ncp');
+  const ccpCourse = coursesData.find(c => c.id === 'ccp');
+  const otherCourses = coursesData.filter(c => c.id !== 'ncp' && c.id !== 'ccp');
+  const sortedCourses = [ncpCourse, ccpCourse, ...otherCourses].filter(Boolean);
+  let filteredCourses = [...sortedCourses];
+  let searchTerm = '';
+  
+  function renderCourseList() {
+    const coursesContainer = document.getElementById('coursesContainer');
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    if (!coursesContainer) return;
+    if (filteredCourses.length === 0) {
+      coursesContainer.innerHTML = `<div class="col-span-3 text-center py-10"><p class="text-yellow-400">No courses found matching "${escapeHtml(searchTerm)}"</p></div>`;
+      if (searchResultsCount) searchResultsCount.innerText = `0 of ${coursesData.length}`;
+      return;
     }
-
-    let userEnrollments = [];
-    try {
-      const profileData = await getUserProfile();
-      userEnrollments = profileData.enrollments || [];
-    } catch (e) {}
-
-    const enrolledIds = userEnrollments.map(e => e.courseId);
-    const enrolledMap = new Map(userEnrollments.map(e => [e.courseId, e]));
-
-    // Build category list
-    const categories = ['all'];
-    const seenCats = new Set();
-    (coursesData || []).forEach(c => {
-      const cat = (c.category || 'Certification').trim();
-      if (!seenCats.has(cat)) { seenCats.add(cat); categories.push(cat); }
-    });
-
-    window.__adminUserCourseState = {
-      filter: 'all',
-      search: '',
-      enrolledIds,
-      enrolledMap,
-      categories
-    };
-
-    let h = '<div class="user-shell">';
-    h += renderUserSidebar('courses');
-    h += '<main style="min-width:0"><div class="user-content">';
-
-    // Header
-    h += '<div style="margin-bottom:20px;">';
-    h += '<div class="u-hero-greeting">Courses</div>';
-    h += '<div class="u-hero-stats"><span class="u-hero-stat"><i class="fa-solid fa-book"></i> ' + coursesData.length + ' certifications available</span></div>';
-    h += '</div>';
-
-    // Search + filters
-    h += '<div class="u-panel" style="margin-bottom:16px;padding:14px 16px;">';
-    h += '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">';
-    h += '<input type="text" id="courseSearchInput" placeholder="Search courses..." class="u-btn-ghost u-btn" style="flex:1;min-width:180px;height:38px;padding:0 14px;background:var(--u-elevated);border:1px solid var(--u-border);border-radius:10px;color:var(--u-text);font-size:13px;font-family:inherit;">';
-    h += '</div>';
-    h += '<div class="u-filter-row" id="courseFilterRow">';
-    categories.forEach(cat => {
-      h += '<button class="u-pill' + (cat === 'all' ? ' active' : '') + '" data-course-filter="' + escapeHtml(cat) + '">' + escapeHtml(cat === 'all' ? 'All' : cat) + '</button>';
-    });
-    h += '</div>';
-    h += '</div>';
-
-    // Grid
-    h += '<div id="coursesGrid"></div>';
-
-    h += '</div></main>';
-    h += '</div>';
-    h += renderUserMobileTabs('courses');
-
-    root.innerHTML = h;
-    wireUserNav();
-
-    // Wire search + filters
-    const searchEl = document.getElementById('courseSearchInput');
-    if (searchEl) {
-      searchEl.addEventListener('input', (e) => {
-        window.__adminUserCourseState.search = e.target.value.toLowerCase();
-        renderCoursesGrid();
-      });
-    }
-    document.querySelectorAll('[data-course-filter]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-course-filter]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        window.__adminUserCourseState.filter = btn.getAttribute('data-course-filter');
-        renderCoursesGrid();
-      });
-    });
-
-    renderCoursesGrid();
-  } catch (error) {
-    console.error('Courses error:', error);
-    root.innerHTML = '<div class="u-panel" style="margin:40px auto;max-width:480px;text-align:center;padding:40px;"><p style="color:var(--u-danger);">Failed to load courses: ' + error.message + '</p></div>';
+    coursesContainer.innerHTML = filteredCourses.map(cert => {
+      const enrolled = currentUser && isAlreadyEnrolled(cert.id);
+      const cp = cert.price || cert.examPrice || 0;
+      return `
+        <div class="glass rounded-2xl p-5 card-hover course-card" data-course-name="${escapeHtml(cert.name).toLowerCase()}">
+          <i class="fa-solid ${cert.icon || 'fa-certificate'} text-4xl text-purple-400"></i>
+          <h3 class="text-xl font-bold mt-3">${escapeHtml(cert.name)}</h3>
+          <p class="text-gray-400 text-sm mt-1">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p>
+          <div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div>
+          <p class="text-xs mt-2 text-cyan-400 font-medium">💰 Course Fee: $${cp}</p>
+          <button onclick="window.handleEnrollClick('${cert.id}')" class="w-full mt-4 bg-gradient-to-r from-purple-600 to-cyan-500 py-2 rounded-xl text-sm">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button>
+        </div>
+      `;
+    }).join('');
+    if (searchResultsCount) searchResultsCount.innerText = `${filteredCourses.length} of ${coursesData.length}`;
   }
+  
+  root.innerHTML = `
+    <div class="max-w-7xl mx-auto fade-in">
+      <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl sm:text-4xl font-black">📚 All Certifications</h1>
+        <div class="search-container"><i class="fa-solid fa-search search-icon"></i><input type="text" id="courseSearchInput" placeholder="Search certifications..." class="search-input" autocomplete="off"><button id="clearSearchBtn" class="search-clear hidden"><i class="fa-solid fa-times-circle"></i></button></div>
+      </div>
+      <p class="text-gray-400 text-sm mb-4" id="searchResultsCount">${coursesData.length} of ${coursesData.length} courses</p>
+      <div id="coursesContainer" class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </div>
+  `;
+  renderCourseList();
+  const searchInput = document.getElementById('courseSearchInput');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  function filterCourses() {
+    searchTerm = searchInput.value.trim().toLowerCase();
+    if (searchTerm === '') {
+      filteredCourses = [...sortedCourses];
+      clearBtn.classList.add('hidden');
+    } else {
+      filteredCourses = sortedCourses.filter(course =>
+        course.name.toLowerCase().includes(searchTerm) ||
+        (course.description && course.description.toLowerCase().includes(searchTerm)) ||
+        (course.category && course.category.toLowerCase().includes(searchTerm))
+      );
+      clearBtn.classList.remove('hidden');
+    }
+    renderCourseList();
+  }
+  searchInput.addEventListener('input', filterCourses);
+  clearBtn.addEventListener('click', () => { searchInput.value = ''; filterCourses(); searchInput.focus(); });
 }
 
-function renderCoursesGrid() {
-  const grid = document.getElementById('coursesGrid');
-  if (!grid) return;
-  const state = window.__adminUserCourseState;
-  let list = (coursesData || []).slice();
-
-  if (state.filter !== 'all') {
-    list = list.filter(c => (c.category || 'Certification') === state.filter);
-  }
-  if (state.search) {
-    list = list.filter(c => (c.name || '').toLowerCase().includes(state.search) || (c.description || '').toLowerCase().includes(state.search));
-  }
-
-  // Enrolled first
-  list.sort((a, b) => {
-    const aEnrolled = state.enrolledIds.includes(a.id) ? 1 : 0;
-    const bEnrolled = state.enrolledIds.includes(b.id) ? 1 : 0;
-    if (aEnrolled !== bEnrolled) return bEnrolled - aEnrolled;
-    return (b.enrolledCount || 0) - (a.enrolledCount || 0);
-  });
-
-  if (list.length === 0) {
-    grid.innerHTML = '<div class="u-empty"><i class="fa-solid fa-magnifying-glass"></i>No courses match your filter.</div>';
-    return;
-  }
-
-  let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">';
-  list.forEach(c => {
-    const cp = c.price || c.examPrice || 0;
-    const isEnrolled = state.enrolledIds.includes(c.id);
-    const enrollment = state.enrolledMap.get(c.id);
-    const pct = enrollment ? (enrollment.progress || 0) : 0;
-
-    h += '<div class="u-course-card" style="min-width:0;max-width:none;" onclick="window.handleEnrollClick(\'' + c.id + '\')">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;">';
-    h += '<div class="u-course-card-icon"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '"></i></div>';
-    if (isEnrolled) h += '<span style="padding:3px 8px;border-radius:999px;background:rgba(16,185,129,0.15);color:#34d399;font-size:10px;font-weight:700;letter-spacing:0.3px;">ENROLLED</span>';
-    h += '</div>';
-    h += '<div class="u-course-card-title">' + escapeHtml(c.name) + '</div>';
-    h += '<div class="u-course-card-cat">' + escapeHtml(c.category || 'Certification') + ' · ' + (c.totalModules || 8) + ' modules</div>';
-    if (isEnrolled) {
-      h += '<div class="u-progress-bar" style="margin-bottom:8px;"><div class="u-progress-fill" style="width:' + pct + '%"></div></div>';
-      h += '<div style="font-size:11px;color:var(--u-muted);margin-bottom:4px;">' + pct + '% complete</div>';
-    }
-    h += '<div class="u-course-card-price">$' + cp + '</div>';
-    h += '</div>';
-  });
-  h += '</div>';
-  grid.innerHTML = h;
-}
+// ==================== EXAMS PAGE ====================
 async function renderExams() {
   hideAIWidget();
   if (!currentUser) { renderPage('login'); return; }
@@ -1911,188 +1842,92 @@ async function renderExams() {
 }
 
 // ==================== CERTIFICATES PAGE ====================
-// ==================== CERTIFICATES v15 (Shell + Status Groups) ====================
 async function renderCertificates() {
-  if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
-  const root = document.getElementById('app-root');
-  root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading certificates...</p></div>';
-
+  if (!currentUser) { renderPage('login'); return; }
   try {
-    const data = await getMyCertificates();
-    const earned = data.earned || [];
-    const pending = data.pending || [];
-
-    let userEnrollments = [];
-    try {
-      const profileData = await getUserProfile();
-      userEnrollments = profileData.enrollments || [];
-    } catch (e) {}
-
-    const inProgress = userEnrollments.filter(e => e.status === 'enrolled' || e.status === 'failed');
-
-    let h = '<div class="user-shell">';
-    h += renderUserSidebar('certificates');
-    h += '<main style="min-width:0"><div class="user-content">';
-
-    // Header
-    h += '<div style="margin-bottom:20px;">';
-    h += '<div class="u-hero-greeting">Certificates</div>';
-    h += '<div class="u-hero-stats">';
-    h += '<span class="u-hero-stat"><i class="fa-solid fa-circle-check" style="color:var(--u-success);"></i> ' + earned.length + ' issued</span>';
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat"><i class="fa-solid fa-hourglass"></i> ' + pending.length + ' pending</span>';
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat"><i class="fa-solid fa-book"></i> ' + inProgress.length + ' in progress</span>';
-    h += '</div>';
-    h += '</div>';
-
-    // ISSUED
-    h += '<div class="u-panel" style="margin-bottom:16px;">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-award" style="color:var(--u-success);"></i> Issued Certificates</div></div>';
-    if (earned.length === 0) {
-      h += '<div class="u-empty"><i class="fa-solid fa-certificate"></i>No certificates issued yet.<br>Pass an exam to earn your first one!</div>';
-    } else {
-      earned.forEach(cert => {
-        h += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--u-elevated);border-radius:10px;margin-bottom:10px;flex-wrap:wrap;">';
-        h += '<div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.15);color:#34d399;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fa-solid fa-certificate"></i></div>';
-        h += '<div style="flex:1;min-width:180px;">';
-        h += '<div style="font-size:14px;font-weight:600;color:var(--u-text);">' + escapeHtml(cert.courseName || 'Certificate') + '</div>';
-        h += '<div style="font-size:12px;color:var(--u-muted);margin-top:2px;">ID: ' + escapeHtml(cert.certificateId || '—') + ' · ' + (cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString() : '—') + '</div>';
-        h += '</div>';
-        h += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-        h += '<button class="u-btn u-btn-ghost" onclick="window.downloadCertificate && window.downloadCertificate(\'' + (cert.certificateId || cert.id) + '\')"><i class="fa-solid fa-download"></i> Download</button>';
-        h += '</div>';
-        h += '</div>';
-      });
-    }
-    h += '</div>';
-
-    // PENDING
-    if (pending.length > 0) {
-      h += '<div class="u-panel" style="margin-bottom:16px;">';
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-hourglass" style="color:var(--u-warning);"></i> Pending Approval</div></div>';
-      pending.forEach(cert => {
-        h += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--u-elevated);border-radius:10px;margin-bottom:10px;border:1px solid rgba(245,158,11,0.2);">';
-        h += '<div style="width:44px;height:44px;border-radius:10px;background:rgba(245,158,11,0.15);color:#fbbf24;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fa-solid fa-hourglass-half"></i></div>';
-        h += '<div style="flex:1;">';
-        h += '<div style="font-size:14px;font-weight:600;color:var(--u-text);">' + escapeHtml(cert.courseName || 'Certificate') + '</div>';
-        h += '<div style="font-size:12px;color:var(--u-muted);margin-top:2px;">Exam passed · awaiting admin approval</div>';
-        h += '</div>';
-        h += '</div>';
-      });
-      h += '</div>';
-    }
-
-    // IN PROGRESS
-    if (inProgress.length > 0) {
-      h += '<div class="u-panel">';
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-spinner"></i> In Progress</div></div>';
-      inProgress.forEach(e => {
-        const pct = e.progress || 0;
-        h += '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--u-elevated);border-radius:10px;margin-bottom:10px;">';
-        h += '<div style="width:44px;height:44px;border-radius:10px;background:rgba(139,92,246,0.15);color:var(--u-accent-hi);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;"><i class="fa-solid ' + (e.courseIcon || 'fa-book') + '"></i></div>';
-        h += '<div style="flex:1;min-width:0;">';
-        h += '<div style="font-size:14px;font-weight:600;color:var(--u-text);">' + escapeHtml(e.courseName) + '</div>';
-        h += '<div style="font-size:12px;color:var(--u-muted);margin-top:2px;">' + (e.moduleProgress?.completedCount || 0) + '/' + (e.moduleProgress?.totalModules || 8) + ' modules · ' + pct + '%</div>';
-        h += '<div class="u-progress-bar" style="margin-top:6px;"><div class="u-progress-fill" style="width:' + pct + '%"></div></div>';
-        h += '</div>';
-        h += '<button class="u-btn" onclick="window.renderCourseDashboard(\'' + e.courseId + '\')"><i class="fa-solid fa-play"></i></button>';
-        h += '</div>';
-      });
-      h += '</div>';
-    }
-
-    h += '</div></main>';
-    h += '</div>';
-    h += renderUserMobileTabs('certificates');
-
-    root.innerHTML = h;
-    wireUserNav();
+    const certData = await getMyCertificates();
+    const earned = certData.earned || [];
+    const root = document.getElementById('app-root');
+    root.innerHTML = `
+      <div class="max-w-4xl mx-auto fade-in">
+        <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
+        <h1 class="text-2xl font-black mb-6">🏅 My Certificates</h1>
+        ${earned.length > 0 ? earned.map(cer => `
+          <div class="glass rounded-2xl p-5 mb-4">
+            <div class="flex justify-between flex-wrap gap-3">
+              <div>
+                <h2 class="text-2xl font-bold">${escapeHtml(cer.courseName)}</h2>
+                <p class="text-gray-400 text-sm">Issued to: ${escapeHtml(cer.studentName || 'Student')}</p>
+                <p class="text-gray-400 text-sm">ID: ${cer.certificateId}</p>
+                <p class="text-sm">Issued: ${formatDate(cer.issuedAt || cer.issueDate)} | Score: ${cer.score}%</p>
+              </div>
+              <i class="fa-solid fa-certificate text-4xl text-cyan-400"></i>
+            </div>
+            <div class="mt-3 flex gap-3 flex-wrap">
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificatePDF('${cer.certificateId}')" title="Download as PDF"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.downloadCertificate('${cer.certificateId}')" title="Download as Image (PNG)"><i class="fa-solid fa-image"></i> Image</button>
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.shareToLinkedIn('${cer.certificateId}')"><i class="fa-brands fa-linkedin"></i> Share</button>
+              <button class="glass px-4 py-2 rounded-xl text-sm" onclick="window.verifyCertificate('${cer.certificateId}')"><i class="fa-solid fa-check-circle"></i> Verify</button>
+            </div>
+          </div>
+        `).join('') : '<div class="glass rounded-3xl p-12 text-center"><p>No certificates yet. Complete an exam to earn your first certificate!</p><button onclick="renderPage(\'dashboard\')" class="mt-4 bg-purple-600 px-6 py-2 rounded-xl">Start Learning</button></div>'}
+      </div>
+    `;
   } catch (error) {
-    console.error('Certificates error:', error);
-    root.innerHTML = '<div class="u-panel" style="margin:40px auto;max-width:480px;text-align:center;padding:40px;"><p style="color:var(--u-danger);">Failed to load certificates: ' + error.message + '</p></div>';
+    document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load certificates</p></div>`;
   }
 }
-// ==================== PROFILE / ME TAB v15 ====================
-async function renderProfile() {
-  if (!currentUser) { renderPage('login'); return; }
-  hideAIWidget();
-  const root = document.getElementById('app-root');
-  root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading profile...</p></div>';
 
+// ==================== PROFILE PAGE ====================
+async function renderProfile() {
+  hideAIWidget();
+  if (!currentUser) { renderPage('login'); return; }
   try {
     const profileData = await getUserProfile();
     const user = profileData.user;
-    const stats = profileData.stats || {};
-    const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
-
-    let h = '<div class="user-shell">';
-    h += renderUserSidebar('profile');
-    h += '<main style="min-width:0"><div class="user-content">';
-
-    h += '<div style="margin-bottom:20px;"><div class="u-hero-greeting">Me</div><div class="u-hero-stats"><span class="u-hero-stat"><i class="fa-solid fa-user"></i> Your account</span></div></div>';
-
-    // Profile card
-    h += '<div class="u-panel" style="margin-bottom:16px;">';
-    h += '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">';
-    h += '<div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,var(--u-accent),#6d28d9);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;">' + escapeHtml(initial) + '</div>';
-    h += '<div style="flex:1;min-width:180px;">';
-    h += '<div style="font-size:20px;font-weight:700;color:var(--u-text);">' + escapeHtml(user.fullName || user.name || '') + '</div>';
-    h += '<div style="font-size:13px;color:var(--u-meta);margin-top:2px;">' + escapeHtml(user.email || '') + '</div>';
-    h += '<div style="font-size:11px;color:var(--u-muted);margin-top:4px;">Member since ' + (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—') + '</div>';
-    h += '</div>';
-    h += '</div>';
-    h += '</div>';
-
-    // Stats row
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px;">';
-    h += '<div class="u-panel" style="padding:14px 16px;margin:0;"><div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--u-muted);">Enrolled</div><div style="font-size:24px;font-weight:700;color:var(--u-text);margin-top:4px;">' + (stats.enrolledCourses || 0) + '</div></div>';
-    h += '<div class="u-panel" style="padding:14px 16px;margin:0;"><div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--u-muted);">Certificates</div><div style="font-size:24px;font-weight:700;color:var(--u-text);margin-top:4px;">' + (stats.earnedCertificates || 0) + '</div></div>';
-    h += '<div class="u-panel" style="padding:14px 16px;margin:0;"><div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--u-muted);">Level</div><div style="font-size:24px;font-weight:700;color:var(--u-text);margin-top:4px;">' + (user.level || 1) + '</div></div>';
-    h += '<div class="u-panel" style="padding:14px 16px;margin:0;"><div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--u-muted);">Streak</div><div style="font-size:24px;font-weight:700;color:var(--u-text);margin-top:4px;">' + (user.streak || 0) + 'd</div></div>';
-    h += '</div>';
-
-    // Legal name status
-    h += '<div class="u-panel" style="margin-bottom:16px;">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-id-card"></i> Legal Name</div></div>';
-    if (user.hasProvidedLegalName) {
-      h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(16,185,129,0.08);border-radius:10px;border:1px solid rgba(16,185,129,0.25);flex-wrap:wrap;">';
-      h += '<i class="fa-solid fa-circle-check" style="color:var(--u-success);"></i>';
-      h += '<div style="flex:1;min-width:160px;font-size:13px;color:var(--u-text);"><strong>' + escapeHtml(user.firstName || '') + ' ' + escapeHtml(user.lastName || '') + '</strong></div>';
-      h += '<a href="https://wa.me/263714587259?text=' + encodeURIComponent("Hi obliXel support, I need to change my legal name.\nAccount email: " + (user.email || '')) + '" target="_blank" style="font-size:12px;color:var(--u-accent-hi);text-decoration:none;font-weight:600;">Contact support to change →</a>';
-      h += '</div>';
-    } else {
-      h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(245,158,11,0.08);border-radius:10px;border:1px solid rgba(245,158,11,0.25);flex-wrap:wrap;">';
-      h += '<i class="fa-solid fa-triangle-exclamation" style="color:var(--u-warning);"></i>';
-      h += '<div style="flex:1;min-width:160px;font-size:13px;color:#fbbf24;">Not set — required for certificates</div>';
-      h += '<button class="u-btn" style="height:32px;padding:0 12px;font-size:12px;" onclick="window.showLegalNameModal()">Set Now</button>';
-      h += '</div>';
-    }
-    h += '</div>';
-
-    // Quick links
-    h += '<div class="u-panel">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-gear"></i> Account</div></div>';
-    h += '<div style="display:flex;flex-direction:column;gap:6px;">';
-    h += '<a class="u-quick-item" href="https://wa.me/263714587259" target="_blank"><i class="fa-brands fa-whatsapp"></i> Contact Support</a>';
-    h += '<a class="u-quick-item" href="https://wa.me/263714587259" target="_blank"><i class="fa-solid fa-key"></i> Change Password (via support)</a>';
-    h += '<a class="u-quick-item" href="https://oblixelacademy.com/verify" target="_blank"><i class="fa-solid fa-shield-halved"></i> Verify a Certificate</a>';
-    h += '<button class="u-quick-item" style="text-align:left;border:1px solid transparent;" onclick="window.logout && window.logout()"><i class="fa-solid fa-right-from-bracket" style="color:var(--u-danger);"></i> Logout</button>';
-    h += '</div>';
-    h += '</div>';
-
-    h += '</div></main>';
-    h += '</div>';
-    h += renderUserMobileTabs('profile');
-
-    root.innerHTML = h;
-    wireUserNav();
+    const root = document.getElementById('app-root');
+    root.innerHTML = `
+      <div class="max-w-4xl mx-auto fade-in">
+        <button onclick="window.renderPage('dashboard')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard</button>
+        <div class="glass rounded-3xl p-6">
+          <div class="flex items-center gap-5 flex-wrap">
+            <div class="w-20 h-20 rounded-3xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-3xl font-black">${(user.avatar && user.avatar !== 'U' && user.avatar.trim()) ? user.avatar : (user.name || '').trim().charAt(0).toUpperCase()}</div>
+            <div>
+              <h1 class="text-2xl font-black">${escapeHtml(user.fullName || user.name)}</h1>
+              <p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? (user.isMainAdmin ? '👑 Main Admin' : 'Admin') : 'Student'}</p>
+              <p class="text-xs text-cyan-400">Member since ${formatDate(user.createdAt)}</p>
+              ${user.hasProvidedLegalName ? `<p class="text-xs text-green-400 mt-1"><i class="fa-solid fa-circle-check mr-1"></i> Legal name: ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} · <a href="https://wa.me/263714587259?text=${encodeURIComponent("Hi obliXel support, I need to change my legal name.%0AAccount email: " + (user.email || ""))}" target="_blank" class="text-cyan-400 hover:underline">Contact support to change →</a></p>` : `<p class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Legal name not set. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline">Set Now →</button></p>`}
+            </div>
+          </div>
+          <div class="stats-grid mt-6">
+            
+            <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-purple-400">${user.level || 1}</h3><p class="text-xs">Level</p></div>
+            <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-yellow-400">$${formatMoney(user.totalSpent || 0)}</h3><p class="text-xs">Spent</p></div>
+            <div class="glass rounded-xl p-3 text-center"><h3 class="text-xl font-black text-green-400">${user.streak || 0}</h3><p class="text-xs">Day Streak</p></div>
+          </div>
+          <button id="deleteAccountBtn" class="mt-6 glass px-4 py-2 rounded-xl text-red-400 text-sm w-full hover:bg-red-500/10 transition">Delete Account</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
+      const confirmMsg = prompt('Type "DELETE" to permanently delete your account:');
+      if (confirmMsg === 'DELETE') {
+        try {
+          await deleteAccount('DELETE');
+          logout();
+          showToast('Account deleted', 'success');
+          renderPage('landing');
+        } catch (error) {
+          showToast('Failed to delete account', 'error');
+        }
+      }
+    });
   } catch (error) {
-    console.error('Profile error:', error);
-    root.innerHTML = '<div class="u-panel" style="margin:40px auto;max-width:480px;text-align:center;padding:40px;"><p style="color:var(--u-danger);">Failed to load profile: ' + error.message + '</p></div>';
+    document.getElementById('app-root').innerHTML = `<div class="glass rounded-3xl p-12 text-center"><p class="text-red-400">Failed to load profile</p></div>`;
   }
 }
+
 console.log('✅ Part 1 (Core & Auth + All Pages + v13.0 Prepped) loaded');
 
 // ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 2 ====================
@@ -7363,69 +7198,3 @@ function showResetVouchersModal() {
   });
 }
 window.showResetVouchersModal = showResetVouchersModal;
-// ==================== COMMUNITY TAB v15 ====================
-async function renderCommunity() {
-  if (!currentUser) { renderPage('login'); return; }
-  hideAIWidget();
-  const root = document.getElementById('app-root');
-
-  let h = '<div class="user-shell">';
-  h += renderUserSidebar('community');
-  h += '<main style="min-width:0"><div class="user-content">';
-
-  h += '<div style="margin-bottom:20px;"><div class="u-hero-greeting">Community</div><div class="u-hero-stats"><span class="u-hero-stat"><i class="fa-solid fa-users"></i> Learn together with other students</span></div></div>';
-
-  // WhatsApp channel
-  h += '<div class="u-panel" style="margin-bottom:14px;">';
-  h += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">';
-  h += '<div style="width:48px;height:48px;border-radius:12px;background:rgba(37,211,102,0.15);color:#25D366;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;"><i class="fa-brands fa-whatsapp"></i></div>';
-  h += '<div style="flex:1;min-width:180px;">';
-  h += '<div style="font-size:15px;font-weight:700;color:var(--u-text);">WhatsApp Community</div>';
-  h += '<div style="font-size:13px;color:var(--u-meta);margin-top:2px;">Join 3,000+ students · exam tips, study groups, updates</div>';
-  h += '</div>';
-  h += '<a href="https://whatsapp.com/channel/0029Vb8ApfmC6Zvo5QJ5LO3R" target="_blank" class="u-btn"><i class="fa-solid fa-arrow-right"></i> Join</a>';
-  h += '</div>';
-  h += '</div>';
-
-  // AI tutor
-  h += '<div class="u-panel" style="margin-bottom:14px;">';
-  h += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">';
-  h += '<div style="width:48px;height:48px;border-radius:12px;background:rgba(139,92,246,0.15);color:var(--u-accent-hi);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;"><i class="fa-solid fa-comments"></i></div>';
-  h += '<div style="flex:1;min-width:180px;">';
-  h += '<div style="font-size:15px;font-weight:700;color:var(--u-text);">AI Study Tutor</div>';
-  h += '<div style="font-size:13px;color:var(--u-meta);margin-top:2px;">Get instant help with any course, quiz, or exam topic</div>';
-  h += '</div>';
-  h += '<button class="u-btn" onclick="window.showAIWidget && window.showAIWidget()"><i class="fa-solid fa-comment"></i> Ask AI</button>';
-  h += '</div>';
-  h += '</div>';
-
-  // Support
-  h += '<div class="u-panel" style="margin-bottom:14px;">';
-  h += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">';
-  h += '<div style="width:48px;height:48px;border-radius:12px;background:rgba(245,158,11,0.15);color:#fbbf24;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;"><i class="fa-solid fa-headset"></i></div>';
-  h += '<div style="flex:1;min-width:180px;">';
-  h += '<div style="font-size:15px;font-weight:700;color:var(--u-text);">Support</div>';
-  h += '<div style="font-size:13px;color:var(--u-meta);margin-top:2px;">Questions about payments, vouchers, or certificates?</div>';
-  h += '</div>';
-  h += '<a href="https://wa.me/263714587259" target="_blank" class="u-btn u-btn-ghost"><i class="fa-brands fa-whatsapp"></i> Chat</a>';
-  h += '</div>';
-  h += '</div>';
-
-  // Coming soon
-  h += '<div class="u-panel">';
-  h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-sparkles"></i> Coming Soon</div></div>';
-  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">';
-  h += '<div style="padding:14px;background:var(--u-elevated);border-radius:10px;font-size:13px;color:var(--u-meta);"><i class="fa-solid fa-user-group" style="color:var(--u-accent-hi);margin-right:6px;"></i> Study Groups</div>';
-  h += '<div style="padding:14px;background:var(--u-elevated);border-radius:10px;font-size:13px;color:var(--u-meta);"><i class="fa-solid fa-ranking-star" style="color:var(--u-accent-hi);margin-right:6px;"></i> Leaderboards</div>';
-  h += '<div style="padding:14px;background:var(--u-elevated);border-radius:10px;font-size:13px;color:var(--u-meta);"><i class="fa-solid fa-trophy" style="color:var(--u-accent-hi);margin-right:6px;"></i> Challenges</div>';
-  h += '</div>';
-  h += '</div>';
-
-  h += '</div></main>';
-  h += '</div>';
-  h += renderUserMobileTabs('community');
-
-  root.innerHTML = h;
-  wireUserNav();
-}
-window.renderCommunity = renderCommunity;
