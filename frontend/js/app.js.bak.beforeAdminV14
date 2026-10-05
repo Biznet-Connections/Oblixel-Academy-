@@ -4784,41 +4784,15 @@ window.applyColorPreset = function(color) {
 };
 
 // ==================== ADMIN CONSOLE (v13.0 - BUG FIX: expiryPeriod & verifyUrlBase SAVE CORRECTLY) ====================
-// ==================== ADMIN CONSOLE v14 (Sidebar + Tabs) ====================
-// Shell loads data once, tabs render independently. Reuses existing modals.
-let _adminState = {
-  stats: null,
-  vouchers: [],
-  pending: [],
-  users: [],
-  courses: [],
-  finance: null,
-  certTemplate: null,
-  activeTab: 'overview',
-  charts: {}, // Chart.js instances by id
-  userFilter: 'all',
-  userSearch: '',
-};
-
 async function renderAdmin() {
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading admin panel...</p></div>';
-
-  // Reset state
-  _adminState = {
-    stats: { totalStudents: 0, totalCourses: 0, totalRevenue: 0, pendingCertificates: 0, activeVouchers: 0, totalEnrollments: 0, totalPayments: 0 },
-    vouchers: [], pending: [], users: [], courses: [],
-    finance: { thisMonth: 0, lastMonth: 0, total: 0 },
-    certTemplate: null,
-    activeTab: 'overview',
-    charts: {},
-    userFilter: 'all',
-    userSearch: '',
-  };
-
-  // Load privileges
+  
+  let stats = { totalStudents: 0, totalCourses: 0, totalRevenue: 0, pendingCertificates: 0, activeVouchers: 0, totalEnrollments: 0, totalPayments: 0 };
+  let vouchers = []; let pending = []; let users = []; let courses = []; let financeData = { thisMonth: 0, lastMonth: 0, total: 0 }; let certTemplate = null;
+  
   try {
     const privData = await getMyAdminPrivileges();
     myAdminPrivileges = privData;
@@ -4826,27 +4800,25 @@ async function renderAdmin() {
       currentUser.isMainAdmin = privData.isMainAdmin;
       currentUser.adminPrivileges = privData.privileges;
     }
-  } catch (e) {}
-
-  // Load all data in parallel
-  try { _adminState.stats = await getAdminStats(); } catch (e) { console.error('Stats error:', e); }
-  try { const vd = await getVouchers(); _adminState.vouchers = vd.vouchers || []; } catch (e) { console.error('Vouchers error:', e); }
-  try { const pd = await getPendingCertificates(); _adminState.pending = pd.pending || []; } catch (e) { console.error('Pending error:', e); }
-  try { const ud = await getAllUsers(); _adminState.users = ud.users || []; } catch (e) { console.error('Users error:', e); }
-  try { _adminState.courses = await getCourses(); } catch (e) { console.error('Courses error:', e); }
-  try { _adminState.finance = await getFinanceData(); } catch (e) { console.error('Finance error:', e); }
-
-  // Load certificate template
+  } catch(e) {}
+  
+  try { stats = await getAdminStats(); } catch(e) { console.error('Stats error:', e); }
+  try { const vd = await getVouchers(); vouchers = vd.vouchers || []; } catch(e) { console.error('Vouchers error:', e); }
+  try { const pd = await getPendingCertificates(); pending = pd.pending || []; } catch(e) { console.error('Pending error:', e); }
+  try { const ud = await getAllUsers(); users = ud.users || []; } catch(e) { console.error('Users error:', e); }
+  try { courses = await getCourses(); } catch(e) { console.error('Courses error:', e); courses = []; }
+  try { financeData = await getFinanceData(); } catch(e) { console.error('Finance error:', e); financeData = { thisMonth: 0, lastMonth: 0, total: 0 }; }
+  
   try {
     const t = await getCertificateTemplate();
-    _adminState.certTemplate = t.template;
-    if (_adminState.certTemplate && _adminState.certTemplate.customTexts && _adminState.certTemplate.customTexts.length > 0) {
-      customTextFields = [..._adminState.certTemplate.customTexts];
+    certTemplate = t.template;
+    if (certTemplate && certTemplate.customTexts && certTemplate.customTexts.length > 0) {
+      customTextFields = [...certTemplate.customTexts];
     } else {
       customTextFields = [];
     }
-  } catch (e) {
-    _adminState.certTemplate = {
+  } catch(e) {
+    certTemplate = {
       templateImage: '/images/certificate-template.png', signatureImage: '',
       expiryPeriod: 'never', verifyUrlBase: '',
       customTexts: [],
@@ -4855,955 +4827,452 @@ async function renderAdmin() {
     };
     customTextFields = [];
   }
-
-  window._adminCoursesData = _adminState.courses;
-  window._certTemplate = _adminState.certTemplate;
-
-  // Privilege flags
+  
+  window._adminCoursesData = courses;
+  window._certTemplate = certTemplate;
+  
   const isMain = !!(currentUser.isMainAdmin === true);
   const priv = currentUser.adminPrivileges || {};
-  window._adminIsMain = isMain;
-  window._adminPriv = {
-    canManageCourses: isMain || priv.manageCourses === true,
-    canManageVouchers: isMain || priv.manageVouchers === true,
-    canManageUsers: isMain || priv.manageUsers === true,
-    canManageAdmins: isMain || priv.manageAdmins === true,
-    canApproveCerts: isMain || priv.approveCertificates === true,
-    canViewFinance: isMain || priv.viewFinance === true,
-  };
+  const canManageCourses = isMain || priv.manageCourses === true;
+  const canManageVouchers = isMain || priv.manageVouchers === true;
+  const canManageUsers = isMain || priv.manageUsers === true;
+  const canManageAdmins = isMain || priv.manageAdmins === true;
+  const canApproveCerts = isMain || priv.approveCertificates === true;
+  const canViewFinance = isMain || priv.viewFinance === true;
 
-  renderAdminShell();
-}
-
-function renderAdminShell() {
-  const root = document.getElementById('app-root');
-  const isMain = window._adminIsMain;
-  const st = _adminState.stats || {};
-  const fin = _adminState.finance || {};
-
-  const tabs = [
-    { id: 'overview',    icon: 'fa-house',            label: 'Overview' },
-    { id: 'users',       icon: 'fa-users',            label: 'Users' },
-    { id: 'courses',     icon: 'fa-book-open',        label: 'Courses' },
-    { id: 'vouchers',    icon: 'fa-ticket',           label: 'Vouchers' },
-    { id: 'certificates',icon: 'fa-certificate',      label: 'Certificates' },
-    { id: 'analytics',   icon: 'fa-chart-line',       label: 'Analytics' },
-    { id: 'settings',    icon: 'fa-gear',             label: 'Settings' },
-  ];
-
-  let html = '<div class="admin-shell">';
-
-  // SIDEBAR (desktop)
-  html += '<aside class="admin-sidebar">';
-  html += '<div class="admin-sidebar-brand">';
-  html += '<div class="admin-sidebar-brand-title">obliXel Admin</div>';
-  html += '<div class="admin-sidebar-brand-sub">' + (isMain ? '👑 Main Admin' : 'Admin') + '</div>';
-  html += '</div>';
-  html += '<div class="admin-nav-section">Menu</div>';
-  for (const t of tabs) {
-    html += '<div class="admin-nav-item' + (t.id === _adminState.activeTab ? ' active' : '') + '" data-admin-nav="' + t.id + '">';
-    html += '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span>';
+  function renderAdminContent() {
+    var currentCourses = window._adminCoursesData || courses;
+    var ct = window._certTemplate || certTemplate;
+    var pos = ct.positions || {};
+    var sty = ct.styles || {};
+    var sigImg = ct.signatureImage || '';
+    var hasSignature = !!(sigImg && sigImg.length > 10);
+    var expPeriod = ct.expiryPeriod || 'never';
+    var vrfBase = ct.verifyUrlBase || 'oblixelacademy.com/verify/';
+    
+    var html = '';
+    html += '<div class="max-w-7xl mx-auto fade-in">';
+    
+    // Header
+    html += '<div class="flex justify-between items-center mb-6 flex-wrap gap-3"><div><button onclick="window.renderPage(\'dashboard\')" class="text-gray-400 hover:text-white mb-2 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button><h1 class="text-3xl sm:text-5xl font-black text-purple-400">' + (isMain ? '👑 ' : '') + 'Admin Console</h1>' + (isMain ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full ml-2">Main Admin</span>' : '<span class="text-xs bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full ml-2">Admin</span>') + '</div>';
+    
+    html += '<div class="flex gap-2">';
+    if (isMain || canManageAdmins) {
+      html += '<button id="quickAddAdminBtn" class="bg-yellow-600/50 hover:bg-yellow-600 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-crown mr-1"></i> Add Admin</button>';
+    }
+    if (isMain) {
+      html += '<div class="relative">';
+      html += '<button id="systemControlsBtn" class="bg-red-600/30 hover:bg-red-600/50 px-4 py-2 rounded-xl text-sm font-bold transition border border-red-500/30"><i class="fa-solid fa-triangle-exclamation mr-1"></i> System Controls</button>';
+      html += '<div id="systemControlsDropdown" class="hidden absolute right-0 mt-2 w-72 glass rounded-2xl p-4 z-50 shadow-2xl border border-white/10">';
+      html += '<p class="text-xs text-gray-400 mb-3 font-bold">⚠️ Dangerous Actions</p>';
+      html += '<button onclick="window.showResetRevenueModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition mb-1"><i class="fa-solid fa-dollar-sign mr-2"></i> Reset Revenue</button>';
+      html += '<button onclick="window.showResetEnrollmentsModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition mb-1"><i class="fa-solid fa-users-slash mr-2"></i> Reset Enrollments</button>';
+      html += '<button onclick="window.showResetCertificatesModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 text-sm transition"><i class="fa-solid fa-certificate mr-2"></i> Reset Certificates</button>';
+      html += '</div></div>';
+    }
+    html += '</div></div>';
+    
+    // Stats
+    html += '<div class="stats-grid mb-8">';
+    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-cyan-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">' + (stats.totalStudents || 0) + '</h3><p class="text-xs">Students</p></div>';
+    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-book-open text-green-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-green-400">' + (stats.totalCourses || currentCourses.length) + '</h3><p class="text-xs">Courses</p></div>';
+    if (canViewFinance) {
+      html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-dollar-sign text-yellow-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-yellow-400">$' + formatMoney(financeData.total || stats.totalRevenue || 0) + '</h3><p class="text-xs">Revenue</p></div>';
+    }
+    html += '<div class="glass rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-purple-400 text-3xl mb-2"></i><h3 class="text-2xl font-black text-purple-400">' + pending.length + '</h3><p class="text-xs">Pending</p></div>';
     html += '</div>';
-  }
-  html += '<div style="flex:1"></div>';
-  html += '<div class="admin-nav-section">Quick</div>';
-  html += '<div class="admin-nav-item" data-admin-nav="back-to-app"><i class="fa-solid fa-arrow-left"></i><span>Back to App</span></div>';
-  html += '</aside>';
+    
+    // Quick Action Panels
+    html += '<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">';
+    if (canManageCourses) {
+      html += '<div class="relative"><button id="qaAddCourse" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-plus-circle text-green-400 text-2xl"></i><p class="text-xs mt-1">Add Course</p></button><div id="qaAddCourseInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + currentCourses.length + ' courses active</p><button onclick="showAddCourseModal()" class="mt-1 text-green-400 hover:underline">+ Add New Course</button></div></div>';
+    }
+    if (canManageVouchers) {
+      html += '<div class="relative"><button id="qaVoucher" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-ticket text-purple-400 text-2xl"></i><p class="text-xs mt-1">Vouchers</p></button><div id="qaVoucherInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + vouchers.length + ' vouchers active</p><button onclick="showCreateVoucherModal()" class="mt-1 text-purple-400 hover:underline">+ Create Voucher</button></div></div>';
+    }
+    if (canManageUsers) {
+      html += '<div class="relative"><button id="qaUsers" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-users-gear text-cyan-400 text-2xl"></i><p class="text-xs mt-1">Users</p></button><div id="qaUsersInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + users.length + ' users total</p></div></div>';
+    }
+    if (isMain || canManageAdmins) {
+      html += '<div class="relative"><button id="qaAddAdmin" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-crown text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Add Admin</p></button><div id="qaAddAdminInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">Manage admin team</p><button onclick="showAddAdminModal()" class="mt-1 text-yellow-400 hover:underline">+ Add Admin</button></div></div>';
+    }
+    if (canApproveCerts) {
+      html += '<div class="relative"><button id="qaApprove" class="glass rounded-xl p-3 text-center hover:bg-white/10 transition w-full"><i class="fa-solid fa-certificate text-yellow-400 text-2xl"></i><p class="text-xs mt-1">Approve</p></button><div id="qaApproveInfo" class="hidden absolute top-full left-0 mt-1 w-48 glass rounded-xl p-3 z-40 border border-white/10 text-xs"><p class="text-gray-400">' + pending.length + ' pending certificates</p></div></div>';
+    }
+    html += '</div>';
 
-  // MAIN
-  html += '<main style="min-width:0">';
-
-  // TOP BAR
-  html += '<div class="admin-topbar">';
-  html += '<div class="admin-topbar-crumb"><i class="fa-solid fa-shield-halved" style="color:var(--a-accent)"></i> Admin <span style="opacity:.4">/</span> <strong id="adminCrumbCurrent">Overview</strong></div>';
-  html += '<div class="admin-topbar-actions">';
-  html += '<button class="admin-icon-btn" onclick="window.renderAdmin()" title="Refresh"><i class="fa-solid fa-rotate"></i></button>';
-  html += '<button class="admin-icon-btn" onclick="window.renderPage(\'dashboard\')" title="Exit admin"><i class="fa-solid fa-right-from-bracket"></i></button>';
-  html += '</div>';
-  html += '</div>';
-
-  // CONTENT
-  html += '<div class="admin-content">';
-
-  // Overview tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'overview' ? ' active' : '') + '" data-admin-tab="overview">';
-  html += renderAdminOverviewTab();
-  html += '</div>';
-
-  // Users tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'users' ? ' active' : '') + '" data-admin-tab="users">';
-  html += renderAdminUsersTab();
-  html += '</div>';
-
-  // Courses tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'courses' ? ' active' : '') + '" data-admin-tab="courses">';
-  html += renderAdminCoursesTab();
-  html += '</div>';
-
-  // Vouchers tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'vouchers' ? ' active' : '') + '" data-admin-tab="vouchers">';
-  html += renderAdminVouchersTab();
-  html += '</div>';
-
-  // Certificates tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'certificates' ? ' active' : '') + '" data-admin-tab="certificates">';
-  html += renderAdminCertificatesTab();
-  html += '</div>';
-
-  // Analytics tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'analytics' ? ' active' : '') + '" data-admin-tab="analytics">';
-  html += renderAdminAnalyticsTab();
-  html += '</div>';
-
-  // Settings tab
-  html += '<div class="admin-tab' + (_adminState.activeTab === 'settings' ? ' active' : '') + '" data-admin-tab="settings">';
-  html += renderAdminSettingsTab();
-  html += '</div>';
-
-  html += '</div>'; // end admin-content
-  html += '</main>';
-  html += '</div>'; // end admin-shell
-
-  // MOBILE BOTTOM NAV
-  html += '<nav class="admin-mobile-nav">';
-  for (const t of tabs) {
-    html += '<button class="admin-mobile-nav-item' + (t.id === _adminState.activeTab ? ' active' : '') + '" data-admin-nav="' + t.id + '">';
-    html += '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span>';
-    html += '</button>';
-  }
-  html += '</nav>';
-
-  root.innerHTML = html;
-
-  // Wire up navigation
-  document.querySelectorAll('[data-admin-nav]').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.getAttribute('data-admin-nav');
-      if (id === 'back-to-app') { window.renderPage('dashboard'); return; }
-      switchAdminTab(id);
-    });
-  });
-
-  // Wire tab-specific actions
-  wireAdminTabActions();
-}
-
-function switchAdminTab(tabId) {
-  _adminState.activeTab = tabId;
-  document.querySelectorAll('[data-admin-tab]').forEach(el => {
-    el.classList.toggle('active', el.getAttribute('data-admin-tab') === tabId);
-  });
-  document.querySelectorAll('[data-admin-nav]').forEach(el => {
-    const isActive = el.getAttribute('data-admin-nav') === tabId;
-    el.classList.toggle('active', isActive);
-  });
-  const crumb = document.getElementById('adminCrumbCurrent');
-  if (crumb) {
-    const label = tabId.charAt(0).toUpperCase() + tabId.slice(1);
-    crumb.textContent = label;
-  }
-  // Redraw charts for analytics/overview on tab switch (charts need visible canvas)
-  if (tabId === 'overview' || tabId === 'analytics') {
-    setTimeout(() => { if (typeof window.__drawAdminCharts === 'function') window.__drawAdminCharts(tabId); }, 60);
-  }
-}
-
-// ==================== TAB RENDERERS ====================
-
-function renderAdminOverviewTab() {
-  const st = _adminState.stats || {};
-  const fin = _adminState.finance || {};
-
-  let h = '';
-  h += '<div class="admin-kpi-grid">';
-  h += '<div class="admin-kpi"><div class="admin-kpi-label">Students</div><div class="admin-kpi-value">' + (st.totalStudents || 0) + '</div><div class="admin-kpi-delta" id="kpiDeltaStudents">—</div></div>';
-  h += '<div class="admin-kpi"><div class="admin-kpi-label">Courses</div><div class="admin-kpi-value">' + (st.totalCourses || _adminState.courses.length) + '</div><div class="admin-kpi-delta">' + _adminState.courses.length + ' active</div></div>';
-  h += '<div class="admin-kpi"><div class="admin-kpi-label">Revenue</div><div class="admin-kpi-value">$' + formatMoney(fin.total || st.totalRevenue || 0) + '</div><div class="admin-kpi-delta" id="kpiDeltaRevenue">—</div></div>';
-  h += '<div class="admin-kpi"><div class="admin-kpi-label">Pending</div><div class="admin-kpi-value">' + _adminState.pending.length + '</div><div class="admin-kpi-delta">certificates</div></div>';
-  h += '</div>';
-
-  h += '<div class="admin-grid-2">';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-chart-line"></i> Students Growth (30 days)</div><div class="admin-chart-wrap"><canvas id="chartStudentsGrowth"></canvas></div></div>';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-dollar-sign"></i> Revenue Growth (30 days)</div><div class="admin-chart-wrap"><canvas id="chartRevenueGrowth"></canvas></div></div>';
-  h += '</div>';
-
-  h += '<div class="admin-grid-2">';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-globe"></i> Top Countries</div><div class="admin-chart-wrap"><canvas id="chartCountries"></canvas></div></div>';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-book"></i> Revenue by Course</div><div class="admin-chart-wrap"><canvas id="chartRevenueByCourse"></canvas></div></div>';
-  h += '</div>';
-
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-bell"></i> Recent Activity</div><div id="adminActivityFeed" style="color:var(--a-meta);font-size:13px;">Loading...</div></div>';
-
-  return h;
-}
-
-function renderAdminUsersTab() {
-  let h = '';
-  h += '<div class="admin-panel">';
-  h += '<div class="admin-toolbar">';
-  h += '<div class="admin-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="text" class="admin-search" id="adminUserSearch" placeholder="Search by name or email..." value="' + escapeHtml(_adminState.userSearch || '') + '"></div>';
-  h += '<button class="admin-pill-btn active" data-user-filter="all">All</button>';
-  h += '<button class="admin-pill-btn" data-user-filter="student">Students</button>';
-  h += '<button class="admin-pill-btn" data-user-filter="admin">Admins</button>';
-  h += '<button class="admin-pill-btn" data-user-filter="locked">Locked Legal Name</button>';
-  h += '</div>';
-  h += '<div id="adminUsersTableWrap"></div>';
-  h += '</div>';
-  return h;
-}
-
-function renderAdminCoursesTab() {
-  let h = '';
-  h += '<div class="admin-panel">';
-  h += '<div class="admin-toolbar" style="justify-content:space-between;">';
-  h += '<div class="admin-panel-title" style="margin:0"><i class="fa-solid fa-book"></i> Course Management</div>';
-  h += '<div style="display:flex;gap:8px;">';
-  h += '<button class="admin-btn admin-btn-ghost" id="adminSaveCourseOrder"><i class="fa-solid fa-floppy-disk"></i> Save Order</button>';
-  h += '<button class="admin-btn" id="adminAddCourseBtn"><i class="fa-solid fa-plus"></i> Add Course</button>';
-  h += '</div>';
-  h += '</div>';
-  h += '<div id="adminCoursesTableWrap"></div>';
-  h += '</div>';
-  return h;
-}
-
-function renderAdminVouchersTab() {
-  let h = '';
-  h += '<div class="admin-panel">';
-  h += '<div class="admin-toolbar" style="justify-content:space-between;">';
-  h += '<div class="admin-panel-title" style="margin:0"><i class="fa-solid fa-ticket"></i> Vouchers (' + _adminState.vouchers.length + ')</div>';
-  h += '<div style="display:flex;gap:8px;">';
-  h += '<button class="admin-btn admin-btn-ghost" id="adminBatchVoucherBtn"><i class="fa-solid fa-box"></i> Batch</button>';
-  h += '<button class="admin-btn" id="adminCreateVoucherBtn"><i class="fa-solid fa-plus"></i> Create</button>';
-  h += '</div>';
-  h += '</div>';
-  h += '<div id="adminVouchersTableWrap"></div>';
-  h += '</div>';
-  return h;
-}
-
-function renderAdminCertificatesTab() {
-  let h = '';
-  // Sub-tab pills
-  h += '<div class="admin-toolbar">';
-  h += '<button class="admin-pill-btn active" data-cert-sub="approvals">Approvals (' + _adminState.pending.length + ')</button>';
-  h += '<button class="admin-pill-btn" data-cert-sub="template">Template Settings</button>';
-  h += '</div>';
-
-  h += '<div data-cert-pane="approvals">';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-clock"></i> Pending Certificates</div><div id="adminPendingCertsWrap"></div></div>';
-  h += '</div>';
-
-  h += '<div data-cert-pane="template" style="display:none;">';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-palette"></i> Certificate Template & Design</div>';
-  h += '<p style="color:var(--a-muted);font-size:12.5px;margin-bottom:14px;">Drag elements, adjust sliders, and save. All existing certificate features are preserved.</p>';
-  h += '<div id="adminCertTemplateWrap"></div>';
-  h += '</div>';
-  h += '</div>';
-  return h;
-}
-
-function renderAdminAnalyticsTab() {
-  let h = '';
-  h += '<div class="admin-toolbar">';
-  h += '<button class="admin-pill-btn active" data-analytics-range="30">30 days</button>';
-  h += '<button class="admin-pill-btn" data-analytics-range="60">60 days</button>';
-  h += '<button class="admin-pill-btn" data-analytics-range="90">90 days</button>';
-  h += '</div>';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-users"></i> Students Growth</div><div class="admin-chart-wrap"><canvas id="chartAnalyticsStudents"></canvas></div></div>';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-dollar-sign"></i> Revenue Growth</div><div class="admin-chart-wrap"><canvas id="chartAnalyticsRevenue"></canvas></div></div>';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-book"></i> Revenue by Course</div><div id="adminRevenueByCourseTable" style="color:var(--a-meta);font-size:13px;">Loading...</div></div>';
-  return h;
-}
-
-function renderAdminSettingsTab() {
-  const isMain = window._adminIsMain;
-  let h = '';
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-circle-info"></i> System Info</div>';
-  h += '<div style="font-size:13px;color:var(--a-meta);line-height:1.9;">';
-  h += '<div>Students: <strong style="color:var(--a-text)">' + (_adminState.stats.totalStudents || 0) + '</strong></div>';
-  h += '<div>Courses: <strong style="color:var(--a-text)">' + _adminState.courses.length + '</strong></div>';
-  h += '<div>Total payments: <strong style="color:var(--a-text)">' + (_adminState.stats.totalPayments || 0) + '</strong></div>';
-  h += '<div>Role: <strong style="color:var(--a-text)">' + (isMain ? '👑 Main Admin' : 'Admin') + '</strong></div>';
-  h += '</div></div>';
-
-  if (isMain) {
-    h += '<div class="admin-panel" style="border-color:rgba(239,68,68,0.3)"><div class="admin-panel-title" style="color:var(--a-danger)"><i class="fa-solid fa-triangle-exclamation" style="color:var(--a-danger)"></i> Danger Zone</div>';
-    h += '<p style="font-size:12.5px;color:var(--a-muted);margin-bottom:14px;">These actions cannot be undone. Use with care.</p>';
-    h += '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px;">';
-    h += '<button class="admin-btn admin-btn-danger" onclick="window.showResetRevenueModal()"><i class="fa-solid fa-dollar-sign"></i> Reset All Revenue</button>';
-    h += '<button class="admin-btn admin-btn-danger" onclick="window.showResetEnrollmentsModal()"><i class="fa-solid fa-users-slash"></i> Reset All Enrollments</button>';
-    h += '<button class="admin-btn admin-btn-danger" onclick="window.showResetCertificatesModal()"><i class="fa-solid fa-certificate"></i> Reset All Certificates</button>';
-    h += '</div></div>';
-  }
-  return h;
-}
-
-// ==================== WIRE TAB ACTIONS ====================
-
-function wireAdminTabActions() {
-  // Populate users table
-  renderAdminUsersTableContent();
-  // Populate courses table
-  renderAdminCoursesTableContent();
-  // Populate vouchers table
-  renderAdminVouchersTableContent();
-  // Populate pending certs
-  renderAdminPendingCertsContent();
-
-  // User search
-  const searchInput = document.getElementById('adminUserSearch');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      _adminState.userSearch = e.target.value;
-      renderAdminUsersTableContent();
-    });
-  }
-
-  // User filter pills
-  document.querySelectorAll('[data-user-filter]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-user-filter]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      _adminState.userFilter = btn.getAttribute('data-user-filter');
-      renderAdminUsersTableContent();
-    });
-  });
-
-  // Course buttons
-  const addCourseBtn = document.getElementById('adminAddCourseBtn');
-  if (addCourseBtn) addCourseBtn.addEventListener('click', () => showAddCourseModal());
-  const saveOrderBtn = document.getElementById('adminSaveCourseOrder');
-  if (saveOrderBtn) saveOrderBtn.addEventListener('click', saveAdminCourseOrder);
-
-  // Voucher buttons
-  const createVoucherBtn = document.getElementById('adminCreateVoucherBtn');
-  if (createVoucherBtn) createVoucherBtn.addEventListener('click', () => showCreateVoucherModal());
-  const batchVoucherBtn = document.getElementById('adminBatchVoucherBtn');
-  if (batchVoucherBtn) batchVoucherBtn.addEventListener('click', () => showBatchVoucherModal());
-
-  // Cert sub-tabs
-  document.querySelectorAll('[data-cert-sub]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sub = btn.getAttribute('data-cert-sub');
-      document.querySelectorAll('[data-cert-sub]').forEach(b => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('[data-cert-pane]').forEach(p => {
-        p.style.display = p.getAttribute('data-cert-pane') === sub ? 'block' : 'none';
-      });
-      if (sub === 'template') {
-        setTimeout(renderAdminCertTemplateContent, 30);
+    // Course Management Table
+    if (canManageCourses) {
+      html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-book text-purple-400 mr-2"></i> Course Management</h2><div class="flex gap-2"><button id="saveCourseOrderBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Order</button><button id="addCourseTableBtn" class="bg-green-600/50 hover:bg-green-600 px-4 py-1.5 rounded-xl text-sm transition">+ Add Course</button></div></div><p class="text-xs text-gray-500 mb-2">Drag rows to reorder courses, then click Save Order.</p><div class="overflow-x-auto"><table class="w-full admin-table" id="adminCourseTable"><thead><tr class="border-b border-white/10"><th class="text-left py-3 w-8"></th><th class="text-left">Course</th><th class="text-left">Fee $</th><th class="text-left">Students</th><th class="text-left">Actions</th></tr></thead><tbody id="adminCourseTableBody">';
+      for (var i = 0; i < currentCourses.length; i++) {
+        var c = currentCourses[i]; var cp = c.price || c.examPrice || 0;
+        html += '<tr class="border-b border-white/10 hover:bg-white/5 course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '"><td class="py-3"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span></td><td class="py-3"><div class="flex items-center gap-2"><i class="fa-solid ' + (c.icon || 'fa-certificate') + ' text-purple-400"></i><span class="font-medium">' + escapeHtml(c.name) + '</span></div></td><td>$' + cp + '</td><td>' + (c.enrolledCount || 0) + '</td><td class="space-x-2"><button onclick="window.showEditCourseModal(\'' + c.id + '\')" class="text-cyan-400 hover:text-cyan-300"><i class="fa-solid fa-pen"></i></button><button onclick="window.showDeleteCourseModal(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button><button onclick="window.showManageVideosModal(\'' + c.id + '\')" class="text-yellow-400 hover:text-yellow-300"><i class="fa-solid fa-video"></i></button></td></tr>';
       }
-    });
-  });
-
-  // Analytics range pills
-  document.querySelectorAll('[data-analytics-range]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-analytics-range]').forEach(b => b.classList.toggle('active', b === btn));
-      const days = parseInt(btn.getAttribute('data-analytics-range'));
-      drawAdminAnalyticsCharts(days);
-    });
-  });
-
-  // Kick off chart draws + activity feed
-  setTimeout(() => {
-    drawAdminOverviewCharts();
-    loadAdminActivityFeed();
-    const initialTab = _adminState.activeTab;
-    if (initialTab === 'analytics') drawAdminAnalyticsCharts(30);
-  }, 80);
-}
-
-function renderAdminUsersTableContent() {
-  const wrap = document.getElementById('adminUsersTableWrap');
-  if (!wrap) return;
-  const canManageUsers = window._adminPriv.canManageUsers;
-
-  let users = _adminState.users.slice();
-  // Filter
-  if (_adminState.userFilter === 'student') users = users.filter(u => u.role === 'student');
-  else if (_adminState.userFilter === 'admin') users = users.filter(u => u.role === 'admin');
-  else if (_adminState.userFilter === 'locked') users = users.filter(u => u.hasProvidedLegalName);
-
-  // Search
-  const q = (_adminState.userSearch || '').toLowerCase().trim();
-  if (q) users = users.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
-
-  if (!users.length) {
-    wrap.innerHTML = '<p style="padding:24px;text-align:center;color:var(--a-muted);font-size:13px;">No users match your filter.</p>';
-    return;
-  }
-
-  let h = '<table class="admin-table-pro"><thead><tr>';
-  h += '<th>User</th><th>Role</th><th>Courses</th><th>Spent</th><th style="text-align:right">Actions</th>';
-  h += '</tr></thead><tbody>';
-
-  for (const u of users) {
-    const initial = (u.name || u.email || '?').trim().charAt(0).toUpperCase();
-    let roleBadge = '';
-    if (u.isMainAdmin) roleBadge = '<span class="admin-pill main">👑 Main</span>';
-    else if (u.role === 'admin') roleBadge = '<span class="admin-pill admin">Admin</span>';
-    else roleBadge = '<span class="admin-pill student">Student</span>';
-
-    h += '<tr data-user-id="' + u.id + '">';
-    h += '<td data-label="User"><div style="display:flex;align-items:center;gap:10px;"><div class="admin-avatar-sm">' + escapeHtml(initial) + '</div><div><strong>' + escapeHtml(u.name || '') + '</strong><div style="font-size:12px;color:var(--a-muted);">' + escapeHtml(u.email || '') + '</div></div></div></td>';
-    h += '<td data-label="Role">' + roleBadge + '</td>';
-    h += '<td data-label="Courses">' + (u.enrolledCourses || 0) + '</td>';
-    h += '<td data-label="Spent">$' + formatMoney(u.totalSpent || 0) + '</td>';
-    h += '<td data-label="Actions" style="text-align:right;"><button class="admin-row-menu-btn" data-user-menu="' + u.id + '"><i class="fa-solid fa-ellipsis"></i></button></td>';
-    h += '</tr>';
-  }
-  h += '</tbody></table>';
-  wrap.innerHTML = h;
-
-  // Wire menu buttons
-  wrap.querySelectorAll('[data-user-menu]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const userId = btn.getAttribute('data-user-menu');
-      const user = _adminState.users.find(x => x.id === userId);
-      if (user) openAdminUserMenu(btn, user);
-    });
-  });
-}
-
-function renderAdminCoursesTableContent() {
-  const wrap = document.getElementById('adminCoursesTableWrap');
-  if (!wrap) return;
-  const courses = _adminState.courses;
-
-  if (!courses.length) {
-    wrap.innerHTML = '<p style="padding:24px;text-align:center;color:var(--a-muted);font-size:13px;">No courses.</p>';
-    return;
-  }
-
-  let h = '<table class="admin-table-pro"><thead><tr>';
-  h += '<th style="width:32px"></th><th>Course</th><th>Fee</th><th>Students</th><th>Revenue</th><th style="text-align:right">Actions</th>';
-  h += '</tr></thead><tbody id="adminCourseTableBody">';
-
-  for (let i = 0; i < courses.length; i++) {
-    const c = courses[i];
-    const cp = c.price || c.examPrice || 0;
-    h += '<tr class="course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '">';
-    h += '<td data-label=""><span class="drag-handle" style="cursor:grab;color:var(--a-muted);"><i class="fa-solid fa-grip-vertical"></i></span></td>';
-    h += '<td data-label="Course"><div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '" style="color:var(--a-accent)"></i><strong>' + escapeHtml(c.name) + '</strong></div></td>';
-    h += '<td data-label="Fee">$' + cp + '</td>';
-    h += '<td data-label="Students">' + (c.enrolledCount || 0) + '</td>';
-    h += '<td data-label="Revenue" data-course-revenue="' + c.id + '">—</td>';
-    h += '<td data-label="Actions" style="text-align:right;">';
-    h += '<button class="admin-row-menu-btn" data-course-menu="' + c.id + '"><i class="fa-solid fa-ellipsis"></i></button>';
-    h += '</td>';
-    h += '</tr>';
-  }
-  h += '</tbody></table>';
-  wrap.innerHTML = h;
-
-  // Wire drag and drop (reuse existing function)
-  if (typeof initDragAndDrop === 'function') initDragAndDrop();
-
-  // Wire menu buttons
-  wrap.querySelectorAll('[data-course-menu]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const courseId = btn.getAttribute('data-course-menu');
-      const course = courses.find(x => x.id === courseId);
-      if (course) openAdminCourseMenu(btn, course);
-    });
-  });
-
-  // Load revenues in background
-  loadCourseRevenues();
-}
-
-async function loadCourseRevenues() {
-  try {
-    const resp = await apiRequest('/admin/analytics/revenue-by-course');
-    const map = new Map((resp.courses || []).map(c => [c.courseId, c]));
-    document.querySelectorAll('[data-course-revenue]').forEach(el => {
-      const id = el.getAttribute('data-course-revenue');
-      const data = map.get(id);
-      if (data) el.innerHTML = '<strong style="color:var(--a-text)">$' + formatMoney(data.revenue) + '</strong><div style="font-size:11px;color:var(--a-muted)">' + data.payments + ' payments</div>';
-      else el.innerHTML = '$0<div style="font-size:11px;color:var(--a-muted)">0 payments</div>';
-    });
-  } catch (e) { console.error('Course revenues error:', e); }
-}
-
-function renderAdminVouchersTableContent() {
-  const wrap = document.getElementById('adminVouchersTableWrap');
-  if (!wrap) return;
-  const vouchers = _adminState.vouchers;
-
-  if (!vouchers.length) {
-    wrap.innerHTML = '<p style="padding:24px;text-align:center;color:var(--a-muted);font-size:13px;">No vouchers yet.</p>';
-    return;
-  }
-
-  let h = '<table class="admin-table-pro"><thead><tr>';
-  h += '<th>Code</th><th>Discount</th><th>Course</th><th>Used</th><th>Expires</th><th style="text-align:right">Actions</th>';
-  h += '</tr></thead><tbody>';
-
-  for (const v of vouchers) {
-    const disc = v.discountType === 'free' ? '🎁 FREE' : (v.discountValue + (v.discountType === 'percentage' ? '%' : ' USD'));
-    const courseName = v.courseId === 'all' ? 'All Courses' : ((_adminState.courses.find(c => c.id === v.courseId) || {}).name || v.courseId);
-    h += '<tr>';
-    h += '<td data-label="Code"><span style="font-family:monospace;color:var(--a-accent-hi)">' + escapeHtml(v.code) + '</span></td>';
-    h += '<td data-label="Discount">' + disc + '</td>';
-    h += '<td data-label="Course">' + escapeHtml(courseName) + '</td>';
-    h += '<td data-label="Used">' + (v.usedCount || 0) + '/' + (v.maxUses || 1) + '</td>';
-    h += '<td data-label="Expires">' + (v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : 'Never') + '</td>';
-    h += '<td data-label="Actions" style="text-align:right;"><button class="admin-row-menu-btn" data-voucher-menu="' + v._id + '"><i class="fa-solid fa-ellipsis"></i></button></td>';
-    h += '</tr>';
-  }
-  h += '</tbody></table>';
-  wrap.innerHTML = h;
-
-  wrap.querySelectorAll('[data-voucher-menu]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const vId = btn.getAttribute('data-voucher-menu');
-      openAdminVoucherMenu(btn, vId);
-    });
-  });
-}
-
-function renderAdminPendingCertsContent() {
-  const wrap = document.getElementById('adminPendingCertsWrap');
-  if (!wrap) return;
-  const pending = _adminState.pending;
-
-  if (!pending.length) {
-    wrap.innerHTML = '<p style="padding:24px;text-align:center;color:var(--a-muted);font-size:13px;">✅ No pending certificates</p>';
-    return;
-  }
-
-  let h = '<div style="display:flex;flex-direction:column;gap:10px;">';
-  for (const p of pending) {
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--a-elevated);border-radius:10px;flex-wrap:wrap;gap:10px;">';
-    h += '<div><strong style="color:var(--a-text)">' + escapeHtml(p.userName || p.userEmail) + '</strong><div style="font-size:12px;color:var(--a-muted);margin-top:2px;">' + escapeHtml(p.courseName) + ' · ' + p.score + '% · ' + (p.certificateId || 'N/A') + '</div></div>';
-    h += '<div style="display:flex;gap:8px;">';
-    h += '<button class="admin-btn" onclick="window.approveCertificateItem(\'' + p.id + '\')">Approve</button>';
-    h += '<button class="admin-btn admin-btn-danger" onclick="window.rejectCertificateItem(\'' + p.id + '\')">Reject</button>';
-    h += '</div></div>';
-  }
-  h += '</div>';
-  wrap.innerHTML = h;
-}
-
-// Note: cert template content reuses existing functions via the old markup.
-// For now, a note + button to open the old template editor as a modal is safer than a full rewrite.
-function renderAdminCertTemplateContent() {
-  const wrap = document.getElementById('adminCertTemplateWrap');
-  if (!wrap) return;
-  wrap.innerHTML = '<p style="color:var(--a-meta);font-size:13px;">Certificate template editor loads below ↓</p><div id="adminCertTemplateLegacy"></div>';
-  // For now, we keep using the existing template editor by injecting it here
-  // (it relies on IDs like posNameX, fontFamily, etc. which are unchanged)
-  if (typeof renderCertificateTemplateEditor === 'function') {
-    renderCertificateTemplateEditor('adminCertTemplateLegacy');
-    setTimeout(() => { if (typeof initCertDragEngine === 'function') initCertDragEngine(); if (typeof redrawCertPreviewCanvas === 'function') redrawCertPreviewCanvas(); }, 80);
-  } else {
-    wrap.innerHTML = '<p style="color:var(--a-danger);font-size:13px;">Certificate template editor not found. It will be re-wired in the next block.</p>';
-  }
-}
-
-// ==================== CHART DRAWING ====================
-
-async function drawAdminOverviewCharts() {
-  try {
-    const [growth, revenue, countries, revenueByCourse] = await Promise.all([
-      apiRequest('/admin/analytics/students-growth?days=30'),
-      apiRequest('/admin/analytics/revenue-growth?days=30'),
-      apiRequest('/admin/analytics/countries'),
-      apiRequest('/admin/analytics/revenue-by-course')
-    ]);
-
-    // KPI deltas
-    const dStudents = document.getElementById('kpiDeltaStudents');
-    if (dStudents && growth) {
-      const delta = (growth.thisWeek || 0) - (growth.lastWeek || 0);
-      const cls = delta >= 0 ? 'up' : 'down';
-      dStudents.className = 'admin-kpi-delta ' + cls;
-      dStudents.innerHTML = (delta >= 0 ? '▲ +' : '▼ ') + delta + ' this week';
-    }
-    const dRev = document.getElementById('kpiDeltaRevenue');
-    if (dRev && revenue) {
-      const delta = (revenue.thisWeek || 0) - (revenue.lastWeek || 0);
-      const cls = delta >= 0 ? 'up' : 'down';
-      dRev.className = 'admin-kpi-delta ' + cls;
-      dRev.innerHTML = (delta >= 0 ? '▲ +$' : '▼ -$') + Math.abs(delta).toFixed(2) + ' this week';
+      html += '</tbody></table></div></div>';
     }
 
-    const chartOpts = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 6 } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a', font: { size: 10 } } }
-      }
-    };
-
-    // Students growth
-    const c1 = document.getElementById('chartStudentsGrowth');
-    if (c1 && window.Chart) {
-      if (_adminState.charts.c1) _adminState.charts.c1.destroy();
-      _adminState.charts.c1 = new Chart(c1, {
-        type: 'line',
-        data: {
-          labels: growth.series.map(d => d.date.slice(5)),
-          datasets: [{ data: growth.series.map(d => d.count), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.35, pointRadius: 0 }]
-        },
-        options: chartOpts
-      });
+    // ========== v13.0 CERTIFICATE SETTINGS - TWO COLUMN LAYOUT - BUG FIXED SAVE ==========
+    if (canManageCourses) {
+      html += '<div class="glass rounded-3xl p-6 mb-8" style="border: 1px solid rgba(139, 92, 246, 0.3);">';
+      html += '<h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-certificate text-purple-400 mr-2"></i> 🎓 Certificate Settings</h2>';
+      
+      html += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
+      
+      // ===== LEFT COLUMN =====
+      html += '<div>';
+      
+      // Template Image
+      html += '<h3 class="font-semibold mb-2 text-purple-400">🖼️ Template Image</h3>';
+      html += '<div class="mb-3 p-4 bg-purple-600/10 rounded-xl border border-purple-500/20 text-center">';
+      html += '<img id="certTemplatePreview" src="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" alt="Template Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin: 0 auto;" onerror="this.style.display=\'none\'">';
+      html += '<p id="certTemplateName" class="text-xs text-gray-400 mt-2">' + (ct.templateImage || 'No template selected') + '</p></div>';
+      html += '<div class="flex gap-2 mb-3"><label for="certFileInput" class="flex-1 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold text-center cursor-pointer transition"><i class="fa-solid fa-folder-open mr-1"></i> Choose from Gallery</label><input type="file" id="certFileInput" accept="image/*" style="display:none;" onchange="window.handleCertFileSelect(event)"><button onclick="window.deleteCertificateTemplate()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash mr-1"></i> Remove</button></div>';
+      html += '<div class="relative mb-4"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">or URL:</span><input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" class="w-full bg-transparent border border-white/20 rounded-xl pl-16 pr-4 py-2 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '<div id="certUploadStatus" class="hidden text-xs mt-2 p-2 rounded-lg"></div>';
+      
+      // Live Canvas Preview
+      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">🖼️ Live Preview <span class="text-xs text-gray-500 font-normal">(Click & Drag Elements)</span></h3>';
+      html += '<div class="canvas-wrapper mb-4" style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.1);"><canvas id="certPreviewCanvas" width="1600" height="1131" style="max-width: 100%; height: auto; cursor: default; border-radius: 8px;"></canvas></div>';
+      html += '<p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-hand-pointer mr-1"></i> <strong>Click and drag</strong> any element directly on the canvas. Sliders update in real-time.</p>';
+      
+      // Signature Pad
+      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">✍️ Official Signature</h3>';
+      html += '<div class="p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 mb-4"><div class="flex items-center gap-3 mb-3"><div class="w-16 h-16 rounded-xl bg-white/90 flex items-center justify-center overflow-hidden" style="min-width: 64px;">';
+      if (hasSignature) { html += '<img id="signaturePreviewImg" src="' + sigImg + '" alt="Signature" style="max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder" style="display:none;"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
+      else { html += '<img id="signaturePreviewImg" src="" alt="Signature" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;"><span id="signaturePlaceholder"><i class="fa-solid fa-signature text-2xl text-gray-400"></i></span>'; }
+      html += '</div><div><p class="text-sm font-medium">' + (hasSignature ? 'Signature Ready' : 'No Signature Yet') + '</p><p class="text-xs text-gray-400">' + (hasSignature ? 'Drag on canvas to position' : 'Click below to draw') + '</p></div></div>';
+      html += '<div class="flex gap-2"><button onclick="window.openSignaturePadModal()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-gray-900 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-pen-to-square mr-1"></i> ' + (hasSignature ? 'Redraw Signature' : 'Draw Signature') + '</button>';
+      if (hasSignature) { html += '<button onclick="window.clearSavedSignature()" class="bg-red-600/50 hover:bg-red-500 px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-trash"></i></button>'; }
+      html += '</div></div>';
+      
+      // Test Data
+      html += '<h3 class="font-semibold mt-4 mb-2 text-purple-400">📝 Test Data</h3><div class="space-y-2">';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Student Name</label><input type="text" id="testStudentName" value="John Doe" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Course Name</label><input type="text" id="testCourseName" value="Computer Certified Professional (CCP)" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Issue Date</label><input type="text" id="testIssueDate" value="24 June 2026" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Certificate ID</label><input type="text" id="testCertId" value="OBX-CCP-TEST123" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm focus:border-purple-400 transition" autocomplete="off"></div>';
+      html += '</div>';
+      
+      html += '</div>'; // END LEFT COLUMN
+      
+      // ===== RIGHT COLUMN =====
+      html += '<div>';
+      
+      // Position Sliders
+      html += '<h3 class="font-semibold mb-2 text-cyan-400">📍 Positions (Drag or Slide)</h3>';
+      html += '<div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">';
+      
+      // Name Position
+      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-purple-400 mb-2">Student Name</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posNameXVal">' + (pos.nameX || 800) + '</span></label><input type="range" id="posNameX" min="0" max="1600" value="' + (pos.nameX || 800) + '" class="w-full" oninput="document.getElementById(\'posNameXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posNameYVal">' + (pos.nameY || 455) + '</span></label><input type="range" id="posNameY" min="0" max="1131" value="' + (pos.nameY || 455) + '" class="w-full" oninput="document.getElementById(\'posNameYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
+      
+      // Course Position
+      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-cyan-400 mb-2">Course Name</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posCourseXVal">' + (pos.courseX || 800) + '</span></label><input type="range" id="posCourseX" min="0" max="1600" value="' + (pos.courseX || 800) + '" class="w-full" oninput="document.getElementById(\'posCourseXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posCourseYVal">' + (pos.courseY || 620) + '</span></label><input type="range" id="posCourseY" min="0" max="1131" value="' + (pos.courseY || 620) + '" class="w-full" oninput="document.getElementById(\'posCourseYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
+      
+      // Date Position
+      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-green-400 mb-2">Issue Date</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posDateXVal">' + (pos.dateX || 470) + '</span></label><input type="range" id="posDateX" min="0" max="1600" value="' + (pos.dateX || 470) + '" class="w-full" oninput="document.getElementById(\'posDateXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posDateYVal">' + (pos.dateY || 885) + '</span></label><input type="range" id="posDateY" min="0" max="1131" value="' + (pos.dateY || 885) + '" class="w-full" oninput="document.getElementById(\'posDateYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
+      
+      // Cert ID Position
+      html += '<div class="glass rounded-xl p-3 border border-white/5"><p class="text-xs font-medium text-yellow-400 mb-2">Certificate ID</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posCertIdXVal">' + (pos.certIdX || 1180) + '</span></label><input type="range" id="posCertIdX" min="0" max="1600" value="' + (pos.certIdX || 1180) + '" class="w-full" oninput="document.getElementById(\'posCertIdXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posCertIdYVal">' + (pos.certIdY || 885) + '</span></label><input type="range" id="posCertIdY" min="0" max="1131" value="' + (pos.certIdY || 885) + '" class="w-full" oninput="document.getElementById(\'posCertIdYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div></div>';
+      
+      // Signature Position
+      html += '<div class="glass rounded-xl p-3 border border-amber-500/20"><p class="text-xs font-medium text-amber-400 mb-2">✍️ Signature</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posSignatureXVal">' + (pos.signatureX || 800) + '</span></label><input type="range" id="posSignatureX" min="0" max="1600" value="' + (pos.signatureX || 800) + '" class="w-full" oninput="document.getElementById(\'posSignatureXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posSignatureYVal">' + (pos.signatureY || 980) + '</span></label><input type="range" id="posSignatureY" min="0" max="1131" value="' + (pos.signatureY || 980) + '" class="w-full" oninput="document.getElementById(\'posSignatureYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
+      html += '<div class="mt-2"><label class="text-xs text-gray-500">Scale: <span id="posSignatureScaleVal">' + (pos.signatureScale || 1.0) + '</span></label><input type="range" id="posSignatureScale" min="0.1" max="3.0" step="0.1" value="' + (pos.signatureScale || 1.0) + '" class="w-full" oninput="document.getElementById(\'posSignatureScaleVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
+      
+      html += '</div>'; // End position sliders scrollable area
+      
+      // ===== FULL FONT SETTINGS FOR ALL ELEMENTS =====
+      html += '<h3 class="font-semibold mt-4 mb-2 text-pink-400">🎨 Font Settings</h3>';
+      html += '<div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">';
+      
+      // Font Family
+      html += '<div class="glass rounded-xl p-3 border border-white/5"><div><label class="block text-xs text-gray-400 mb-1">Font Family</label><select id="fontFamily" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-1.5 text-sm"><option value="Georgia"' + (sty.fontFamily === 'Georgia' ? ' selected' : '') + '>Georgia</option><option value="Times New Roman"' + (sty.fontFamily === 'Times New Roman' ? ' selected' : '') + '>Times New Roman</option><option value="Arial"' + (sty.fontFamily === 'Arial' ? ' selected' : '') + '>Arial</option><option value="Playfair Display"' + (sty.fontFamily === 'Playfair Display' ? ' selected' : '') + '>Playfair Display</option><option value="Montserrat"' + (sty.fontFamily === 'Montserrat' ? ' selected' : '') + '>Montserrat</option></select></div></div>';
+      
+      // Student Name Font
+      html += '<div class="glass rounded-xl p-3 border border-purple-500/20"><p class="text-xs font-medium text-purple-400 mb-2">📛 Student Name</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontNameSizeVal">' + (sty.nameFontSize || 52) + 'px</span></label><input type="range" id="fontNameSize" min="20" max="100" value="' + (sty.nameFontSize || 52) + '" class="w-full" oninput="document.getElementById(\'fontNameSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontNameColor" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontNameColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontNameColorText" value="' + escapeHtml(sty.nameFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontNameColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
+      
+      // Course Name Font
+      html += '<div class="glass rounded-xl p-3 border border-cyan-500/20"><p class="text-xs font-medium text-cyan-400 mb-2">📚 Course Name</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontCourseSizeVal">' + (sty.courseFontSize || 36) + 'px</span></label><input type="range" id="fontCourseSize" min="16" max="80" value="' + (sty.courseFontSize || 36) + '" class="w-full" oninput="document.getElementById(\'fontCourseSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontCourseColor" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontCourseColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontCourseColorText" value="' + escapeHtml(sty.courseFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontCourseColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
+      
+      // Issue Date Font
+      html += '<div class="glass rounded-xl p-3 border border-green-500/20"><p class="text-xs font-medium text-green-400 mb-2">📅 Issue Date</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontDateSizeVal">' + (sty.dateFontSize || 28) + 'px</span></label><input type="range" id="fontDateSize" min="12" max="60" value="' + (sty.dateFontSize || 28) + '" class="w-full" oninput="document.getElementById(\'fontDateSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontDateColor" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontDateColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontDateColorText" value="' + escapeHtml(sty.dateFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontDateColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
+      
+      // Cert ID Font
+      html += '<div class="glass rounded-xl p-3 border border-yellow-500/20"><p class="text-xs font-medium text-yellow-400 mb-2">🏷️ Certificate ID</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">Size: <span id="fontCertIdSizeVal">' + (sty.certIdFontSize || 28) + 'px</span></label><input type="range" id="fontCertIdSize" min="12" max="60" value="' + (sty.certIdFontSize || 28) + '" class="w-full" oninput="document.getElementById(\'fontCertIdSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Color</label><div class="flex gap-1"><input type="color" id="fontCertIdColor" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontCertIdColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontCertIdColorText" value="' + escapeHtml(sty.certIdFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontCertIdColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div></div>';
+      
+      html += '</div>'; // End font settings scrollable area
+      
+      // Color Presets
+      html += '<div class="flex flex-wrap gap-2 mt-3">';
+      var presets = [{ name: 'GOLD', color: '#D4AF37' }, { name: 'SILVER', color: '#C0C0C0' }, { name: 'NAVY', color: '#1B2A4A' }, { name: 'BLACK', color: '#1A1A1A' }];
+      for (var pidx = 0; pidx < presets.length; pidx++) { var preset = presets[pidx]; html += '<button onclick="window.applyColorPreset(\'' + preset.color + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border-2 border-white/10 hover:scale-105" style="background:' + preset.color + '; color:' + (preset.color === '#FFFFFF' || preset.color === '#C0C0C0' ? '#1a1a1a' : '#ffffff') + ';">' + preset.name + '</button>'; }
+      html += '</div>';
+      
+      // ===== EXPIRY DATE SECTION - AUTO-CALCULATE, CLEAN DATE (NO PREFIX) =====
+      html += '<div class="glass rounded-xl p-4 mt-4 border border-yellow-500/20">';
+      html += '<h3 class="font-semibold mb-3 text-yellow-400">📅 Expiry Date <span class="text-xs text-yellow-500/70 font-normal">(Auto-Calculated)</span></h3>';
+      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Expiry Period</label><select id="expiryPeriod" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm" onchange="redrawCertPreviewCanvas();"><option value="never"' + (expPeriod === 'never' ? ' selected' : '') + '>Never Expires</option><option value="1year"' + (expPeriod === '1year' ? ' selected' : '') + '>1 Year</option><option value="2years"' + (expPeriod === '2years' ? ' selected' : '') + '>2 Years</option><option value="3years"' + (expPeriod === '3years' ? ' selected' : '') + '>3 Years</option></select></div>';
+      html += '<div class="p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/10 mb-3"><p class="text-xs text-gray-400 mb-1">📐 Auto-Calculated Preview:</p><p id="expiryAutoPreview" class="text-sm text-green-400 font-semibold"></p><p class="text-xs text-gray-500 mt-1">(Issue Date + Selected Period = Expiry Date)</p></div>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posExpiryDateXVal">' + (pos.expiryDateX || 470) + '</span></label><input type="range" id="posExpiryDateX" min="0" max="1600" value="' + (pos.expiryDateX || 470) + '" class="w-full" oninput="document.getElementById(\'posExpiryDateXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posExpiryDateYVal">' + (pos.expiryDateY || 920) + '</span></label><input type="range" id="posExpiryDateY" min="0" max="1131" value="' + (pos.expiryDateY || 920) + '" class="w-full" oninput="document.getElementById(\'posExpiryDateYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
+      html += '<div class="grid grid-cols-2 gap-2 mt-2"><div><label class="block text-xs text-gray-400 mb-1">Font Size: <span id="fontExpiryDateSizeVal">' + (sty.expiryDateFontSize || 24) + 'px</span></label><input type="range" id="fontExpiryDateSize" min="12" max="60" value="' + (sty.expiryDateFontSize || 24) + '" class="w-full" oninput="document.getElementById(\'fontExpiryDateSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Color</label><div class="flex gap-1"><input type="color" id="fontExpiryDateColor" value="' + escapeHtml(sty.expiryDateFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontExpiryDateColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontExpiryDateColorText" value="' + escapeHtml(sty.expiryDateFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontExpiryDateColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div>';
+      html += '</div>';
+      
+      // ===== VERIFY URL SECTION =====
+      html += '<div class="glass rounded-xl p-4 mt-4 border border-cyan-500/20">';
+      html += '<h3 class="font-semibold mb-3 text-cyan-400">🔗 Verify At URL</h3>';
+      html += '<div class="mb-3"><label class="block text-xs text-gray-400 mb-1">Base URL</label><input type="text" id="verifyUrlBase" value="' + escapeHtml(vrfBase) + '" placeholder="e.g., oblixelacademy.com/verify/" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 text-sm focus:border-cyan-400 transition" autocomplete="off" oninput="redrawCertPreviewCanvas();"></div>';
+      html += '<p class="text-xs text-gray-500 mb-2"><i class="fa-solid fa-circle-info mr-1"></i> Certificate ID auto-appended: <span class="text-cyan-400" style="word-break: break-all;">' + escapeHtml(vrfBase) + '<strong>OBX-CCP-TEST123</strong></span></p>';
+      html += '<p class="text-xs text-gray-500 mb-3"><i class="fa-solid fa-globe mr-1"></i> Anyone with this URL can verify the certificate — no login required.</p>';
+      html += '<div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-gray-500">X: <span id="posVerifyUrlXVal">' + (pos.verifyUrlX || 1180) + '</span></label><input type="range" id="posVerifyUrlX" min="0" max="1600" value="' + (pos.verifyUrlX || 1180) + '" class="w-full" oninput="document.getElementById(\'posVerifyUrlXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="text-xs text-gray-500">Y: <span id="posVerifyUrlYVal">' + (pos.verifyUrlY || 920) + '</span></label><input type="range" id="posVerifyUrlY" min="0" max="1131" value="' + (pos.verifyUrlY || 920) + '" class="w-full" oninput="document.getElementById(\'posVerifyUrlYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div></div>';
+      html += '<div class="grid grid-cols-2 gap-2 mt-2"><div><label class="block text-xs text-gray-400 mb-1">Font Size: <span id="fontVerifyUrlSizeVal">' + (sty.verifyUrlFontSize || 20) + 'px</span></label><input type="range" id="fontVerifyUrlSize" min="10" max="50" value="' + (sty.verifyUrlFontSize || 20) + '" class="w-full" oninput="document.getElementById(\'fontVerifyUrlSizeVal\').textContent = this.value + \'px\'; redrawCertPreviewCanvas();"></div>';
+      html += '<div><label class="block text-xs text-gray-400 mb-1">Color</label><div class="flex gap-1"><input type="color" id="fontVerifyUrlColor" value="' + escapeHtml(sty.verifyUrlFontColor || '#1a1a1a') + '" class="w-8 h-8 rounded-lg border-0 cursor-pointer" oninput="document.getElementById(\'fontVerifyUrlColorText\').value = this.value; redrawCertPreviewCanvas();"><input type="text" id="fontVerifyUrlColorText" value="' + escapeHtml(sty.verifyUrlFontColor || '#1a1a1a') + '" class="flex-1 bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs" oninput="document.getElementById(\'fontVerifyUrlColor\').value = this.value; redrawCertPreviewCanvas();"></div></div></div>';
+      html += '</div>';
+      
+      // ===== CUSTOM TEXT FIELDS SECTION =====
+      html += '<div class="glass rounded-xl p-4 mt-4 border border-green-500/20">';
+      html += '<div class="flex justify-between items-center mb-3"><h3 class="font-semibold text-green-400">📝 Custom Text Fields</h3><button onclick="window.addCustomTextField()" class="bg-green-600/50 hover:bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus mr-1"></i> Add Custom Text Field</button></div>';
+      html += '<div id="customTextFieldsContainer" class="max-h-[400px] overflow-y-auto pr-1"></div>';
+      html += '</div>';
+      
+      html += '</div>'; // END RIGHT COLUMN
+      
+      html += '</div>'; // END TWO COLUMN GRID
+      
+      // Bottom Buttons
+      html += '<div class="flex gap-3 mt-6 pt-4 border-t border-white/10">';
+      html += '<button id="saveCertSettingsBtn" class="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl text-sm font-bold transition flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Save All Settings</button>';
+      html += '<button id="testCertPreviewBtn" class="bg-cyan-600 hover:bg-cyan-500 px-6 py-3 rounded-xl text-sm font-bold transition flex-1"><i class="fa-solid fa-eye mr-1"></i> Test Full Preview</button>';
+      html += '</div>';
+      
+      html += '</div>'; // End certificate settings glass container
     }
 
-    // Revenue growth
-    const c2 = document.getElementById('chartRevenueGrowth');
-    if (c2 && window.Chart) {
-      if (_adminState.charts.c2) _adminState.charts.c2.destroy();
-      _adminState.charts.c2 = new Chart(c2, {
-        type: 'bar',
-        data: {
-          labels: revenue.series.map(d => d.date.slice(5)),
-          datasets: [{ data: revenue.series.map(d => d.total), backgroundColor: 'rgba(139,92,246,0.5)', borderRadius: 4 }]
-        },
-        options: chartOpts
-      });
+    // Vouchers
+    if (canManageVouchers) {
+      html += '<div class="glass rounded-3xl p-6 mb-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fa-solid fa-ticket text-purple-400 mr-2"></i> Vouchers</h2><div class="flex gap-2"><button id="createVoucherTableBtn" class="bg-purple-600/50 hover:bg-purple-600 px-4 py-1.5 rounded-xl text-sm">+ Create</button><button id="batchVoucherBtn" class="bg-blue-600/50 hover:bg-blue-600 px-4 py-1.5 rounded-xl text-sm">📦 Batch</button></div></div><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">Code</th><th class="text-left">Discount</th><th class="text-left">Course</th><th class="text-left">Used/Max</th><th class="text-left">Expires</th><th class="text-left">Actions</th></tr></thead><tbody>';
+      if (vouchers.length > 0) { for (var j = 0; j < vouchers.length; j++) { var v = vouchers[j]; html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><span class="font-mono text-cyan-400">' + escapeHtml(v.code) + '</span><button onclick="window.copyToClipboard(\'' + v.code + '\')" class="ml-2 text-gray-400 hover:text-cyan-400"><i class="fa-regular fa-copy"></i></button></td><td>' + (v.discountType === 'free' ? '🎁 FREE' : v.discountValue + (v.discountType === 'percentage' ? '% off' : '$ off')) + '</td><td>' + (v.courseId === 'all' ? 'All Courses' : (currentCourses.find(function(c2){return c2.id===v.courseId;})?.name||v.courseId)) + '</td><td>' + (v.usedCount||0) + '/' + (v.maxUses||1) + '</td><td>' + (v.expiresAt?new Date(v.expiresAt).toLocaleDateString():'Never') + '</td><td><button onclick="window.deleteVoucherItem(\'' + v._id + '\')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></td></tr>'; } }
+      else { html += '<tr><td colspan="6" class="text-center py-8 text-gray-400">No vouchers yet.</td></tr>'; }
+      html += '</tbody></table></div></div>';
     }
 
-    // Countries
-    const c3 = document.getElementById('chartCountries');
-    if (c3 && window.Chart && countries.countries) {
-      if (_adminState.charts.c3) _adminState.charts.c3.destroy();
-      _adminState.charts.c3 = new Chart(c3, {
-        type: 'bar',
-        data: {
-          labels: countries.countries.map(c => c.country),
-          datasets: [{ data: countries.countries.map(c => c.count), backgroundColor: 'rgba(139,92,246,0.6)', borderRadius: 4 }]
-        },
-        options: { ...chartOpts, indexAxis: 'y' }
-      });
+    // Pending Certificates
+    if (canApproveCerts) {
+      html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-clock text-yellow-400 mr-2"></i> Pending Certificates (' + pending.length + ')</h2><div class="space-y-3">';
+      if (pending.length > 0) { for (var k = 0; k < pending.length; k++) { var p = pending[k]; html += '<div class="flex justify-between items-center glass rounded-xl p-4 flex-wrap gap-3"><div><p class="font-medium">' + escapeHtml(p.userName||p.userEmail) + '</p><p class="text-sm text-gray-400">' + escapeHtml(p.courseName) + ' • Score: ' + p.score + '% • Code: ' + (p.certificateId||'N/A') + '</p></div><div class="flex gap-2"><button onclick="window.approveCertificateItem(\'' + p.id + '\')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl text-sm">✅ Approve</button><button onclick="window.rejectCertificateItem(\'' + p.id + '\')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl text-sm">❌ Reject</button></div></div>'; } }
+      else { html += '<div class="text-center py-8 text-gray-400">✅ No pending certificates</div>'; }
+      html += '</div></div>';
     }
 
-    // Revenue by course
-    const c4 = document.getElementById('chartRevenueByCourse');
-    if (c4 && window.Chart && revenueByCourse.courses) {
-      if (_adminState.charts.c4) _adminState.charts.c4.destroy();
-      _adminState.charts.c4 = new Chart(c4, {
-        type: 'bar',
-        data: {
-          labels: revenueByCourse.courses.slice(0, 6).map(c => c.courseId.toUpperCase()),
-          datasets: [{ data: revenueByCourse.courses.slice(0, 6).map(c => c.revenue), backgroundColor: 'rgba(139,92,246,0.6)', borderRadius: 4 }]
-        },
-        options: chartOpts
-      });
-    }
-  } catch (e) { console.error('Overview charts error:', e); }
-}
-
-async function drawAdminAnalyticsCharts(days) {
-  try {
-    const [growth, revenue, revenueByCourse] = await Promise.all([
-      apiRequest('/admin/analytics/students-growth?days=' + days),
-      apiRequest('/admin/analytics/revenue-growth?days=' + days),
-      apiRequest('/admin/analytics/revenue-by-course')
-    ]);
-
-    const chartOpts = {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 8 } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a', font: { size: 10 } } }
-      }
-    };
-
-    const c1 = document.getElementById('chartAnalyticsStudents');
-    if (c1 && window.Chart) {
-      if (_adminState.charts.a1) _adminState.charts.a1.destroy();
-      _adminState.charts.a1 = new Chart(c1, {
-        type: 'line',
-        data: { labels: growth.series.map(d => d.date.slice(5)), datasets: [{ data: growth.series.map(d => d.count), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.35, pointRadius: 0 }] },
-        options: chartOpts
-      });
-    }
-
-    const c2 = document.getElementById('chartAnalyticsRevenue');
-    if (c2 && window.Chart) {
-      if (_adminState.charts.a2) _adminState.charts.a2.destroy();
-      _adminState.charts.a2 = new Chart(c2, {
-        type: 'bar',
-        data: { labels: revenue.series.map(d => d.date.slice(5)), datasets: [{ data: revenue.series.map(d => d.total), backgroundColor: 'rgba(139,92,246,0.5)', borderRadius: 4 }] },
-        options: chartOpts
-      });
-    }
-
-    // Revenue by course table
-    const wrap = document.getElementById('adminRevenueByCourseTable');
-    if (wrap && revenueByCourse.courses) {
-      if (!revenueByCourse.courses.length) {
-        wrap.innerHTML = '<p style="padding:16px;color:var(--a-muted);font-size:13px;">No revenue yet.</p>';
-      } else {
-        let h = '<table class="admin-table-pro"><thead><tr><th>Course</th><th>Payments</th><th>Revenue</th></tr></thead><tbody>';
-        for (const c of revenueByCourse.courses) {
-          h += '<tr><td data-label="Course"><strong>' + escapeHtml(c.courseName) + '</strong></td><td data-label="Payments">' + c.payments + '</td><td data-label="Revenue"><strong style="color:var(--a-accent-hi)">$' + formatMoney(c.revenue) + '</strong></td></tr>';
+    // User Management
+    if (canManageUsers) {
+      html += '<div class="glass rounded-3xl p-6 mb-8"><h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-users-gear text-cyan-400 mr-2"></i> User Management</h2><div class="overflow-x-auto"><table class="w-full admin-table"><thead><tr class="border-b border-white/10"><th class="text-left py-3">User</th><th class="text-left">Role</th><th class="text-left">Courses</th><th class="text-left">Spent</th><th class="text-left">Actions</th></tr></thead><tbody>';
+      if (users.length > 0) {
+        for (var m = 0; m < users.length; m++) {
+          var u = users[m];
+          var isAdminUser = u.role === 'admin';
+          var isMainAdminUser = u.isMainAdmin === true;
+          var roleBadge = '';
+          if (isMainAdminUser) { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400">👑 Main Admin</span>'; }
+          else if (isAdminUser) { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">Admin</span>'; }
+          else { roleBadge = '<span class="px-2 py-1 rounded-full text-xs bg-gray-500/20">Student</span>'; }
+          
+          var actionsHtml = '';
+          if (!isMainAdminUser && isAdminUser && (isMain || canManageAdmins)) {
+            actionsHtml += '<button onclick="window.showEditAdminPrivilegesModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\', \'' + escapeHtml(u.email).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-gear"></i> Edit</button>';
+          }
+          if (!isMainAdminUser && isAdminUser && isMain) {
+            actionsHtml += '<button onclick="window.showRemoveAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-user-slash"></i> Remove Admin</button>';
+          }
+          if (!isAdminUser && !isMainAdminUser && (isMain || canManageAdmins)) {
+            actionsHtml += '<button onclick="window.showMakeAdminModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-yellow-400 hover:text-yellow-300 text-xs"><i class="fa-solid fa-crown"></i> Make Admin</button>';
+          }
+          if (u.email !== currentUser.email && !isMainAdminUser) {
+            actionsHtml += '<button onclick="window.showDeleteUserModal(\'' + u.id + '\', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 ml-2 text-xs"><i class="fa-solid fa-trash"></i></button>';
+          }
+          
+          html += '<tr class="border-b border-white/10 hover:bg-white/5"><td class="py-3"><div><p class="font-medium">' + escapeHtml(u.name) + '</p><p class="text-xs text-gray-400">' + escapeHtml(u.email) + '</p></div></td><td>' + roleBadge + '</td><td>' + (u.enrolledCourses||0) + '</td><td>$' + formatMoney(u.totalSpent||0) + '</td><td class="space-x-1">' + (actionsHtml || '<span class="text-xs text-gray-500">-</span>') + '</td></tr>';
         }
-        h += '</tbody></table>';
-        wrap.innerHTML = h;
-      }
+      } else { html += '<tr><td colspan="5" class="text-center py-8 text-gray-400">No users found.</td></tr>'; }
+      html += '</tbody></table></div></div>';
     }
-  } catch (e) { console.error('Analytics charts error:', e); }
-}
+    
+    html += '</div>';
+    return html;
+  }
 
-// Expose for tab-switch redraw
-window.__drawAdminCharts = function(tabId) {
-  if (tabId === 'overview') drawAdminOverviewCharts();
-  if (tabId === 'analytics') drawAdminAnalyticsCharts(30);
-};
+  root.innerHTML = renderAdminContent();
 
-async function loadAdminActivityFeed() {
-  try {
-    const data = await apiRequest('/admin/analytics/activity?limit=20');
-    const wrap = document.getElementById('adminActivityFeed');
-    if (!wrap || !data.events) return;
-    if (!data.events.length) {
-      wrap.innerHTML = '<p style="padding:12px;color:var(--a-muted);font-size:13px;">No recent activity.</p>';
-      return;
+  setTimeout(function() {
+    var sysBtn = document.getElementById('systemControlsBtn');
+    var sysDropdown = document.getElementById('systemControlsDropdown');
+    if (sysBtn && sysDropdown) {
+      sysBtn.addEventListener('click', function(e) { e.stopPropagation(); sysDropdown.classList.toggle('hidden'); });
+      document.addEventListener('click', function(e) { if (!sysDropdown.classList.contains('hidden') && !sysDropdown.contains(e.target) && e.target !== sysBtn) { sysDropdown.classList.add('hidden'); } });
     }
-    let h = '';
-    for (const ev of data.events) {
-      const icon = ev.type === 'payment' ? 'fa-dollar-sign' : ev.type === 'signup' ? 'fa-user-plus' : 'fa-graduation-cap';
-      const color = ev.type === 'payment' ? 'var(--a-success)' : ev.type === 'signup' ? 'var(--a-accent-hi)' : 'var(--a-warning)';
-      const ago = timeAgo(ev.at);
-      h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--a-border);">';
-      h += '<div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;"><i class="fa-solid ' + icon + '" style="color:' + color + ';font-size:12px;"></i></div>';
-      h += '<div style="flex:1;font-size:13px;">' + escapeHtml(ev.label) + '</div>';
-      h += '<div style="font-size:11px;color:var(--a-muted);">' + ago + '</div>';
-      h += '</div>';
+    
+    var qaPanels = ['qaAddCourse', 'qaVoucher', 'qaUsers', 'qaAddAdmin', 'qaApprove'];
+    for (var qpi = 0; qpi < qaPanels.length; qpi++) {
+      (function(panelId) {
+        var btn = document.getElementById(panelId);
+        var info = document.getElementById(panelId + 'Info');
+        if (btn && info) {
+          btn.addEventListener('click', function(e) { e.stopPropagation();
+            var allInfos = document.querySelectorAll('[id$="Info"]');
+            for (var ai = 0; ai < allInfos.length; ai++) { if (allInfos[ai] !== info) allInfos[ai].classList.add('hidden'); }
+            info.classList.toggle('hidden');
+          });
+        }
+      })(qaPanels[qpi]);
     }
-    wrap.innerHTML = h;
-  } catch (e) { console.error('Activity feed error:', e); }
-}
-
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  const d = Math.floor(h / 24);
-  if (d < 7) return d + 'd ago';
-  return new Date(dateStr).toLocaleDateString();
-}
-
-// ==================== ROW MENUS ====================
-
-function openAdminUserMenu(btnEl, user) {
-  closeAllAdminMenus();
-  const rect = btnEl.getBoundingClientRect();
-  const canManageAdmins = window._adminPriv.canManageAdmins;
-  const isMain = window._adminIsMain;
-
-  let h = '<div class="admin-menu-popover" style="top:' + Math.min(rect.bottom + 4, window.innerHeight - 320) + 'px;left:' + Math.min(rect.right - 240, window.innerWidth - 250) + 'px;">';
-  h += '<button class="admin-menu-item" data-action="view-user"><i class="fa-solid fa-eye"></i>View details</button>';
-  h += '<div class="admin-menu-divider"></div>';
-  h += '<button class="admin-menu-item" data-action="edit-legal-name"><i class="fa-solid fa-pen"></i>Edit legal name</button>';
-  h += '<button class="admin-menu-item" data-action="reset-avatar"><i class="fa-solid fa-rotate"></i>Reset avatar</button>';
-  h += '<button class="admin-menu-item" data-action="reset-password"><i class="fa-solid fa-key"></i>Reset password</button>';
-  if (user.role !== 'admin' && !user.isMainAdmin && (isMain || canManageAdmins)) {
-    h += '<div class="admin-menu-divider"></div>';
-    h += '<button class="admin-menu-item" data-action="make-admin"><i class="fa-solid fa-crown"></i>Make admin</button>';
-  }
-  if (user.role === 'admin' && !user.isMainAdmin && (isMain || canManageAdmins)) {
-    h += '<div class="admin-menu-divider"></div>';
-    if (isMain) h += '<button class="admin-menu-item" data-action="edit-privileges"><i class="fa-solid fa-gear"></i>Edit privileges</button>';
-    if (isMain) h += '<button class="admin-menu-item danger" data-action="remove-admin"><i class="fa-solid fa-user-slash"></i>Remove admin</button>';
-  }
-  if (user.email !== currentUser.email && !user.isMainAdmin) {
-    h += '<div class="admin-menu-divider"></div>';
-    h += '<button class="admin-menu-item danger" data-action="delete-user"><i class="fa-solid fa-trash"></i>Delete user</button>';
-  }
-  h += '</div>';
-
-  document.body.insertAdjacentHTML('beforeend', h);
-  const menu = document.querySelector('.admin-menu-popover:last-child');
-  menu.addEventListener('click', (e) => {
-    const item = e.target.closest('.admin-menu-item');
-    if (!item) return;
-    handleAdminUserAction(item.getAttribute('data-action'), user);
-    closeAllAdminMenus();
-  });
-}
-
-function handleAdminUserAction(action, user) {
-  switch (action) {
-    case 'view-user': showAdminUserDetails(user); break;
-    case 'edit-legal-name': showAdminEditLegalNameModal(user); break;
-    case 'reset-avatar': confirmAndResetAvatar(user); break;
-    case 'reset-password': confirmAndResetPassword(user); break;
-    case 'make-admin': if (window.showMakeAdminModal) showMakeAdminModal(user.id, user.name); break;
-    case 'edit-privileges': if (window.showEditAdminPrivilegesModal) showEditAdminPrivilegesModal(user.id, user.name, user.email); break;
-    case 'remove-admin': if (window.showRemoveAdminModal) showRemoveAdminModal(user.id, user.name); break;
-    case 'delete-user': if (window.showDeleteUserModal) showDeleteUserModal(user.id, user.name); break;
-  }
-}
-
-function openAdminCourseMenu(btnEl, course) {
-  closeAllAdminMenus();
-  const rect = btnEl.getBoundingClientRect();
-
-  let h = '<div class="admin-menu-popover" style="top:' + Math.min(rect.bottom + 4, window.innerHeight - 260) + 'px;left:' + Math.min(rect.right - 240, window.innerWidth - 250) + 'px;">';
-  h += '<button class="admin-menu-item" data-action="edit-course"><i class="fa-solid fa-pen"></i>Edit course</button>';
-  h += '<button class="admin-menu-item" data-action="videos"><i class="fa-solid fa-video"></i>Manage videos</button>';
-  h += '<button class="admin-menu-item" data-action="payments"><i class="fa-solid fa-chart-line"></i>View payments</button>';
-  h += '<div class="admin-menu-divider"></div>';
-  h += '<button class="admin-menu-item danger" data-action="delete-course"><i class="fa-solid fa-trash"></i>Delete course</button>';
-  h += '</div>';
-
-  document.body.insertAdjacentHTML('beforeend', h);
-  const menu = document.querySelector('.admin-menu-popover:last-child');
-  menu.addEventListener('click', (e) => {
-    const item = e.target.closest('.admin-menu-item');
-    if (!item) return;
-    handleAdminCourseAction(item.getAttribute('data-action'), course);
-    closeAllAdminMenus();
-  });
-}
-
-function handleAdminCourseAction(action, course) {
-  switch (action) {
-    case 'edit-course': if (window.showEditCourseModal) showEditCourseModal(course.id); break;
-    case 'videos': if (window.showManageVideosModal) showManageVideosModal(course.id); break;
-    case 'delete-course': if (window.showDeleteCourseModal) showDeleteCourseModal(course.id, course.name); break;
-    case 'payments': showAdminCoursePaymentsModal(course); break;
-  }
-}
-
-function openAdminVoucherMenu(btnEl, voucherId) {
-  closeAllAdminMenus();
-  const rect = btnEl.getBoundingClientRect();
-  let h = '<div class="admin-menu-popover" style="top:' + Math.min(rect.bottom + 4, window.innerHeight - 120) + 'px;left:' + Math.min(rect.right - 240, window.innerWidth - 250) + 'px;">';
-  h += '<button class="admin-menu-item danger" data-action="delete-voucher"><i class="fa-solid fa-trash"></i>Delete voucher</button>';
-  h += '</div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-  const menu = document.querySelector('.admin-menu-popover:last-child');
-  menu.addEventListener('click', (e) => {
-    const item = e.target.closest('.admin-menu-item');
-    if (!item) return;
-    if (item.getAttribute('data-action') === 'delete-voucher' && window.deleteVoucherItem) deleteVoucherItem(voucherId);
-    closeAllAdminMenus();
-  });
-}
-
-function closeAllAdminMenus() {
-  document.querySelectorAll('.admin-menu-popover').forEach(m => m.remove());
-}
-document.addEventListener('click', closeAllAdminMenus);
-document.addEventListener('scroll', closeAllAdminMenus, true);
-
-// ==================== ADMIN MODALS (NEW POWERS) ====================
-
-function showAdminUserDetails(user) {
-  let h = '<div id="adminUserDetailsModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:560px;width:100%;max-height:80vh;overflow-y:auto;margin:0;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-user"></i> ' + escapeHtml(user.name || '') + '</div><button class="admin-icon-btn" onclick="document.getElementById(\'adminUserDetailsModal\').remove()"><i class="fa-solid fa-xmark"></i></button></div>';
-  h += '<div style="font-size:13.5px;color:var(--a-meta);line-height:2;">';
-  h += '<div><strong style="color:var(--a-text)">Email:</strong> ' + escapeHtml(user.email || '') + '</div>';
-  h += '<div><strong style="color:var(--a-text)">Role:</strong> ' + (user.isMainAdmin ? '👑 Main Admin' : (user.role === 'admin' ? 'Admin' : 'Student')) + '</div>';
-  h += '<div><strong style="color:var(--a-text)">Enrolled:</strong> ' + (user.enrolledCourses || 0) + ' course(s)</div>';
-  h += '<div><strong style="color:var(--a-text)">Total spent:</strong> $' + formatMoney(user.totalSpent || 0) + '</div>';
-  h += '<div><strong style="color:var(--a-text)">Joined:</strong> ' + (user.createdAt ? new Date(user.createdAt).toLocaleString() : '—') + '</div>';
-  h += '</div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-}
-
-function showAdminEditLegalNameModal(user) {
-  let h = '<div id="adminEditLegalNameModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:480px;width:100%;margin:0;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-pen"></i> Edit Legal Name</div><button class="admin-icon-btn" onclick="document.getElementById(\'adminEditLegalNameModal\').remove()"><i class="fa-solid fa-xmark"></i></button></div>';
-  h += '<p style="font-size:12.5px;color:var(--a-muted);margin-bottom:14px;">User: <strong style="color:var(--a-text)">' + escapeHtml(user.email) + '</strong></p>';
-  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">First Name</label><input id="adminLegalFirstName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(user.firstName || '') + '"></div>';
-  h += '<div style="margin-bottom:10px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Last Name</label><input id="adminLegalLastName" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" value="' + escapeHtml(user.lastName || '') + '"></div>';
-  h += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Reason (audit log)</label><input id="adminLegalReason" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;" placeholder="e.g., User requested correction"></div>';
-  h += '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'adminEditLegalNameModal\').remove()">Cancel</button><button class="admin-btn" id="adminLegalSaveBtn">Save</button></div>';
-  h += '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-  document.getElementById('adminLegalSaveBtn').addEventListener('click', async () => {
-    const firstName = document.getElementById('adminLegalFirstName').value.trim();
-    const lastName = document.getElementById('adminLegalLastName').value.trim();
-    const reason = document.getElementById('adminLegalReason').value.trim();
-    if (!firstName || !lastName) { showToast('Both names required', 'error'); return; }
-    try {
-      await apiRequest('/admin/users/' + user.id + '/override-legal-name', { method: 'POST', body: JSON.stringify({ firstName, lastName, reason }) });
-      showToast('Legal name updated', 'success');
-      document.getElementById('adminEditLegalNameModal').remove();
-      renderAdmin();
-    } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-  });
-}
-
-async function confirmAndResetAvatar(user) {
-  if (!confirm('Reset avatar for ' + (user.name || user.email) + '?')) return;
-  try {
-    await apiRequest('/admin/users/' + user.id + '/reset-avatar', { method: 'POST', body: JSON.stringify({}) });
-    showToast('Avatar reset', 'success');
-    renderAdmin();
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-}
-
-async function confirmAndResetPassword(user) {
-  if (!confirm('Generate a password reset code for ' + (user.name || user.email) + '?')) return;
-  try {
-    const r = await apiRequest('/admin/users/' + user.id + '/reset-password', { method: 'POST', body: JSON.stringify({}) });
-    alert('Reset code generated:\n\n' + (r.code || 'Error') + '\n\nShare this with the user manually.');
-    showToast('Reset code generated', 'success');
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-}
-
-async function showAdminCoursePaymentsModal(course) {
-  let h = '<div id="adminCoursePaymentsModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);">';
-  h += '<div class="admin-panel" style="max-width:720px;width:100%;max-height:85vh;overflow-y:auto;margin:0;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-chart-line"></i> ' + escapeHtml(course.name) + ' — Payments</div><button class="admin-icon-btn" onclick="document.getElementById(\'adminCoursePaymentsModal\').remove()"><i class="fa-solid fa-xmark"></i></button></div>';
-  h += '<div id="adminCoursePaymentsContent" style="font-size:13px;color:var(--a-meta);">Loading...</div>';
-  h += '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-
-  try {
-    const data = await apiRequest('/admin/courses/' + course.id + '/payments');
-    const wrap = document.getElementById('adminCoursePaymentsContent');
-    let inner = '<div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">';
-    inner += '<div class="admin-kpi" style="flex:1;min-width:140px;"><div class="admin-kpi-label">Total</div><div class="admin-kpi-value">$' + formatMoney(data.total) + '</div></div>';
-    inner += '<div class="admin-kpi" style="flex:1;min-width:140px;"><div class="admin-kpi-label">Payments</div><div class="admin-kpi-value">' + data.count + '</div></div>';
-    inner += '</div>';
-
-    if (!data.payments.length) {
-      inner += '<p style="padding:20px;text-align:center;color:var(--a-muted);">No payments yet.</p>';
-    } else {
-      inner += '<table class="admin-table-pro"><thead><tr><th>Student</th><th>Amount</th><th>Method</th><th>When</th></tr></thead><tbody>';
-      for (const p of data.payments) {
-        inner += '<tr><td data-label="Student"><strong>' + escapeHtml(p.userName) + '</strong><div style="font-size:11px;color:var(--a-muted);">' + escapeHtml(p.userEmail) + '</div></td>';
-        inner += '<td data-label="Amount"><strong style="color:var(--a-success)">$' + formatMoney(p.amount) + '</strong></td>';
-        inner += '<td data-label="Method">' + escapeHtml(p.paymentMethod || '—') + '</td>';
-        inner += '<td data-label="When">' + (p.completedAt ? new Date(p.completedAt).toLocaleString() : '—') + '</td></tr>';
-      }
-      inner += '</tbody></table>';
+    document.addEventListener('click', function() { var allInfos = document.querySelectorAll('[id$="Info"]'); for (var ai2 = 0; ai2 < allInfos.length; ai2++) { allInfos[ai2].classList.add('hidden'); } });
+    
+    var qaAdminBtn = document.getElementById('quickAddAdminBtn');
+    if (qaAdminBtn) { qaAdminBtn.addEventListener('click', function() { showAddAdminModal(); }); }
+    
+    if (canManageCourses) {
+      initDragAndDrop();
+      var saveBtn = document.getElementById('saveCourseOrderBtn');
+      if (saveBtn) { saveBtn.addEventListener('click', async function() { var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row'); var orderData = []; rows.forEach(function(row, index) { orderData.push({ courseId: row.dataset.courseId, displayOrder: index }); }); try { await apiRequest('/admin/courses/reorder', { method: 'PUT', body: JSON.stringify({ courses: orderData }) }); showToast('Course order saved!', 'success'); await loadCourses(); window._adminCoursesData = coursesData.slice(); } catch (error) { showToast('Failed: ' + error.message, 'error'); } }); }
+      
+      initCertDragEngine();
+      renderCustomTextFieldsList();
+      redrawCertPreviewCanvas();
+      
+      // ===== BUG FIX: SAVE CERTIFICATE SETTINGS - expiryPeriod & verifyUrlBase NOW SAVE CORRECTLY =====
+      var saveCertBtn = document.getElementById('saveCertSettingsBtn');
+      if (saveCertBtn) { saveCertBtn.addEventListener('click', async function() {
+        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
+        var positions = {
+          nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
+          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
+          dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
+          expiryDateX: parseInt(document.getElementById('posExpiryDateX')?.value) || 470, expiryDateY: parseInt(document.getElementById('posExpiryDateY')?.value) || 920,
+          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
+          verifyUrlX: parseInt(document.getElementById('posVerifyUrlX')?.value) || 1180, verifyUrlY: parseInt(document.getElementById('posVerifyUrlY')?.value) || 920,
+          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
+          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
+        };
+        var styles = {
+          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
+          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
+          nameFontColor: document.getElementById('fontNameColorText')?.value || document.getElementById('fontNameColor')?.value || '#1a1a1a',
+          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
+          courseFontColor: document.getElementById('fontCourseColorText')?.value || document.getElementById('fontCourseColor')?.value || '#1a1a1a',
+          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
+          dateFontColor: document.getElementById('fontDateColorText')?.value || document.getElementById('fontDateColor')?.value || '#1a1a1a',
+          expiryDateFontSize: parseInt(document.getElementById('fontExpiryDateSize')?.value) || 24,
+          expiryDateFontColor: document.getElementById('fontExpiryDateColorText')?.value || document.getElementById('fontExpiryDateColor')?.value || '#1a1a1a',
+          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
+          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || document.getElementById('fontCertIdColor')?.value || '#1a1a1a',
+          verifyUrlFontSize: parseInt(document.getElementById('fontVerifyUrlSize')?.value) || 20,
+          verifyUrlFontColor: document.getElementById('fontVerifyUrlColorText')?.value || document.getElementById('fontVerifyUrlColor')?.value || '#1a1a1a'
+        };
+        var signatureImage = window._certTemplate?.signatureImage || '';
+        var expiryPeriod = document.getElementById('expiryPeriod')?.value || 'never';
+        var verifyUrlBase = document.getElementById('verifyUrlBase')?.value || '';
+        
+        console.log('💾 SAVING: expiryPeriod=' + expiryPeriod + ', verifyUrlBase=' + verifyUrlBase);
+        
+        try {
+          await updateCertificateTemplateImage(imageUrl);
+          await updateCertificateTemplateSettings(positions, styles, signatureImage, expiryPeriod, verifyUrlBase, customTextFields);
+          showToast('Certificate settings saved!', 'success');
+          // Refresh the certTemplate in memory
+          window._certTemplate.expiryPeriod = expiryPeriod;
+          window._certTemplate.verifyUrlBase = verifyUrlBase;
+        } catch (error) { showToast('Failed: ' + error.message, 'error'); }
+      }); }
+      
+      var testBtn = document.getElementById('testCertPreviewBtn');
+      if (testBtn) { testBtn.addEventListener('click', function() {
+        var imageUrl = document.getElementById('certTemplateImage')?.value || '/images/certificate-template.png';
+        var positions = {
+          nameX: parseInt(document.getElementById('posNameX')?.value) || 800, nameY: parseInt(document.getElementById('posNameY')?.value) || 455,
+          courseX: parseInt(document.getElementById('posCourseX')?.value) || 800, courseY: parseInt(document.getElementById('posCourseY')?.value) || 620,
+          dateX: parseInt(document.getElementById('posDateX')?.value) || 470, dateY: parseInt(document.getElementById('posDateY')?.value) || 885,
+          expiryDateX: parseInt(document.getElementById('posExpiryDateX')?.value) || 470, expiryDateY: parseInt(document.getElementById('posExpiryDateY')?.value) || 920,
+          certIdX: parseInt(document.getElementById('posCertIdX')?.value) || 1180, certIdY: parseInt(document.getElementById('posCertIdY')?.value) || 885,
+          verifyUrlX: parseInt(document.getElementById('posVerifyUrlX')?.value) || 1180, verifyUrlY: parseInt(document.getElementById('posVerifyUrlY')?.value) || 920,
+          signatureX: parseInt(document.getElementById('posSignatureX')?.value) || 800, signatureY: parseInt(document.getElementById('posSignatureY')?.value) || 980,
+          signatureScale: parseFloat(document.getElementById('posSignatureScale')?.value) || 1.0
+        };
+        var styles = {
+          fontFamily: document.getElementById('fontFamily')?.value || 'Georgia',
+          nameFontSize: parseInt(document.getElementById('fontNameSize')?.value) || 52,
+          nameFontColor: document.getElementById('fontNameColorText')?.value || '#1a1a1a',
+          courseFontSize: parseInt(document.getElementById('fontCourseSize')?.value) || 36,
+          courseFontColor: document.getElementById('fontCourseColorText')?.value || '#1a1a1a',
+          dateFontSize: parseInt(document.getElementById('fontDateSize')?.value) || 28,
+          dateFontColor: document.getElementById('fontDateColorText')?.value || '#1a1a1a',
+          expiryDateFontSize: parseInt(document.getElementById('fontExpiryDateSize')?.value) || 24,
+          expiryDateFontColor: document.getElementById('fontExpiryDateColorText')?.value || '#1a1a1a',
+          certIdFontSize: parseInt(document.getElementById('fontCertIdSize')?.value) || 28,
+          certIdFontColor: document.getElementById('fontCertIdColorText')?.value || '#1a1a1a',
+          verifyUrlFontSize: parseInt(document.getElementById('fontVerifyUrlSize')?.value) || 20,
+          verifyUrlFontColor: document.getElementById('fontVerifyUrlColorText')?.value || '#1a1a1a'
+        };
+        var testData = {
+          studentName: document.getElementById('testStudentName')?.value || 'John Doe',
+          courseName: document.getElementById('testCourseName')?.value || 'Computer Certified Professional (CCP)',
+          issueDate: document.getElementById('testIssueDate')?.value || '24 June 2026',
+          certId: document.getElementById('testCertId')?.value || 'OBX-CCP-TEST123'
+        };
+        var sigImg = window._certTemplate?.signatureImage || '';
+        var expPeriod = document.getElementById('expiryPeriod')?.value || 'never';
+        var vrfBase = document.getElementById('verifyUrlBase')?.value || '';
+        
+        showCertPreviewModal(imageUrl, positions, styles, testData, sigImg, expPeriod, vrfBase, customTextFields);
+      }); }
+      
+      var allInputs = document.querySelectorAll('#posNameX, #posNameY, #posCourseX, #posCourseY, #posDateX, #posDateY, #posExpiryDateX, #posExpiryDateY, #posCertIdX, #posCertIdY, #posVerifyUrlX, #posVerifyUrlY, #posSignatureX, #posSignatureY, #posSignatureScale, #fontFamily, #fontNameSize, #fontNameColor, #fontNameColorText, #fontCourseSize, #fontCourseColor, #fontCourseColorText, #fontDateSize, #fontDateColor, #fontDateColorText, #fontExpiryDateSize, #fontExpiryDateColor, #fontExpiryDateColorText, #fontCertIdSize, #fontCertIdColor, #fontCertIdColorText, #fontVerifyUrlSize, #fontVerifyUrlColor, #fontVerifyUrlColorText, #testStudentName, #testCourseName, #testIssueDate, #testCertId, #certTemplateImage, #verifyUrlBase');
+      allInputs.forEach(function(input) {
+        input.addEventListener('input', function() {
+          if (input.id === 'fontNameColor') { var t = document.getElementById('fontNameColorText'); if (t) t.value = input.value; }
+          if (input.id === 'fontNameColorText') { var c = document.getElementById('fontNameColor'); if (c) c.value = input.value; }
+          if (input.id === 'fontCourseColor') { var ct = document.getElementById('fontCourseColorText'); if (ct) ct.value = input.value; }
+          if (input.id === 'fontCourseColorText') { var cc = document.getElementById('fontCourseColor'); if (cc) cc.value = input.value; }
+          if (input.id === 'fontDateColor') { var dt = document.getElementById('fontDateColorText'); if (dt) dt.value = input.value; }
+          if (input.id === 'fontDateColorText') { var dc = document.getElementById('fontDateColor'); if (dc) dc.value = input.value; }
+          if (input.id === 'fontExpiryDateColor') { var et = document.getElementById('fontExpiryDateColorText'); if (et) et.value = input.value; }
+          if (input.id === 'fontExpiryDateColorText') { var ec = document.getElementById('fontExpiryDateColor'); if (ec) ec.value = input.value; }
+          if (input.id === 'fontCertIdColor') { var it = document.getElementById('fontCertIdColorText'); if (it) it.value = input.value; }
+          if (input.id === 'fontCertIdColorText') { var ic = document.getElementById('fontCertIdColor'); if (ic) ic.value = input.value; }
+          if (input.id === 'fontVerifyUrlColor') { var vt = document.getElementById('fontVerifyUrlColorText'); if (vt) vt.value = input.value; }
+          if (input.id === 'fontVerifyUrlColorText') { var vc = document.getElementById('fontVerifyUrlColor'); if (vc) vc.value = input.value; }
+          if (input.id === 'certTemplateImage') { var p = document.getElementById('certTemplatePreview'); if (p) p.src = input.value; var n = document.getElementById('certTemplateName'); if (n) n.textContent = input.value; }
+          redrawCertPreviewCanvas();
+        });
+      });
+      
+      var addCourseBtn = document.getElementById('addCourseTableBtn'); if (addCourseBtn) addCourseBtn.addEventListener('click', function() { showAddCourseModal(); });
     }
-    wrap.innerHTML = inner;
-  } catch (e) {
-    document.getElementById('adminCoursePaymentsContent').innerHTML = '<p style="color:var(--a-danger)">Failed to load: ' + e.message + '</p>';
-  }
+    
+    var cvBtn = document.getElementById('createVoucherTableBtn'); if (cvBtn && canManageVouchers) cvBtn.addEventListener('click', function() { showCreateVoucherModal(); });
+    var bvBtn = document.getElementById('batchVoucherBtn'); if (bvBtn && canManageVouchers) bvBtn.addEventListener('click', function() { showBatchVoucherModal(); });
+    
+  }, 400);
 }
 
-async function saveAdminCourseOrder() {
-  const rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row');
-  const orderData = [];
-  rows.forEach((row, index) => { orderData.push({ courseId: row.dataset.courseId, displayOrder: index }); });
-  try {
-    await apiRequest('/admin/courses/reorder', { method: 'PUT', body: JSON.stringify({ courses: orderData }) });
-    showToast('Course order saved', 'success');
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
-}
 console.log('✅ Part 2 (Course Dashboard + Admin Console v13.0 with SAVE BUG FIXED) loaded');
 
 // ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 3 ====================
