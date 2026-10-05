@@ -1207,4 +1207,69 @@ router.get('/vouchers/:voucherCode/usage', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ==================== CERT NAME FIX (v15) ====================
+// Admin route to fix a cert's studentName if it was issued with wrong data.
+// Uses userId → fetches correct name from User record.
+router.post('/certificates/:certificateId/refix-name', isMainAdmin, async (req, res) => {
+  try {
+    const cert = await Certificate.findOne({ certificateId: req.params.certificateId });
+    if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+
+    const user = await User.findById(cert.userId);
+    if (!user) return res.status(404).json({ error: 'Certificate owner not found' });
+
+    const correctName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name;
+
+    const oldName = cert.studentName;
+    cert.studentName = correctName;
+    await cert.save();
+
+    console.log(`[ADMIN] Cert ${cert.certificateId} name fixed: "${oldName}" → "${correctName}" by ${req.user.email}`);
+
+    res.json({
+      success: true,
+      certificateId: cert.certificateId,
+      oldName,
+      newName: correctName,
+      message: `Cert name updated to "${correctName}"`
+    });
+  } catch (e) {
+    console.error('[ADMIN/CERT-REFIX] ERROR:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bulk fix all certs (main admin only)
+router.post('/certificates/refix-all-names', isMainAdmin, async (req, res) => {
+  try {
+    const certs = await Certificate.find({});
+    let fixed = 0;
+    const details = [];
+
+    for (const cert of certs) {
+      const user = await User.findById(cert.userId);
+      if (!user) continue;
+      const correctName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name;
+      if (cert.studentName !== correctName) {
+        details.push({ certificateId: cert.certificateId, old: cert.studentName, new: correctName });
+        cert.studentName = correctName;
+        await cert.save();
+        fixed++;
+      }
+    }
+
+    console.log(`[ADMIN] Bulk cert name fix: ${fixed} certs updated by ${req.user.email}`);
+
+    res.json({
+      success: true,
+      totalScanned: certs.length,
+      fixed,
+      details
+    });
+  } catch (e) {
+    console.error('[ADMIN/CERT-REFIX-ALL] ERROR:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 module.exports = router;
