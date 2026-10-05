@@ -177,14 +177,14 @@ router.post('/chat', async (req, res) => {
 📚 COURSES:
 ${coursesList}
 
-📋 RULES:
+ðŸ“‹ RULES:
 â€¢ 25 questions, 60 min, 70% pass
 â€¢ Failed = 7-day cooldown
 â€¢ Complete all modules before final exam
 â€¢ Vouchers = INSTANT enrollment, each code works ONCE
 â€¢ Credit Card/PayPal/EcoCash = COMING SOON
 
-📞 Support: ${config.supportWhatsApp}
+ðŸ“ž Support: ${config.supportWhatsApp}
 
 ${FORMATTING_INSTRUCTION}
 

@@ -174,17 +174,17 @@ router.post('/chat', async (req, res) => {
 
     const systemPrompt = `You are OBliXel AI for OBliXel Academy (${courses.length} certifications).
 
-📚 COURSES:
+ðŸ“š COURSES:
 ${coursesList}
 
-📋 RULES:
+ðŸ“‹ RULES:
 â€¢ 25 questions, 60 min, 70% pass
 â€¢ Failed = 7-day cooldown
 â€¢ Complete all modules before final exam
 â€¢ Vouchers = INSTANT enrollment, each code works ONCE
 â€¢ Credit Card/PayPal/EcoCash = COMING SOON
 
-📞 Support: ${config.supportWhatsApp}
+ðŸ“ž Support: ${config.supportWhatsApp}
 
 ${FORMATTING_INSTRUCTION}
 
@@ -229,11 +229,11 @@ router.post('/teacher/:courseId', async (req, res) => {
 
   const config = getAIConfig();
   const teachers = {
-    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor â€¢ 12 Years', avatar: '📡' },
-    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor â€¢ 15 Years', avatar: '📚' },
-    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect â€¢ AWS Certified', avatar: 'œ' },
-    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: 'ðŸ' },
-    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚' }
+    ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor â€¢ 12 Years', avatar: 'ðŸ“¡' },
+    ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor â€¢ 15 Years', avatar: 'ðŸ“š' },
+    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect â€¢ AWS Certified', avatar: 'Ã¢ËœÂÃ¯Â¸Â' },
+    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: 'ðŸ§ ' },
+    default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: 'ðŸ“š' }
   };
   const teacher = teachers[courseId] || teachers.default;
   const course = await Course.findOne({ courseId }).select('name');
@@ -519,7 +519,7 @@ function generateFallbackNotes(moduleName) {
   return `
 ${moduleName.toUpperCase()}
 
-€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+Ã¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€ÂÃ¢â€Â
 
 KEY CONCEPTS
 

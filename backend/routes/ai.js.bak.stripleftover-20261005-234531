@@ -177,14 +177,14 @@ router.post('/chat', async (req, res) => {
 📚 COURSES:
 ${coursesList}
 
-📋 RULES:
+ðŸ“‹ RULES:
 â€¢ 25 questions, 60 min, 70% pass
 â€¢ Failed = 7-day cooldown
 â€¢ Complete all modules before final exam
 â€¢ Vouchers = INSTANT enrollment, each code works ONCE
 â€¢ Credit Card/PayPal/EcoCash = COMING SOON
 
-📞 Support: ${config.supportWhatsApp}
+ðŸ“ž Support: ${config.supportWhatsApp}
 
 ${FORMATTING_INSTRUCTION}
 
@@ -231,8 +231,8 @@ router.post('/teacher/:courseId', async (req, res) => {
   const teachers = {
     ncp: { name: 'Professor Carlos', title: 'Network Certified Instructor â€¢ 12 Years', avatar: '📡' },
     ccp: { name: 'Professor Sarah Chen', title: 'Computer Science Professor â€¢ 15 Years', avatar: '📚' },
-    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect â€¢ AWS Certified', avatar: 'œ' },
-    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: 'ðŸ' },
+    clp: { name: 'Professor Mike Ross', title: 'Cloud Architect â€¢ AWS Certified', avatar: 'âËœÂÃ¯Â¸Â' },
+    aip: { name: 'Professor Nova Turing', title: 'AI Research Scientist', avatar: 'ðŸ§ ' },
     default: { name: 'Professor Sarah Chen', title: 'Senior Instructor', avatar: '📚' }
   };
   const teacher = teachers[courseId] || teachers.default;
@@ -519,7 +519,7 @@ function generateFallbackNotes(moduleName) {
   return `
 ${moduleName.toUpperCase()}
 
-€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+ââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Âââ€Â
 
 KEY CONCEPTS
 

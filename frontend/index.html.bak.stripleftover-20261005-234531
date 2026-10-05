@@ -280,7 +280,7 @@
       <div class="flex gap-2">
         <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs text-white shrink-0">AI</div>
         <div class="glass rounded-2xl p-3 max-w-[80%]">
-          <p class="text-xs sm:text-sm">Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! €œ</p>
+          <p class="text-xs sm:text-sm">Hi! I'm your AI study assistant. Ask me anything about certifications, exam prep, or course recommendations! Ã°Å¸Å½â€œ</p>
           <div class="ai-action-buttons mt-2 pt-2 border-t border-white/10 flex gap-2">
             <button class="ai-copy-btn text-xs text-gray-400 hover:text-cyan-400 transition" title="Copy"><i class="fa-regular fa-copy"></i></button>
             <button class="ai-like-btn text-xs text-gray-400 hover:text-green-400 transition" title="Like"><i class="fa-regular fa-thumbs-up"></i></button>

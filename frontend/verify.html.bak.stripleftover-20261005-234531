@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Verification - obliXel Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --purple: #8b5cf6;
+            --cyan: #06b6d4;
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --gold: #D4AF37;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(34, 197, 94, 0.04) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 40px;
+        }
+
+        /* Logo */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--purple), var(--cyan));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 900;
+            color: white;
+            margin: 0 auto 12px;
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+        }
+
+        .logo-section h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--purple), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-section p {
+            color: var(--muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Search Bar */
+        .search-section {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(20px);
+        }
+
+        .search-section h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-section h2 i {
+            color: var(--cyan);
+        }
+
+        .search-section .subtitle {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: var(--text);
+            font-size: 15px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: 0;
+        }
+
+        .search-box button {
+            background: linear-gradient(135deg, var(--purple), var(--cyan));
+            border: none;
+            border-radius: 14px;
+            padding: 14px 24px;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-box button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+        }
+
+        .search-box button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Result Card */
+        .result-card {
+            border-radius: 24px;
+            padding: 32px;
+            backdrop-filter: blur(20px);
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* VALID */
+        .result-card.valid {
+            background: rgba(34, 197, 94, 0.05);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        /* EXPIRED */
+        .result-card.expired {
+            background: rgba(234, 179, 8, 0.05);
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+
+        /* INVALID */
+        .result-card.invalid {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .result-icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+        }
+
+        .result-card.valid .result-icon { color: var(--green); }
+        .result-card.expired .result-icon { color: var(--yellow); }
+        .result-card.invalid .result-icon { color: var(--red); }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .result-card.valid .result-title { color: var(--green); }
+        .result-card.expired .result-title { color: var(--yellow); }
+        .result-card.invalid .result-title { color: var(--red); }
+
+        .result-subtitle {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .result-details {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-size: 13px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-label i {
+            width: 16px;
+            text-align: center;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--green);
+        }
+
+        .status-badge.expired-badge {
+            background: rgba(234, 179, 8, 0.15);
+            color: var(--yellow);
+        }
+
+        .result-message {
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .result-message ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+        }
+
+        .result-message ul li {
+            padding: 3px 0;
+        }
+
+        .result-message ul li::before {
+            content: '• ';
+            color: var(--muted);
+        }
+
+        /* Loading */
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Error */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: var(--red);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: var(--cyan);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                margin-top: 20px;
+            }
+            .search-box {
+                flex-direction: column;
+            }
+            .result-card {
+                padding: 20px;
+            }
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .detail-value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo-section">
+            <div class="logo-icon">O</div>
+            <h1>obliXel Academy</h1>
+            <p>Certificate Verification Portal</p>
+        </div>
+
+        <!-- Search -->
+        <div class="search-section">
+            <h2><i class="fa-solid fa-magnifying-glass"></i> Verify a Certificate</h2>
+            <p class="subtitle">Enter a certificate ID to check its authenticity and validity.</p>
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="certIdInput" 
+                    placeholder="e.g. OBX-CCP-A7X92"
+                    autocomplete="off"
+                >
+                <button id="verifyBtn" onclick="verifyCertificate()">
+                    <i class="fa-solid fa-check-circle"></i> Verify
+                </button>
+            </div>
+            <div id="searchError" class="error-message hidden"></div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingSection" class="loading-spinner hidden">
+            <div class="spinner"></div>
+            <p style="color: var(--muted); font-size: 14px;">Verifying certificate...</p>
+        </div>
+
+        <!-- Result -->
+        <div id="resultSection" class="hidden"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>obliXel Academy — Verify certificates issued by our platform.</p>
+        <p style="margin-top: 4px;">
+            <a href="/">← Back to obliXel Academy</a>
+        </p>
+    </div>
+
+    <script>
+        // Auto-detect API URL
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5001/api'
+            : '/api';
+
+        console.log('[VERIFY] API_BASE_URL:', API_BASE_URL);
+
+        // Get certificate ID from URL
+        function getCertIdFromURL() {
+            const path = window.location.pathname;
+            const parts = path.split('/verify/');
+            if (parts.length === 2 && parts[1].trim()) {
+                return parts[1].trim();
+            }
+            return null;
+        }
+
+        // On page load, check if there's an ID in the URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const certId = getCertIdFromURL();
+            if (certId) {
+                document.getElementById('certIdInput').value = certId;
+                verifyCertificate();
+            }
+
+            // Enter key to verify
+            document.getElementById('certIdInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyCertificate();
+                }
+            });
+        });
+
+        async function verifyCertificate() {
+            const certId = document.getElementById('certIdInput').value.trim();
+            const searchError = document.getElementById('searchError');
+            const loadingSection = document.getElementById('loadingSection');
+            const resultSection = document.getElementById('resultSection');
+            const verifyBtn = document.getElementById('verifyBtn');
+
+            // Reset
+            searchError.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            resultSection.innerHTML = '';
+
+            // Validate input
+            if (!certId) {
+                searchError.textContent = 'Please enter a certificate ID.';
+                searchError.classList.remove('hidden');
+                return;
+            }
+
+            // Show loading
+            loadingSection.classList.remove('hidden');
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/verify/${encodeURIComponent(certId)}`);
+                const data = await response.json();
+
+                loadingSection.classList.add('hidden');
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Verify';
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || 'Verification failed');
+                }
+
+                renderResult(data, certId);
+
+            } catch (error) {
+                loadingSection.classList.add('hidden');
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Verify';
+
+                console.error('Verify error:', error);
+                renderNotFound(certId);
+            }
+        }
+
+        function renderResult(data, certId) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.classList.remove('hidden');
+
+            if (!data.found) {
+                renderNotFound(certId);
+                return;
+            }
+
+            const isExpired = data.isExpired === true;
+            const cardClass = isExpired ? 'expired' : 'valid';
+            const icon = isExpired ? 'fa-triangle-exclamation' : 'fa-circle-check';
+            const title = isExpired ? 'Certificate Expired' : 'Certificate Valid';
+            const subtitle = isExpired 
+                ? 'This certificate has passed its expiry date.' 
+                : 'This certificate is authentic and currently valid.';
+
+            const formattedIssueDate = data.issueDate ? new Date(data.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+            const formattedExpiryDate = data.expiryDate ? new Date(data.expiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No Expiry';
+
+            resultSection.innerHTML = `
+                <div class="result-card ${cardClass}">
+                    <div class="result-header">
+                        <div class="result-icon">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div class="result-title">${title}</div>
+                        <div class="result-subtitle">${subtitle}</div>
+                    </div>
+
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-user"></i> Student</span>
+                            <span class="detail-value">${escapeHtml(data.studentName || 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-graduation-cap"></i> Course</span>
+                            <span class="detail-value">${escapeHtml(data.courseName || 'N/A')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-calendar-check"></i> Issued</span>
+                            <span class="detail-value">${formattedIssueDate}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-calendar-xmark"></i> Expires</span>
+                            <span class="detail-value">${formattedExpiryDate}</span>
+                        </div>
+                        ${data.score !== undefined ? `
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-star"></i> Score</span>
+                            <span class="detail-value">${data.score}%</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-fingerprint"></i> Certificate ID</span>
+                            <span class="detail-value" style="font-family: 'Courier New', monospace; font-size: 12px;">${escapeHtml(data.certificateId || certId)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label"><i class="fa-solid fa-circle"></i> Status</span>
+                            <span class="detail-value">
+                                <span class="status-badge ${isExpired ? 'expired-badge' : 'active'}">
+                                    ${isExpired ? '⚠️ Expired' : '🟢 Active'}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="result-message">
+                        ${isExpired 
+                            ? '<p>This certificate was issued by <strong>obliXel Academy</strong> but has since expired. The certificate holder needs to renew their certification to maintain active status.</p>'
+                            : '<p>This certificate was issued by <strong>obliXel Academy</strong> and is currently valid. The holder has successfully completed all requirements for this certification.</p>'
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNotFound(certId) {
+            const resultSection = document.getElementById('resultSection');
+            resultSection.classList.remove('hidden');
+
+            resultSection.innerHTML = `
+                <div class="result-card invalid">
+                    <div class="result-header">
+                        <div class="result-icon">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                        <div class="result-title">Certificate Not Found</div>
+                        <div class="result-subtitle">The certificate ID you entered was not found in our system.</div>
+                    </div>
+
+                    <div class="result-message">
+                        <p>This could mean:</p>
+                        <ul>
+                            <li>The certificate ID was typed incorrectly</li>
+                            <li>The certificate does not exist</li>
+                            <li>The certificate may have been revoked</li>
+                        </ul>
+                        <p style="margin-top: 12px;">
+                            <strong>ID searched:</strong> 
+                            <span style="font-family: 'Courier New', monospace;">${escapeHtml(certId)}</span>
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

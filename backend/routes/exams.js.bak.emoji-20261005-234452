@@ -147,7 +147,7 @@ router.post('/start', authenticate, async (req, res) => {
       const cert = await Certificate.findOne({ userId, courseId: courseId.toLowerCase(), status: 'issued' }).sort({ issuedAt: -1 });
       return res.status(403).json({
         error: 'Already passed',
-        message: '🎉 You have already passed this certification exam! No more retakes needed.',
+        message: 'ðŸŽ‰ You have already passed this certification exam! No more retakes needed.',
         score: enrollment.score,
         certificateCode: cert ? cert.certificateId : enrollment.certificateId || null
       });
@@ -390,14 +390,14 @@ router.post('/submit', authenticate, async (req, res) => {
         
         enrollment.certificateId = certificateCode;
         
-        console.log(`[EXAM] ✅ Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
+        console.log(`[EXAM] âœ… Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
       } else {
         const cd = new Date();
         cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
         enrollment.retakeFeeRequired = true; // __setRetakeOnFail
-        console.log(`[EXAM] Œ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
+        console.log(`[EXAM] âŒ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
       }
       await enrollment.save();
     }
@@ -477,8 +477,8 @@ router.post('/submit', authenticate, async (req, res) => {
       minutesLeft,
       cooldownHours: EXAM_COOLDOWN_HOURS,
       message: passed
-        ? `🎉 Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
-        : `Œ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
+        ? `ðŸŽ‰ Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
+        : `âŒ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
     });
   } catch (error) {
     console.error('[EXAM] Submit error:', error.message);
