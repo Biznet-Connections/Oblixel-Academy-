@@ -1,48 +1,63 @@
 ﻿// ==================== ENROLL MODAL LOGIC ====================
 (function () {
 
+  var SUPPORT_WHATSAPP = '263714587259';
+
   function requireLogin() {
-    const token = localStorage.getItem('auth_token');
+    var token = localStorage.getItem('auth_token');
     if (!token) {
-      const modal = document.getElementById('enrollModal');
+      var modal = document.getElementById('enrollModal');
       if (modal) {
-        modal.innerHTML = `
-          <div class="enroll-modal-header">
-            <div>
-              <p class="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1">Login Required</p>
-              <h2 class="text-xl font-black leading-tight">Please log in first</h2>
-            </div>
-            <button class="enroll-modal-close" onclick="closeEnrollModal()">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <p class="text-sm text-gray-300 my-4">You need an account to enroll in a course. It only takes 30 seconds.</p>
-          <button class="enroll-cta" onclick="closeEnrollModal(); if(typeof window.openLoginModal === 'function'){window.openLoginModal();} else { location.reload(); }">
-            <i class="fa-solid fa-right-to-bracket mr-2"></i> Log In / Sign Up
-          </button>
-          <button class="enroll-cta" style="margin-top:0.5rem;background:rgba(255,255,255,0.06);box-shadow:none;" onclick="closeEnrollModal()">
-            Cancel
-          </button>
-        `;
+        modal.innerHTML = ''
+          + '<div class="enroll-modal-header">'
+          + '<div>'
+          + '<p class="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1">Login Required</p>'
+          + '<h2 class="text-xl font-black leading-tight">Please log in first</h2>'
+          + '</div>'
+          + '<button class="enroll-modal-close" onclick="closeEnrollModal()">'
+          + '<i class="fa-solid fa-xmark"></i>'
+          + '</button>'
+          + '</div>'
+          + '<p class="text-sm text-gray-300 my-4">You need an account to enroll in a course. It only takes 30 seconds.</p>'
+          + '<button class="enroll-cta" onclick="closeEnrollModal(); if(typeof window.openLoginModal === \'function\'){window.openLoginModal();} else { location.reload(); }">'
+          + '<i class="fa-solid fa-right-to-bracket mr-2"></i> Log In / Sign Up'
+          + '</button>'
+          + '<button class="enroll-cta" style="margin-top:0.5rem;background:rgba(255,255,255,0.06);box-shadow:none;" onclick="closeEnrollModal()">'
+          + 'Cancel'
+          + '</button>';
       }
       return false;
     }
     return true;
   }
-  let currentCourse = null;
-  let currentPlan = 'exam_only';
-  let currentPrice = 0;
-  let currentOriginalPrice = 0;
+
+  function injectSupportLink() {
+    var pane = document.getElementById('pane-linkwa');
+    if (!pane) return;
+    if (pane.querySelector('.enroll-support-link')) return;
+    var link = document.createElement('a');
+    link.href = 'https://wa.me/' + SUPPORT_WHATSAPP + '?text=Hi%20obliXel%20support%2C%20I%20need%20help%20with%20enrollment.';
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.className = 'enroll-support-link';
+    link.style.cssText = 'display:block;text-align:center;margin-top:14px;font-size:12px;color:rgba(255,255,255,0.55);text-decoration:none;';
+    link.innerHTML = '<i class="fa-brands fa-whatsapp" style="color:#25D366;margin-right:6px;"></i>Having trouble? Contact support';
+    pane.appendChild(link);
+  }
+
+  var currentCourse = null;
+  var currentPlan = 'exam_only';
+  var currentPrice = 0;
+  var currentOriginalPrice = 0;
 
   window.openEnrollModal = async function (course) {
-    // Always fetch fresh course data to ensure prices are correct
     try {
-      const res = await fetch('/api/courses');
+      var res = await fetch('/api/courses');
       if (res.ok) {
-        const data = await res.json();
-        const fresh = (data.courses || []).find(c =>
-          c.id === course.courseId || c.courseId === course.courseId || c.id === course.id
-        );
+        var data = await res.json();
+        var fresh = (data.courses || []).find(function(c) {
+          return c.id === course.courseId || c.courseId === course.courseId || c.id === course.id;
+        });
         if (fresh) {
           course.name = fresh.name || course.name;
           course.examPrice = fresh.examPrice || fresh.price || 0;
@@ -51,23 +66,23 @@
         }
       }
     } catch (e) { console.warn('[Enroll] Could not fetch fresh course', e); }
-    // If price is missing, fetch fresh from API
+
     if (!course.examPrice && !course.price) {
       try {
-        const token = localStorage.getItem('auth_token');
-        const res = await fetch('/api/courses/' + course.courseId, {
+        var token = localStorage.getItem('auth_token');
+        var res2 = await fetch('/api/courses/' + course.courseId, {
           headers: token ? { Authorization: 'Bearer ' + token } : {}
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.course) {
-            course.examPrice = data.course.examPrice || 0;
-            course.pathPrice = data.course.pathPrice || data.course.examPrice || 0;
+        if (res2.ok) {
+          var data2 = await res2.json();
+          if (data2.course) {
+            course.examPrice = data2.course.examPrice || 0;
+            course.pathPrice = data2.course.pathPrice || data2.course.examPrice || 0;
           }
         }
       } catch (e) { console.warn('[Enroll] Could not fetch course', e); }
     }
-    // course: { courseId, name, examPrice, pathPrice, icon, ... }
+
     currentCourse = course;
     currentPlan = 'exam_only';
 
@@ -75,21 +90,18 @@
     document.getElementById('enrollExamPrice').textContent = '$' + Number(course.examPrice || 0).toFixed(0);
     document.getElementById('enrollPathPrice').textContent = '$' + Number(course.pathPrice || course.examPrice || 0).toFixed(0);
 
-    // reset selection
-    document.querySelectorAll('.enroll-plan-option').forEach(el => {
+    document.querySelectorAll('.enroll-plan-option').forEach(function(el) {
       el.classList.toggle('selected', el.dataset.plan === 'exam_only');
     });
 
-    // reset tabs to linkwa
     switchEnrollTab('linkwa');
-
-    // reset messages
     resetVoucherMsg();
-    const lm = document.getElementById('enrollLinkwaMsg');
+    var lm = document.getElementById('enrollLinkwaMsg');
     lm.classList.remove('show');
     lm.textContent = '';
 
     updatePayButton();
+    injectSupportLink();
     document.getElementById('enrollModalBackdrop').classList.add('active');
   };
 
@@ -99,24 +111,24 @@
 
   window.selectPlan = function (plan) {
     currentPlan = plan;
-    document.querySelectorAll('.enroll-plan-option').forEach(el => {
+    document.querySelectorAll('.enroll-plan-option').forEach(function(el) {
       el.classList.toggle('selected', el.dataset.plan === plan);
     });
     updatePayButton();
   };
 
   window.switchEnrollTab = function (tab) {
-    document.querySelectorAll('.enroll-tab').forEach(el => {
+    document.querySelectorAll('.enroll-tab').forEach(function(el) {
       el.classList.toggle('active', el.dataset.tab === tab);
     });
-    document.querySelectorAll('.enroll-pane').forEach(el => {
+    document.querySelectorAll('.enroll-pane').forEach(function(el) {
       el.classList.toggle('active', el.id === 'pane-' + tab);
     });
   };
 
   function updatePayButton() {
     if (!currentCourse) return;
-    const price = currentPlan === 'exam_only'
+    var price = currentPlan === 'exam_only'
       ? Number(currentCourse.examPrice || 0)
       : Number(currentCourse.pathPrice || currentCourse.examPrice || 0);
     currentPrice = price;
@@ -124,38 +136,47 @@
     document.getElementById('enrollPayAmount').textContent = '$' + price.toFixed(2);
   }
 
-  // ---------- Linkwa flow ----------
   window.startLinkwaPayment = async function () {
     if (!requireLogin()) return;
     if (!currentCourse) return;
 
-    const btn = document.getElementById('enrollPayBtn');
-    const msg = document.getElementById('enrollLinkwaMsg');
+    var btn = document.getElementById('enrollPayBtn');
+    var msg = document.getElementById('enrollLinkwaMsg');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Creating payment...';
     msg.classList.remove('show');
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/payments/initiate', {
+      var token = localStorage.getItem('auth_token');
+
+      try {
+        sessionStorage.setItem('linkwa_pending_course', JSON.stringify({
+          courseId: currentCourse.courseId,
+          name: currentCourse.name,
+          examPrice: currentCourse.examPrice,
+          pathPrice: currentCourse.pathPrice || currentCourse.examPrice,
+          icon: currentCourse.icon
+        }));
+      } catch (e) {}
+
+      var res = await fetch('/api/payments/initiate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: 'Bearer ' + token } : {})
-        },
+        headers: Object.assign(
+          { 'Content-Type': 'application/json' },
+          token ? { Authorization: 'Bearer ' + token } : {}
+        ),
         body: JSON.stringify({
           courseId: currentCourse.courseId,
           type: currentPlan
         })
       });
 
-      const data = await res.json();
+      var data = await res.json();
 
       if (!res.ok || !data.checkoutUrl) {
-        // already enrolled?
         if (data.alreadyEnrolled) {
           msg.className = 'enroll-msg show info';
-          msg.textContent = '✅ You are already enrolled in this course.';
+          msg.textContent = 'You are already enrolled in this course.';
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Already Enrolled';
           return;
@@ -163,19 +184,14 @@
         throw new Error(data.error || 'Failed to initiate payment');
       }
 
-      // Show redirect overlay and open Linkwa
       document.getElementById('linkwaRedirectOverlay').classList.add('active');
-
-      // Save reference so we can check status later if needed
       sessionStorage.setItem('linkwa_last_ref', data.sessionId);
       sessionStorage.setItem('linkwa_last_course', currentCourse.courseId);
 
-      // Open Linkwa checkout in new tab
-      setTimeout(() => {
+      setTimeout(function() {
         window.open(data.checkoutUrl, '_blank', 'noopener');
-        // Close modal after redirect
         closeEnrollModal();
-        setTimeout(() => {
+        setTimeout(function() {
           document.getElementById('linkwaRedirectOverlay').classList.remove('active');
         }, 1500);
       }, 500);
@@ -183,15 +199,14 @@
     } catch (err) {
       console.error('[Enroll] Linkwa error:', err);
       msg.className = 'enroll-msg show error';
-      msg.textContent = '❌ ' + (err.message || 'Something went wrong. Try again.');
+      msg.textContent = 'Error: ' + (err.message || 'Something went wrong. Try again.');
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> Pay <span id="enrollPayAmount">$' + currentPrice.toFixed(2) + '</span> → Linkwa';
+      btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> Pay <span id="enrollPayAmount">$' + currentPrice.toFixed(2) + '</span> to Linkwa';
     }
   };
 
-  // ---------- Voucher flow ----------
   window.resetVoucherMsg = function () {
-    const vm = document.getElementById('enrollVoucherMsg');
+    var vm = document.getElementById('enrollVoucherMsg');
     vm.classList.remove('show');
     vm.textContent = '';
   };
@@ -199,9 +214,9 @@
   window.applyVoucher = async function () {
     if (!requireLogin()) return;
     if (!currentCourse) return;
-    const code = document.getElementById('enrollVoucherInput').value.trim().toUpperCase();
-    const msg = document.getElementById('enrollVoucherMsg');
-    const btn = document.getElementById('enrollVoucherBtn');
+    var code = document.getElementById('enrollVoucherInput').value.trim().toUpperCase();
+    var msg = document.getElementById('enrollVoucherMsg');
+    var btn = document.getElementById('enrollVoucherBtn');
 
     if (!code) {
       msg.className = 'enroll-msg show error';
@@ -213,13 +228,13 @@
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Validating...';
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/payments/create-checkout', {
+      var token = localStorage.getItem('auth_token');
+      var res = await fetch('/api/payments/create-checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: 'Bearer ' + token } : {})
-        },
+        headers: Object.assign(
+          { 'Content-Type': 'application/json' },
+          token ? { Authorization: 'Bearer ' + token } : {}
+        ),
         body: JSON.stringify({
           courseId: currentCourse.courseId,
           type: currentPlan,
@@ -227,38 +242,34 @@
         })
       });
 
-      const data = await res.json();
-
+      var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Voucher failed');
 
       msg.className = 'enroll-msg show success';
-      msg.innerHTML = '🎉 ' + (data.message || 'Enrolled successfully!') +
+      msg.innerHTML = (data.message || 'Enrolled successfully!') +
         '<br><span class="text-xs">Redirecting to your dashboard...</span>';
-
       btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Enrolled!';
 
-      setTimeout(() => {
+      setTimeout(function() {
         closeEnrollModal();
         location.reload();
       }, 1800);
 
     } catch (err) {
       msg.className = 'enroll-msg show error';
-      msg.textContent = '❌ ' + (err.message || 'Invalid voucher');
+      msg.textContent = 'Error: ' + (err.message || 'Invalid voucher');
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-ticket mr-2"></i> Apply Voucher';
     }
   };
 
-  // Close on backdrop click
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', function(e) {
     if (e.target && e.target.id === 'enrollModalBackdrop') {
       closeEnrollModal();
     }
   });
 
-  // Close on ESC
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeEnrollModal();
   });
 })();

@@ -1,0 +1,4 @@
+﻿// ==================== LINKWA WEBHOOK PATCH ====================
+// Replace the existing webhook handler in app.js with this block.
+// It adds request logging so we can debug "paid but no course".
+// =============================================================

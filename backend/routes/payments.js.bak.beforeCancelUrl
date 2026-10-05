@@ -5,13 +5,11 @@ const Payment = require('../models/Payment');
 const Voucher = require('../models/Voucher');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
-const User = require('../models/User');
-const authenticate = require('../middleware/auth');
-const linkwa = require('../utils/linkwa');
 
-async function __applyRetakePayment(payment) {
+﻿async function __applyRetakePayment(payment) {
   if (payment.type !== 'retake') return;
   try {
+    const Enrollment = require('../models/Enrollment');
     const enr = await Enrollment.findOne({ userId: payment.userId, courseId: payment.courseId });
     if (!enr) { console.log('[RETAKE] No enrollment'); return; }
     enr.retakeFeePaid = true;
@@ -23,18 +21,14 @@ async function __applyRetakePayment(payment) {
   } catch (e) { console.error('[RETAKE] Error:', e.message); }
 }
 
+const User = require('../models/User');
+const authenticate = require('../middleware/auth');
+const linkwa = require('../utils/linkwa');
+
 // ==================== HELPERS ====================
 
-function buildCallbackUrls(sessionId) {
-  const appUrl = process.env.APP_URL || 'http://localhost:5001';
-  return {
-    returnUrl:  `${appUrl}/payment-complete?reference=${sessionId}`,
-    cancelUrl:  `${appUrl}/payment-complete?reason=cancelled&reference=${sessionId}`,
-    failureUrl: `${appUrl}/payment-complete?reason=failed&reference=${sessionId}`,
-  };
-}
-
 async function enrollUser({ userId, course, type, amountPaid, originalPrice, voucherCode, paymentMethod }) {
+  // Idempotency — don't double-enroll
   const existing = await Enrollment.findOne({ userId, courseId: course.courseId });
   if (existing) return { alreadyEnrolled: true, enrollment: existing };
 
@@ -66,11 +60,11 @@ async function enrollUser({ userId, course, type, amountPaid, originalPrice, vou
     $inc: { totalSpent: amountPaid, enrolledCourses: 1 }
   });
 
-  console.log(`[PAYMENT] Enrolled via ${paymentMethod}: user ${userId} -> ${course.name} ($${amountPaid})`);
+  console.log(`[PAYMENT] ✅ Enrolled via ${paymentMethod}: user ${userId} → ${course.name} ($${amountPaid})`);
   return { alreadyEnrolled: false, enrollment };
 }
 
-// ==================== VALIDATE VOUCHER ====================
+// ==================== VALIDATE VOUCHER (unchanged) ====================
 router.post('/validate-voucher', async (req, res) => {
   const { code, courseId } = req.body;
   if (!code) return res.status(400).json({ error: 'Voucher code is required' });
@@ -92,7 +86,7 @@ router.post('/validate-voucher', async (req, res) => {
     }
 
     let discountText = '';
-    if (voucher.discountType === 'free') discountText = 'FREE enrollment!';
+    if (voucher.discountType === 'free') discountText = '🎉 FREE enrollment!';
     else if (voucher.discountType === 'percentage') discountText = `${voucher.discountValue}% off`;
     else if (voucher.discountType === 'fixed') discountText = `$${voucher.discountValue} off`;
 
@@ -106,7 +100,7 @@ router.post('/validate-voucher', async (req, res) => {
         maxUses: voucher.maxUses,
         usedCount: voucher.usedCount
       },
-      message: `Voucher applied! ${discountText}`
+      message: `✅ Voucher applied! ${discountText}`
     });
   } catch (error) {
     console.error('[VOUCHER] Validation error:', error.message);
@@ -126,6 +120,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
     if (!course) return res.status(404).json({ error: 'Course not found' });
     const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
 
+        // __retakeCheckout
     if (type === 'retake') {
       if (!existing) return res.status(400).json({ error: 'Must be enrolled' });
       if (!existing.retakeFeeRequired) return res.status(400).json({ error: 'No retake fee required' });
@@ -147,6 +142,8 @@ router.post('/create-checkout', authenticate, async (req, res) => {
       return res.json({ sessionId, amount: retakeFee, courseId: courseId.toLowerCase(), type: 'retake', retake: true });
     }
     if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+
+
 
     let amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
     let discount = 0;
@@ -214,6 +211,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
       paymentMethod: 'voucher'
     });
 
+    // Atomic voucher usage
     await Voucher.findOneAndUpdate(
       { code: voucherCode.toUpperCase(), $expr: { $lt: ['$usedCount', '$maxUses'] } },
       { $inc: { usedCount: 1 } }
@@ -224,7 +222,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
     res.json({
       success: true,
       autoEnrolled: true,
-      message: `Voucher applied! You've been enrolled in ${course.name}.`,
+      message: `🎉 Voucher applied! You've been enrolled in ${course.name}.`,
       sessionId,
       amount: finalAmount,
       originalAmount: amount,
@@ -253,32 +251,26 @@ router.post('/initiate', authenticate, async (req, res) => {
 
     const existing = await Enrollment.findOne({ userId, courseId: courseId.toLowerCase() });
 
-    // --- Retake branch ---
+    // __initRetakeBranch — handle retake payment before already-enrolled rejection
     if (type === 'retake') {
       if (!existing) return res.status(400).json({ error: 'Must be enrolled to pay retake' });
       if (!existing.retakeFeeRequired) return res.status(400).json({ error: 'No retake fee required' });
       const base = course.pathPrice || course.examPrice || 0;
       const retakeFee = Math.max(15, Math.round(base * 0.30));
       const retakeSessionId = `OMX-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      const appUrl = process.env.APP_URL || 'http://localhost:5001';
-      const urls = buildCallbackUrls(retakeSessionId);
-
+      const retakeAppUrl = process.env.APP_URL || 'http://localhost:5001';
+      const retakeReturnUrl = retakeAppUrl + '/payment-complete?reference=' + retakeSessionId;
       console.log('[INITIATE-RETAKE] Amount:', retakeFee, 'Course:', course.courseId);
-
       const retakeLink = await linkwa.createPaymentLink({
         amount: retakeFee,
-        name: course.name + ' - Retake Fee',
+        name: course.name + ' — Retake Fee',
         description: 'Retake fee for ' + course.name,
-        returnUrl: urls.returnUrl,
-        cancelUrl: urls.cancelUrl,
-        failureUrl: urls.failureUrl,
+        returnUrl: retakeReturnUrl,
         phone: phone || req.user.phone,
         email: req.user.email,
-        imageUrl: appUrl + '/favicon.svg'
+        imageUrl: retakeAppUrl + '/favicon.svg'
       });
-
       if (!retakeLink.success) return res.status(400).json({ error: retakeLink.message || 'Linkwa failed' });
-
       await Payment.create({
         sessionId: retakeSessionId,
         userId,
@@ -294,33 +286,23 @@ router.post('/initiate', authenticate, async (req, res) => {
         linkwaShortUrl: retakeLink.shortUrl || null,
         billingInfo: { firstName: req.user.name || 'Student', lastName: '', email: req.user.email, phone: phone || req.user.phone || '', country: 'Zimbabwe' }
       });
-
-      return res.json({
-        success: true,
-        sessionId: retakeSessionId,
-        shortUrl: retakeLink.shortUrl,
-        checkoutUrl: retakeLink.checkoutUrl,
-        amount: retakeFee,
-        type: 'retake'
-      });
+      return res.json({ success: true, sessionId: retakeSessionId, shortUrl: retakeLink.shortUrl, checkoutUrl: retakeLink.checkoutUrl, amount: retakeFee, type: 'retake' });
     }
 
     if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
 
     const amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
     const sessionId = `OMX-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
     const appUrl = process.env.APP_URL || 'http://localhost:5001';
-    const urls = buildCallbackUrls(sessionId);
+    const returnUrl = `${appUrl}/payment-complete?reference=${sessionId}`;
 
     console.log('[INITIATE] Calling Linkwa with amount:', amount, 'for course:', course.courseId);
-
     const link = await linkwa.createPaymentLink({
       amount,
-      name: `${course.name} - ${type === 'exam_only' ? 'Exam Only' : 'Full Learning Path'}`,
+      name: `${course.name} — ${type === 'exam_only' ? 'Exam Only' : 'Full Learning Path'}`,
       description: `Enrollment for ${course.name} (${course.abbreviation || course.courseId})`,
-      returnUrl: urls.returnUrl,
-      cancelUrl: urls.cancelUrl,
-      failureUrl: urls.failureUrl,
+      returnUrl,
       phone: phone || req.user.phone,
       email: req.user.email,
       imageUrl: `${appUrl}/favicon.svg`
@@ -330,7 +312,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       return res.status(400).json({ error: link.message || 'Linkwa payment failed to initiate' });
     }
 
-    await Payment.create({
+    const payment = await Payment.create({
       sessionId,
       userId,
       courseId: courseId.toLowerCase(),
@@ -352,7 +334,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       }
     });
 
-    console.log(`[PAYMENT] Linkwa initiated: ${sessionId} for ${course.name} ($${amount})`);
+    console.log(`[PAYMENT] 🔗 Linkwa initiated: ${sessionId} for ${course.name} ($${amount})`);
 
     res.json({
       success: true,
@@ -395,18 +377,19 @@ router.get('/status/:sessionId', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to view this payment' });
     }
 
+    // Already settled?
     if (payment.status === 'completed' || payment.status === 'failed') {
-      const c = await Course.findOne({ courseId: payment.courseId });
       return res.json({
         sessionId: payment.sessionId,
         status: payment.status,
         amount: payment.amount,
         courseId: payment.courseId,
         paidAt: payment.paidAt || payment.completedAt,
-        courseName: c ? c.name : null
+        courseName: (await Course.findOne({ courseId: payment.courseId }))?.name
       });
     }
 
+    // Verify with Linkwa
     const sUrl = short_url || payment.linkwaShortUrl;
     const pRef = payment_reference || payment.linkwaPaymentReference;
 
@@ -420,83 +403,10 @@ router.get('/status/:sessionId', async (req, res) => {
         payment.linkwaPaymentReference = pRef;
         await payment.save();
 
+        // __retakeHookConfirm
         if (payment.type === 'retake') {
           await __applyRetakePayment(payment);
         } else {
-          const course = await Course.findOne({ courseId: payment.courseId });
-          if (course) {
-            await enrollUser({
-              userId: payment.userId,
-              course,
-              type: payment.type,
-              amountPaid: payment.amount,
-              originalPrice: payment.originalAmount,
-              voucherCode: null,
-              paymentMethod: 'linkwa'
-            });
-          }
-        }
-      }
-    }
-
-    const c = await Course.findOne({ courseId: payment.courseId });
-    res.json({
-      sessionId: payment.sessionId,
-      status: payment.status,
-      amount: payment.amount,
-      courseId: payment.courseId,
-      courseName: c ? c.name : null,
-      paidAt: payment.paidAt
-    });
-  } catch (error) {
-    console.error('[PAYMENT] Status error:', error.message);
-    res.status(500).json({ error: 'Failed to check status' });
-  }
-});
-
-// ==================== RECOVER ACCESS (fix "paid but no course") ====================
-router.post('/recover', async (req, res) => {
-  const { sessionId } = req.body;
-  if (!sessionId) return res.status(400).json({ success: false, message: 'sessionId required' });
-
-  try {
-    const payment = await Payment.findOne({ sessionId });
-    if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-
-    if (payment.status === 'completed') {
-      const c = await Course.findOne({ courseId: payment.courseId });
-      return res.json({
-        success: true,
-        status: 'completed',
-        amount: payment.amount,
-        courseId: payment.courseId,
-        courseName: c ? c.name : null,
-        message: 'Already completed'
-      });
-    }
-
-    const sUrl = payment.linkwaShortUrl;
-    const pRef = payment.linkwaPaymentReference;
-
-    if (!sUrl || !pRef) {
-      return res.json({
-        success: false,
-        status: payment.status,
-        message: 'No Linkwa reference stored yet. Please wait a minute and try again.'
-      });
-    }
-
-    const result = await linkwa.getPaymentStatus(sUrl, pRef);
-
-    if (result.success && (result.status === 'PAID' || result.status === 'paid')) {
-      payment.status = 'completed';
-      payment.paidAt = new Date();
-      payment.completedAt = new Date();
-      await payment.save();
-
-      if (payment.type === 'retake') {
-        await __applyRetakePayment(payment);
-      } else {
         const course = await Course.findOne({ courseId: payment.courseId });
         if (course) {
           await enrollUser({
@@ -506,46 +416,42 @@ router.post('/recover', async (req, res) => {
             amountPaid: payment.amount,
             originalPrice: payment.originalAmount,
             voucherCode: null,
-            paymentMethod: 'linkwa-recover'
+            paymentMethod: 'linkwa'
           });
         }
+        }
       }
-
-      const c = await Course.findOne({ courseId: payment.courseId });
-      return res.json({
-        success: true,
-        status: 'completed',
-        amount: payment.amount,
-        courseId: payment.courseId,
-        courseName: c ? c.name : null,
-        message: 'Payment confirmed, enrollment activated'
-      });
     }
 
-    return res.json({
-      success: false,
+    const course = await Course.findOne({ courseId: payment.courseId });
+    res.json({
+      sessionId: payment.sessionId,
       status: payment.status,
-      message: 'Linkwa still shows this payment as not completed. If you were charged, please WhatsApp support.'
+      amount: payment.amount,
+      courseId: payment.courseId,
+      courseName: course?.name,
+      paidAt: payment.paidAt
     });
   } catch (error) {
-    console.error('[RECOVER] error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[PAYMENT] Status error:', error.message);
+    res.status(500).json({ error: 'Failed to check status' });
   }
 });
 
 // ==================== LINKWA WEBHOOK ====================
+// NOTE: mounted in app.js BEFORE express.json() with raw body
 async function handleLinkwaWebhook(rawBodyBuffer, signature) {
   const raw = rawBodyBuffer.toString('utf8');
 
   if (!linkwa.verifySignature(raw, signature)) {
-    console.warn('[WEBHOOK] Invalid signature');
+    console.warn('[WEBHOOK] ❌ Invalid signature');
     return { ok: false, status: 401, message: 'Invalid signature' };
   }
 
   let body;
   try { body = JSON.parse(raw); } catch (e) { return { ok: false, status: 400, message: 'Invalid JSON' }; }
 
-  console.log('[WEBHOOK] Linkwa event:', body.status, body.external_payment_link_id);
+  console.log('[WEBHOOK] 📩 Linkwa event:', body.status, body.external_payment_link_id);
 
   if (body.status !== 'PAID' && body.status !== 'paid') {
     return { ok: true, status: 200, message: 'Not a paid event' };
@@ -555,17 +461,14 @@ async function handleLinkwaWebhook(rawBodyBuffer, signature) {
   if (!externalId) return { ok: true, status: 200, message: 'No external link id' };
 
   const payment = await Payment.findOne({ linkwaExternalLinkId: externalId });
-  if (!payment) {
-    console.warn('[WEBHOOK] No matching payment for external link id:', externalId);
-    return { ok: true, status: 200, message: 'No matching payment' };
-  }
+  if (!payment) return { ok: true, status: 200, message: 'No matching payment' };
   if (payment.status === 'completed') return { ok: true, status: 200, message: 'Already processed' };
 
   if (Number(body.amount) !== Number(payment.amount)) {
     payment.status = 'failed';
     payment.failureReason = `Amount mismatch: expected ${payment.amount}, got ${body.amount}`;
     await payment.save();
-    console.error('[WEBHOOK] Amount mismatch for', payment.sessionId);
+    console.error('[WEBHOOK] ❌ Amount mismatch for', payment.sessionId);
     return { ok: true, status: 200, message: 'Amount mismatch' };
   }
 
@@ -577,44 +480,27 @@ async function handleLinkwaWebhook(rawBodyBuffer, signature) {
   if (body.payment_reference) payment.linkwaPaymentReference = body.payment_reference;
   await payment.save();
 
+  // __retakeHookWebhook
   if (payment.type === 'retake') {
     await __applyRetakePayment(payment);
   } else {
-    const course = await Course.findOne({ courseId: payment.courseId });
-    if (course) {
-      await enrollUser({
-        userId: payment.userId,
-        course,
-        type: payment.type,
-        amountPaid: payment.amount,
-        originalPrice: payment.originalAmount,
-        voucherCode: null,
-        paymentMethod: 'linkwa'
-      });
-    }
+  const course = await Course.findOne({ courseId: payment.courseId });
+  if (course) {
+    await enrollUser({
+      userId: payment.userId,
+      course,
+      type: payment.type,
+      amountPaid: payment.amount,
+      originalPrice: payment.originalAmount,
+      voucherCode: null,
+      paymentMethod: 'linkwa'
+    });
+  }
   }
 
-  console.log('[WEBHOOK] Enrolled user via Linkwa webhook');
+  console.log('[WEBHOOK] ✅ Enrolled user via Linkwa webhook');
   return { ok: true, status: 200, message: 'Processed' };
 }
-
-// ==================== ADMIN: BALANCE + STATEMENT ====================
-router.get('/admin/balance', authenticate, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  const result = await linkwa.getBalance();
-  if (!result.success) return res.status(400).json({ error: result.message });
-  res.json(result);
-});
-
-router.get('/admin/statement', authenticate, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  const currencyCode = req.query.currency_code || 'USD';
-  const perPage = parseInt(req.query.per_page) || 25;
-  const page = parseInt(req.query.page) || 1;
-  const result = await linkwa.getStatement({ currencyCode, perPage, page });
-  if (!result.success) return res.status(400).json({ error: result.message });
-  res.json(result);
-});
 
 // ==================== PAYMENT HISTORY ====================
 router.get('/my-payments', authenticate, async (req, res) => {

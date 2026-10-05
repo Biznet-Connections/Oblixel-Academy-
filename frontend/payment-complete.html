@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Payment Complete — obliXel Academy</title>
+<title>Payment - obliXel Academy</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -39,93 +39,205 @@
     </div>
     <h1 class="text-2xl sm:text-3xl font-black mb-3">Payment Confirmed!</h1>
     <p class="text-gray-400 text-sm mb-1">You're now enrolled in</p>
-    <p id="success-course" class="gradient-text text-xl sm:text-2xl font-black mb-6">—</p>
+    <p id="success-course" class="gradient-text text-xl sm:text-2xl font-black mb-6">-</p>
     <div class="glass rounded-2xl p-4 text-left text-sm mb-6">
-      <div class="flex justify-between mb-2"><span class="text-gray-400">Amount paid</span><span id="success-amount" class="font-bold">—</span></div>
-      <div class="flex justify-between"><span class="text-gray-400">Reference</span><span id="success-ref" class="font-mono text-xs">—</span></div>
+      <div class="flex justify-between mb-2"><span class="text-gray-400">Amount paid</span><span id="success-amount" class="font-bold">-</span></div>
+      <div class="flex justify-between"><span class="text-gray-400">Reference</span><span id="success-ref" class="font-mono text-xs">-</span></div>
     </div>
     <a id="startLearningBtn" href="/?page=dashboard" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
-      🚀 Start Learning Now
+      Start Learning Now
     </a>
-    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">Back to Courses</a>
   </div>
 
-  <!-- FAILED -->
-  <div id="state-failed" class="hidden">
-    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
-      <i class="fa-solid fa-xmark text-4xl text-red-400"></i>
-    </div>
-    <h1 class="text-2xl sm:text-3xl font-black mb-3">Payment Failed</h1>
-    <p class="text-gray-400 text-sm mb-6">No charge was made. You can try again.</p>
-    <a href="/" class="block w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">Try Again</a>
-    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
-  </div>
-
-  <!-- PENDING -->
+  <!-- PENDING (paid but webhook slow) -->
   <div id="state-pending" class="hidden">
     <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
       <i class="fa-solid fa-hourglass-half text-4xl text-yellow-400"></i>
     </div>
     <h1 class="text-2xl sm:text-3xl font-black mb-3">Still Processing</h1>
-    <p class="text-gray-400 text-sm mb-6">EcoCash can take up to 5 minutes. We'll email you when confirmed.</p>
-    <button onclick="location.reload()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">Check Again</button>
-    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">← Back to Courses</a>
+    <p class="text-gray-400 text-sm mb-6">EcoCash can take up to 5 minutes. We'll activate your course automatically when it confirms.</p>
+
+    <button onclick="location.reload()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
+      <i class="fa-solid fa-rotate mr-2"></i> Check Again
+    </button>
+
+    <button onclick="recoverAccess()" id="recoverBtn" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 py-3 rounded-2xl font-bold mb-3">
+      <i class="fa-solid fa-bolt mr-2"></i> I already paid - Recover Access
+    </button>
+
+    <a id="wa-pending" href="#" target="_blank" class="block w-full glass py-3 rounded-2xl font-semibold text-sm mb-3">
+      <i class="fa-brands fa-whatsapp mr-2" style="color:#25D366;"></i> Contact Support on WhatsApp
+    </a>
+
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">Back to Courses</a>
+
+    <p id="pending-ref" class="text-xs text-gray-500 mt-4 font-mono"></p>
+  </div>
+
+  <!-- FAILED / CANCELLED / USED -->
+  <div id="state-failed" class="hidden">
+    <div id="fail-icon" class="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+      <i class="fa-solid fa-xmark text-4xl text-red-400"></i>
+    </div>
+    <h1 id="fail-title" class="text-2xl sm:text-3xl font-black mb-3">Payment didn't complete</h1>
+    <p id="fail-msg" class="text-gray-400 text-sm mb-6">No charge was made. You can try again.</p>
+
+    <button onclick="tryAgain()" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-2xl font-bold mb-3">
+      <i class="fa-solid fa-rotate mr-2"></i> <span id="retry-label">Try Again</span>
+    </button>
+
+    <a id="wa-failed" href="#" target="_blank" class="block w-full glass py-3 rounded-2xl font-semibold text-sm mb-3">
+      <i class="fa-brands fa-whatsapp mr-2" style="color:#25D366;"></i> Contact Support on WhatsApp
+    </a>
+
+    <a href="/" class="block w-full glass py-3 rounded-2xl font-semibold text-sm">Back to Courses</a>
+
+    <p id="fail-ref" class="text-xs text-gray-500 mt-4 font-mono"></p>
   </div>
 
 </div>
 
 <script>
-const params = new URLSearchParams(location.search);
-const sessionId = params.get('reference');
-const shortUrl = params.get('short_url');
-const paymentRef = params.get('payment_reference');
+var SUPPORT_WHATSAPP = '263714587259';
+
+var params = new URLSearchParams(location.search);
+var sessionId  = params.get('reference');
+var shortUrl   = params.get('short_url');
+var paymentRef = params.get('payment_reference');
+var reason     = params.get('reason'); // cancelled | failed | used | null
 
 function show(id) {
-  ['loading','success','failed','pending'].forEach(s => {
-    document.getElementById('state-' + s).classList.toggle('hidden', s !== id);
+  ['loading','success','failed','pending'].forEach(function(s) {
+    var el = document.getElementById('state-' + s);
+    if (el) el.classList.toggle('hidden', s !== id);
   });
 }
 
-let attempts = 0;
-const MAX_ATTEMPTS = 20; // ~60s
+function buildWhatsApp(reason, reference) {
+  var text =
+    'Hi obliXel support, I had a payment issue.%0A%0A' +
+    'Ref: ' + (reference || 'N/A') + '%0A' +
+    'Reason: ' + reason;
+  return 'https://wa.me/' + SUPPORT_WHATSAPP + '?text=' + text;
+}
 
-async function check() {
-  if (!sessionId) { show('failed'); return; }
+function tryAgain() {
+  window.location.href = '/?retry=1' + (sessionId ? '&ref=' + encodeURIComponent(sessionId) : '');
+}
 
-  attempts++;
+async function recoverAccess() {
+  var btn = document.getElementById('recoverBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Checking Linkwa...';
+
   try {
-    const url = `/api/payments/status/${sessionId}` +
-      (shortUrl && paymentRef ? `?short_url=${shortUrl}&payment_reference=${paymentRef}` : '');
-    const res = await fetch(url);
-    const data = await res.json();
+    var res = await fetch('/api/payments/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionId })
+    });
+    var data = await res.json();
 
-    if (data.status === 'completed' || data.status === 'paid') {
+    if (data.success && data.status === 'completed') {
       document.getElementById('success-course').textContent = data.courseName || 'your course';
       document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
       document.getElementById('success-ref').textContent = sessionId;
-
-      // Save for later use
-      try {
-        sessionStorage.setItem('just_enrolled_course', data.courseId || '');
-        sessionStorage.setItem('just_enrolled_name', data.courseName || '');
-      } catch (e) {}
-
       show('success');
-
-      // Auto-redirect to course dashboard after 3.5s
-      setTimeout(() => {
+      setTimeout(function() {
         window.location.href = '/?page=dashboard&enrolled=' + encodeURIComponent(data.courseId || '');
       }, 3500);
       return;
     }
-    if (data.status === 'failed') { show('failed'); return; }
-  } catch (e) { /* ignore */ }
 
-  if (attempts >= MAX_ATTEMPTS) { show('pending'); return; }
-  setTimeout(check, 3000);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> I already paid - Recover Access';
+    alert(data.message || 'Payment not found yet. If you were charged, WhatsApp support.');
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> I already paid - Recover Access';
+    alert('Network error. Please try again or contact support.');
+  }
 }
 
-check();
+function renderFailureState(reason) {
+  var icon = document.getElementById('fail-icon');
+  var title = document.getElementById('fail-title');
+  var msg = document.getElementById('fail-msg');
+  var retryLabel = document.getElementById('retry-label');
+
+  if (reason === 'used') {
+    icon.className = 'w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center';
+    icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-4xl text-amber-400"></i>';
+    title.textContent = 'This payment link was already used';
+    msg.textContent = 'Looks like you already tried to pay, or someone shared this link with you. No problem - click below for a fresh one.';
+    retryLabel.textContent = 'Get a Fresh Payment Link';
+  } else if (reason === 'cancelled') {
+    title.textContent = 'Payment cancelled';
+    msg.textContent = 'You cancelled the payment. You have NOT been charged.';
+  } else {
+    title.textContent = "Payment didn't complete";
+    msg.textContent = 'The payment service had a connection issue. You have NOT been charged.';
+  }
+
+  document.getElementById('wa-failed').href = buildWhatsApp(reason || 'failed', sessionId);
+  document.getElementById('fail-ref').textContent = sessionId ? ('Ref: ' + sessionId) : '';
+  show('failed');
+}
+
+// ==================== MAIN ====================
+if (reason) {
+  renderFailureState(reason);
+} else if (!sessionId) {
+  renderFailureState('failed');
+} else {
+  (function() {
+    var attempts = 0;
+    var MAX_ATTEMPTS = 20;
+
+    async function check() {
+      attempts++;
+      try {
+        var url = '/api/payments/status/' + sessionId +
+          (shortUrl && paymentRef ? '?short_url=' + shortUrl + '&payment_reference=' + paymentRef : '');
+        var res = await fetch(url);
+        var data = await res.json();
+
+        if (data.status === 'completed' || data.status === 'paid') {
+          document.getElementById('success-course').textContent = data.courseName || 'your course';
+          document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
+          document.getElementById('success-ref').textContent = sessionId;
+
+          try {
+            sessionStorage.setItem('just_enrolled_course', data.courseId || '');
+            sessionStorage.setItem('just_enrolled_name', data.courseName || '');
+          } catch (e) {}
+
+          show('success');
+          setTimeout(function() {
+            window.location.href = '/?page=dashboard&enrolled=' + encodeURIComponent(data.courseId || '');
+          }, 3500);
+          return;
+        }
+
+        if (data.status === 'failed') {
+          renderFailureState('failed');
+          return;
+        }
+      } catch (e) { /* ignore */ }
+
+      if (attempts >= MAX_ATTEMPTS) {
+        document.getElementById('wa-pending').href = buildWhatsApp('pending', sessionId);
+        document.getElementById('pending-ref').textContent = 'Ref: ' + sessionId;
+        show('pending');
+        return;
+      }
+      setTimeout(check, 3000);
+    }
+
+    check();
+  })();
+}
 </script>
 </body>
 </html>

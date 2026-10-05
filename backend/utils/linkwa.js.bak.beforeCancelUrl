@@ -13,13 +13,9 @@ function authHeaders() {
 
 /**
  * Create a Linkwa payment link.
- * Supports cancelUrl + failureUrl so buyer returns to us on failure/used-link.
+ * Returns { success, checkoutUrl, externalPaymentLinkId, shortUrl, raw }
  */
-async function createPaymentLink({
-  amount, name, description,
-  returnUrl, cancelUrl, failureUrl,
-  phone, email, imageUrl
-}) {
+async function createPaymentLink({ amount, name, description, returnUrl, phone, email, imageUrl }) {
   try {
     const body = {
       amount: Number(amount),
@@ -30,9 +26,9 @@ async function createPaymentLink({
       stock: 1,
     };
 
-    if (cancelUrl)  body.cancel_url  = cancelUrl;
-    if (failureUrl) body.failure_url = failureUrl;
-    if (imageUrl)   body.image_url   = imageUrl;
+    if (imageUrl) {
+      body.image_url = imageUrl;
+    }
 
     if (phone || email) {
       body.autofill_contact_details = {};
@@ -60,6 +56,9 @@ async function createPaymentLink({
   }
 }
 
+/**
+ * Get payment status for a link + payment reference.
+ */
 async function getPaymentStatus(shortUrl, paymentReference) {
   try {
     const res = await axios.get(
@@ -69,36 +68,14 @@ async function getPaymentStatus(shortUrl, paymentReference) {
     return { success: true, ...res.data };
   } catch (error) {
     const body = error?.response?.data || {};
+    console.error('[Linkwa] getPaymentStatus error:', error.message, body);
     return { success: false, message: body.message || error.message, raw: body };
   }
 }
 
-async function getBalance() {
-  try {
-    const res = await axios.get(`${BASE_URL}/balance`, {
-      headers: authHeaders(),
-      timeout: 20000,
-    });
-    return { success: true, ...res.data };
-  } catch (error) {
-    const body = error?.response?.data || {};
-    return { success: false, message: body.message || error.message, raw: body };
-  }
-}
-
-async function getStatement({ currencyCode = 'USD', perPage = 25, page = 1 } = {}) {
-  try {
-    const res = await axios.get(
-      `${BASE_URL}/statement?currency_code=${currencyCode}&per_page=${perPage}&page=${page}`,
-      { headers: authHeaders(), timeout: 20000 }
-    );
-    return { success: true, ...res.data };
-  } catch (error) {
-    const body = error?.response?.data || {};
-    return { success: false, message: body.message || error.message, raw: body };
-  }
-}
-
+/**
+ * Verify webhook HMAC-SHA256 signature.
+ */
 function verifySignature(rawBody, signature) {
   const secret = process.env.LINKWA_WEBHOOK_SECRET;
   if (!secret) {
@@ -121,7 +98,5 @@ function verifySignature(rawBody, signature) {
 module.exports = {
   createPaymentLink,
   getPaymentStatus,
-  getBalance,
-  getStatement,
   verifySignature,
 };
