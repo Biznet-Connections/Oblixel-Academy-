@@ -355,7 +355,7 @@ router.post('/submit', authenticate, async (req, res) => {
         enrollment.status = 'certified';
         enrollment.cooldownUntil = null;
         
-        const studentFullName = (user.fullName && user.fullName.trim()) || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.name || 'Student';
+        const studentFullName = user.fullName || user.name || 'Student';
         const studentFirstName = user.firstName || '';
         const studentLastName = user.lastName || '';
         
