@@ -1580,7 +1580,6 @@ function renderUserSidebar(active) {
 }
 
 function renderUserMobileTabs(active) {
-  const isAdmin = currentUser && currentUser.role === 'admin';
   const tabs = [
     { id: 'home',         icon: 'fa-house',         label: 'Home' },
     { id: 'courses',      icon: 'fa-book-open',     label: 'Courses' },
@@ -1588,12 +1587,9 @@ function renderUserMobileTabs(active) {
     { id: 'community',    icon: 'fa-users',         label: 'Social' },
     { id: 'profile',      icon: 'fa-user',          label: 'Me' }
   ];
-  if (isAdmin) {
-    tabs.push({ id: 'admin', icon: 'fa-crown', label: 'Admin', className: 'admin-tab' });
-  }
   let h = '<nav class="user-mobile-tabs">';
   tabs.forEach(t => {
-    h += '<button class="user-mobile-tab' + (t.id === active ? ' active' : '') + (t.className ? ' ' + t.className : '') + '" data-user-nav="' + t.id + '">';
+    h += '<button class="user-mobile-tab' + (t.id === active ? ' active' : '') + '" data-user-nav="' + t.id + '">';
     h += '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span>';
     h += '</button>';
   });
