@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema({
   idNumber: { type: String, trim: true, default: '' },
   country: { type: String, trim: true, default: '' },
   hasProvidedLegalName: { type: Boolean, default: false },
-  legalNameLockedAt: { type: Date, default: null },
   // Admin privilege system
   isMainAdmin: { type: Boolean, default: false },
   adminPrivileges: {

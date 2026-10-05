@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const authenticate = require('../middleware/auth');
 const ExamQuestion = require('../models/ExamQuestion');
@@ -93,7 +93,7 @@ router.post('/void-session', authenticate, async (req, res) => {
       cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
       enrollment.cooldownUntil = cd;
       await enrollment.save();
-      console.log('[EXAM] Voided session ' + sessionId + ' â€” cooldown until ' + cd.toISOString());
+      console.log('[EXAM] Voided session ' + sessionId + ' — cooldown until ' + cd.toISOString());
     }
     res.json({ ok: true, cooldownHours: enrollment ? getCooldownHours(enrollment.examAttempts) : null });
   } catch (e) {
@@ -147,7 +147,7 @@ router.post('/start', authenticate, async (req, res) => {
       const cert = await Certificate.findOne({ userId, courseId: courseId.toLowerCase(), status: 'issued' }).sort({ issuedAt: -1 });
       return res.status(403).json({
         error: 'Already passed',
-        message: 'ðŸŽ‰ You have already passed this certification exam! No more retakes needed.',
+        message: '🎉 You have already passed this certification exam! No more retakes needed.',
         score: enrollment.score,
         certificateCode: cert ? cert.certificateId : enrollment.certificateId || null
       });
@@ -169,7 +169,7 @@ router.post('/start', authenticate, async (req, res) => {
       });
     }
 
-    // __retakeFeeGate â€” require payment before retaking after a fail
+    // __retakeFeeGate — require payment before retaking after a fail
     if (enrollment.status === 'failed' && enrollment.retakeFeeRequired && !enrollment.retakeFeePaid) {
       const courseDoc = await Course.findOne({ courseId: courseId.toLowerCase() });
       const fee = calculateRetakeFee(courseDoc || {});
@@ -221,7 +221,7 @@ router.post('/start', authenticate, async (req, res) => {
       correct: q.correct
     }));
 
-    // __consumeRetake â€” paid users get exactly one attempt
+    // __consumeRetake — paid users get exactly one attempt
     if (enrollment.retakeFeePaid) {
       enrollment.retakeFeePaid = false;
       enrollment.retakeFeeRequired = false;
@@ -390,14 +390,14 @@ router.post('/submit', authenticate, async (req, res) => {
         
         enrollment.certificateId = certificateCode;
         
-        console.log(`[EXAM] âœ… Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
+        console.log(`[EXAM] ✅ Certificate auto-issued: ${certificateCode} for ${studentFullName} (${req.user.email})`);
       } else {
         const cd = new Date();
         cd.setHours(cd.getHours() + getCooldownHours(enrollment.examAttempts));
         enrollment.cooldownUntil = cd;
         enrollment.status = 'failed';
         enrollment.retakeFeeRequired = true; // __setRetakeOnFail
-        console.log(`[EXAM] âŒ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
+        console.log(`[EXAM] ❌ Failed. Cooldown until: ${cd.toLocaleTimeString()} for ${req.user.email}`);
       }
       await enrollment.save();
     }
@@ -477,8 +477,8 @@ router.post('/submit', authenticate, async (req, res) => {
       minutesLeft,
       cooldownHours: EXAM_COOLDOWN_HOURS,
       message: passed
-        ? `ðŸŽ‰ Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
-        : `âŒ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
+        ? `🎉 Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
+        : `❌ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
     });
   } catch (error) {
     console.error('[EXAM] Submit error:', error.message);
@@ -533,18 +533,6 @@ router.post('/update-legal-name', authenticate, async (req, res) => {
   }
 
   try {
-    // Lock: once legal name has been set, only support can change it
-    const existingUser = await User.findById(userId);
-    if (!existingUser) return res.status(404).json({ error: 'User not found' });
-
-    if (existingUser.hasProvidedLegalName && existingUser.legalNameLockedAt) {
-      return res.status(403).json({
-        error: 'Legal name is locked. Please contact support on WhatsApp to change it.',
-        contactSupport: true,
-        whatsapp: '263714587259'
-      });
-    }
-
     const user = await User.findByIdAndUpdate(
       userId,
       {
@@ -554,8 +542,7 @@ router.post('/update-legal-name', authenticate, async (req, res) => {
         idNumber: idNumber || '',
         phone: phone || '',
         country: country || '',
-        hasProvidedLegalName: true,
-        legalNameLockedAt: existingUser.legalNameLockedAt || new Date()
+        hasProvidedLegalName: true
       },
       { new: true, runValidators: true }
     );

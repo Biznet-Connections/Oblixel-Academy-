@@ -1378,7 +1378,7 @@ async function renderDashboard() {
             </div>
           </div>
           ${enrollmentsData.length === 0 ? `<div class="mt-3 p-3 bg-purple-500/20 rounded-xl"><p class="text-sm"><i class="fa-regular fa-star text-yellow-400 mr-2"></i>Enroll in your first course to begin your certification journey! 🚀</p></div>` : ''}
-          ${!currentUser.hasProvidedLegalName ? `<div id="legalNameBanner" class="mt-3 p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30"><p class="text-sm text-yellow-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Update your legal name for certificates. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline font-bold">Update Now →</button></p></div>` : `<div class="mt-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30"><p class="text-sm text-green-400"><i class="fa-solid fa-circle-check mr-2"></i>Legal name: <strong>${escapeHtml(currentUser.firstName || "")} ${escapeHtml(currentUser.lastName || "")}</strong> · <a href="https://wa.me/263714587259?text=${encodeURIComponent("Hi obliXel support, I need to change my legal name for certificates.%0A%0AAccount email: " + (currentUser.email || ""))}" target="_blank" class="text-cyan-400 hover:underline font-bold">Need changes? Contact support →</a></p></div>`}
+          ${!currentUser.hasProvidedLegalName ? `<div id="legalNameBanner" class="mt-3 p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30"><p class="text-sm text-yellow-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Update your legal name for certificates. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline font-bold">Update Now →</button></p></div>` : ''}
         </div>
         <div class="stats-grid mb-8">
           <div class="glass rounded-2xl p-4 text-center card-hover"><i class="fa-solid fa-book-open text-cyan-400 text-2xl mb-2"></i><h3 class="text-2xl font-black text-cyan-400">${stats.enrolledCourses || 0}</h3><p class="text-xs text-gray-400">Enrolled</p></div>
@@ -1518,17 +1518,7 @@ window.saveLegalName = async function() {
       renderDashboard();
     }
   } catch (error) {
-    if (error.contactSupport || (error.message && error.message.toLowerCase().includes("locked"))) {
-      showToast("Legal name is locked. Opening WhatsApp support...", "info");
-      var msg = "Hi obliXel support, I need to change my legal name for certificates."
-        + "\n\nAccount email: " + (currentUser.email || "")
-        + "\nCurrent name: " + (currentUser.firstName || "") + " " + (currentUser.lastName || "");
-      setTimeout(function() {
-        window.open("https://wa.me/263714587259?text=" + encodeURIComponent(msg), "_blank");
-      }, 800);
-      return;
-    }
-    showToast("Failed to save: " + error.message, "error");
+    showToast('Failed to save: ' + error.message, 'error');
   }
 };
 
@@ -1705,7 +1695,7 @@ async function renderProfile() {
               <h1 class="text-2xl font-black">${escapeHtml(user.fullName || user.name)}</h1>
               <p class="text-gray-400 text-sm">${user.email} • ${user.role === 'admin' ? (user.isMainAdmin ? '👑 Main Admin' : 'Admin') : 'Student'}</p>
               <p class="text-xs text-cyan-400">Member since ${formatDate(user.createdAt)}</p>
-              ${user.hasProvidedLegalName ? `<p class="text-xs text-green-400 mt-1"><i class="fa-solid fa-circle-check mr-1"></i> Legal name: ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} · <a href="https://wa.me/263714587259?text=${encodeURIComponent("Hi obliXel support, I need to change my legal name.%0AAccount email: " + (user.email || ""))}" target="_blank" class="text-cyan-400 hover:underline">Contact support to change →</a></p>` : `<p class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Legal name not set. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline">Set Now →</button></p>`}
+              ${user.hasProvidedLegalName ? `<p class="text-xs text-green-400 mt-1"><i class="fa-solid fa-circle-check mr-1"></i> Legal name: ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>` : `<p class="text-xs text-yellow-400 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Legal name not set. <button onclick="window.showLegalNameModal()" class="text-cyan-400 hover:underline">Set Now →</button></p>`}
             </div>
           </div>
           <div class="stats-grid mt-6">
