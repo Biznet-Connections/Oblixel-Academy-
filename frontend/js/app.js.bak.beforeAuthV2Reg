@@ -1192,188 +1192,56 @@ function renderRegister() {
   hideAIWidget();
   const root = document.getElementById('app-root');
   root.innerHTML = `
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <a class="auth-back" onclick="window.renderPage('landing')"><i class="fa-solid fa-arrow-left"></i> Back</a>
-
-        <div class="auth-logo">O</div>
-        <div class="auth-title">Create account</div>
-        <div class="auth-sub">Join thousands of students getting certified</div>
-
-        <div id="regError" class="auth-error hidden"><i class="fa-solid fa-circle-exclamation"></i><span id="regErrorText"></span></div>
-
-        <div class="auth-field">
-          <label class="auth-label">Full name</label>
-          <div class="auth-input-wrap">
-            <input id="regName" type="text" class="auth-input" placeholder="Tafara Moyo" autocomplete="name" autocapitalize="words" spellcheck="false">
-          </div>
+    <div class="flex items-center justify-center min-h-[70vh] p-4">
+      <div class="max-w-md w-full glass rounded-3xl p-6" data-aos="fade-up">
+        <button onclick="window.renderPage('landing')" class="text-gray-400 hover:text-white mb-4 text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button>
+        <div class="text-center">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-r from-purple-600 to-cyan-500 flex items-center justify-center text-2xl font-black mx-auto">O</div>
+          <h2 class="text-2xl font-black gradient-text mt-4">Join obliXel</h2>
+          <p class="text-gray-400 text-sm mt-1">Start your certification journey</p>
         </div>
-
-        <div class="auth-field">
-          <label class="auth-label">Email</label>
-          <div class="auth-input-wrap">
-            <input id="regEmail" type="email" class="auth-input" placeholder="you@example.com" autocomplete="email" autocapitalize="off" spellcheck="false">
-          </div>
+        <input id="regName" placeholder="Full name" class="w-full bg-transparent border border-white/20 rounded-xl p-3 my-3 text-sm focus:outline-none focus:border-cyan-400 transition" autocomplete="off">
+        <input id="regEmail" type="email" placeholder="Email address" class="w-full bg-transparent border border-white/20 rounded-xl p-3 my-3 text-sm focus:outline-none focus:border-cyan-400 transition" autocomplete="off">
+        <div class="relative my-3">
+          <input id="regPass" type="password" placeholder="Create password" class="w-full bg-transparent border border-white/20 rounded-xl p-3 pr-12 text-sm focus:outline-none focus:border-cyan-400 transition" style="direction: ltr !important; unicode-bidi: normal !important;" autocomplete="off">
+          <button id="toggleRegPass" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fa-regular fa-eye"></i></button>
         </div>
-
-        <div class="auth-field">
-          <label class="auth-label">
-            <span>Password</span>
-            <span style="font-size:11px;color:var(--u-muted);text-transform:none;letter-spacing:0;">Min 5 characters</span>
-          </label>
-          <div class="auth-input-wrap">
-            <input id="regPass" type="password" class="auth-input has-icon" placeholder="Create a password" autocomplete="new-password">
-            <button id="toggleRegPass" class="auth-toggle-pass" type="button" tabindex="-1" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
-          </div>
-        </div>
-
-        <button id="doRegister" class="auth-cta" style="margin-top:14px;" type="button">Create Account</button>
-
-        <div class="auth-switch">
-          Already have an account?
-          <a id="switchToLogin">Sign in →</a>
-        </div>
+        <button id="doRegister" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mt-4">Create Account</button>
+        <p class="text-center mt-4 text-sm">Already have an account? <a href="#" id="switchToLogin" class="text-cyan-400 hover:underline">Sign in →</a></p>
       </div>
     </div>
   `;
-
-  setTimeout(() => {
-    const el = document.getElementById('regName');
-    if (el) el.focus();
-  }, 100);
-
-  // Password direction fix
-  const regPass = document.getElementById('regPass');
-  regPass.setAttribute('dir', 'ltr');
-  regPass.style.direction = 'ltr';
-  regPass.style.unicodeBidi = 'normal';
-
-  // Toggle password visibility
+  const passwordInput = document.getElementById('regPass');
+  passwordInput.setAttribute('dir', 'ltr');
+  passwordInput.style.direction = 'ltr';
+  passwordInput.style.unicodeBidi = 'normal';
+  passwordInput.addEventListener('keydown', function(e) { this.style.direction = 'ltr'; this.style.unicodeBidi = 'normal'; });
+  passwordInput.addEventListener('input', function(e) { this.style.direction = 'ltr'; this.style.unicodeBidi = 'normal'; const pos = this.selectionStart; setTimeout(() => { this.setSelectionRange(pos, pos); }, 0); });
+  document.getElementById('doRegister').addEventListener('click', async () => {
+    const name = document.getElementById('regName').value;
+    const email = document.getElementById('regEmail').value;
+    const password = passwordInput.value;
+    if (!name || !email || !password) { showToast('Please fill all fields', 'error'); return; }
+    if (password.length < 5) { showToast('Password must be at least 5 characters', 'error'); return; }
+    try {
+      await register(name, email, password);
+      showToast('Account created! Please sign in to continue', 'success');
+      renderPage('login');
+    } catch (error) {
+      showToast(error.message || 'Registration failed', 'error');
+    }
+  });
+  document.getElementById('switchToLogin').addEventListener('click', (e) => { e.preventDefault(); renderPage('login'); });
   let vis = false;
   document.getElementById('toggleRegPass').addEventListener('click', () => {
     vis = !vis;
-    regPass.type = vis ? 'text' : 'password';
-    document.getElementById('toggleRegPass').innerHTML = vis
-      ? '<i class="fa-regular fa-eye-slash"></i>'
-      : '<i class="fa-regular fa-eye"></i>';
+    passwordInput.type = vis ? 'text' : 'password';
+    passwordInput.style.direction = 'ltr';
+    passwordInput.style.unicodeBidi = 'normal';
   });
-
-  // Enter key submit
-  ['regName', 'regEmail', 'regPass'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); doRegisterClick(); }
-    });
-  });
-
-  function showRegError(msg) {
-    const box = document.getElementById('regError');
-    const txt = document.getElementById('regErrorText');
-    if (!box || !txt) return;
-    txt.textContent = msg;
-    box.classList.remove('hidden');
-    const card = document.querySelector('.auth-card');
-    if (card) {
-      card.classList.remove('auth-shake');
-      void card.offsetWidth;
-      card.classList.add('auth-shake');
-    }
-  }
-
-  function hideRegError() {
-    const box = document.getElementById('regError');
-    if (box) box.classList.add('hidden');
-  }
-
-  ['regName', 'regEmail', 'regPass'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', hideRegError);
-  });
-
-  async function doRegisterClick() {
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim().toLowerCase();
-    const password = regPass.value;
-
-    hideRegError();
-
-    if (!name || !email || !password) {
-      showRegError('Please fill in all fields.');
-      return;
-    }
-    if (name.length < 2) {
-      showRegError('Please enter your full name.');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showRegError('Please enter a valid email address.');
-      return;
-    }
-    if (password.length < 5) {
-      showRegError('Password must be at least 5 characters.');
-      return;
-    }
-
-    const btn = document.getElementById('doRegister');
-    const originalHTML = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Creating account...';
-
-    try {
-      // 1. Register
-      await register(name, email, password);
-
-      // 2. Auto-login with the same credentials
-      try {
-        const data = await login(email, password, false);
-        currentUser = data.user;
-
-        // Load admin privileges if admin
-        if (currentUser.role === 'admin') {
-          try {
-            const privData = await getMyAdminPrivileges();
-            myAdminPrivileges = privData;
-            currentUser.isMainAdmin = privData.isMainAdmin;
-            currentUser.adminPrivileges = privData.privileges;
-          } catch (e) { myAdminPrivileges = null; }
-        }
-
-        try {
-          const enrollmentData = await getMyEnrollments();
-          userEnrollmentsCache = enrollmentData.enrollments || [];
-        } catch (e) { userEnrollmentsCache = []; }
-
-        showToast(`Welcome to obliXel, ${name.split(' ')[0]}! 🎉`, 'success');
-        updateAuthUI();
-        updateNavbarStyle();
-        await loadCourses();
-
-        // 3. Auto-route to dashboard
-        renderPage('dashboard');
-        return;
-      } catch (loginErr) {
-        // Login after register failed — fall back to login page
-        console.warn('Auto-login after register failed:', loginErr);
-        showToast('Account created! Please sign in.', 'success');
-        renderPage('login');
-        return;
-      }
-    } catch (error) {
-      const msg = (error && error.message) ? error.message : 'Registration failed. Please try again.';
-      showRegError(msg);
-      btn.disabled = false;
-      btn.innerHTML = originalHTML;
-    }
-  }
-
-  document.getElementById('doRegister').addEventListener('click', doRegisterClick);
-  document.getElementById('switchToLogin').addEventListener('click', (e) => {
-    e.preventDefault(); renderPage('login');
-  });
-
   applyAllPasswordFixes();
 }
+
 // ==================== LOGIN PAGE ====================
 function renderLogin() {
   hideAIWidget();
