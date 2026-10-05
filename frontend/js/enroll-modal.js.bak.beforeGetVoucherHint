@@ -271,37 +271,3 @@
     if (e.key === 'Escape') closeEnrollModal();
   });
 })();
-
-// ==================== GET A VOUCHER (WhatsApp request) ====================
-// Opens WhatsApp with the buyer's course + price pre-filled.
-(function () {
-  var SUPPORT_WHATSAPP = '263714587259';
-
-  window.requestVoucher = function () {
-    var courseName = 'Course';
-    var price = 0;
-
-    try {
-      var modalCourse = document.getElementById('enrollCourseName');
-      if (modalCourse && modalCourse.textContent && modalCourse.textContent.trim() !== 'Loading...') {
-        courseName = modalCourse.textContent.trim();
-      }
-    } catch (e) {}
-
-    try {
-      var priceEl = document.getElementById('enrollPathPrice');
-      if (priceEl) {
-        var raw = (priceEl.textContent || '').replace(/[^0-9.]/g, '');
-        var parsed = parseFloat(raw);
-        if (!isNaN(parsed)) price = parsed;
-      }
-    } catch (e) {}
-
-    var msg = "Hi obliXel support, I'd like to get a voucher.\n\n"
-      + "Course: " + courseName + "\n"
-      + "Price: $" + price;
-
-    var url = 'https://wa.me/' + SUPPORT_WHATSAPP + '?text=' + encodeURIComponent(msg);
-    window.open(url, '_blank', 'noopener');
-  };
-})();

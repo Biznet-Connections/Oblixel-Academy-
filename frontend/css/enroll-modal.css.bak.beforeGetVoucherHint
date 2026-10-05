@@ -305,31 +305,3 @@
   .enroll-methods { grid-template-columns: repeat(2, 1fr); }
   .enroll-plan-single .enroll-plan-price { font-size: 1.25rem; }
 }
-
-/* ==================== VOUCHER HINT LINE ==================== */
-
-.enroll-voucher-hint {
-  text-align: center;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 0.85rem;
-  line-height: 1.5;
-}
-
-.enroll-voucher-hint a {
-  color: #c084fc;
-  font-weight: 700;
-  text-decoration: none;
-  margin-left: 0.35rem;
-  transition: color 0.2s;
-  white-space: nowrap;
-}
-
-.enroll-voucher-hint a:hover {
-  color: #e9d5ff;
-  text-decoration: underline;
-}
-
-.enroll-voucher-hint a i {
-  margin-right: 0.15rem;
-}

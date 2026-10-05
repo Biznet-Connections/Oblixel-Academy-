@@ -429,13 +429,6 @@
 
       <div class="enroll-msg" id="enrollVoucherMsg"></div>
 
-      <p class="enroll-voucher-hint">
-        Don't have a code?
-        <a href="#" onclick="requestVoucher(); return false;">
-          <i class="fa-solid fa-gift mr-1"></i>Get a Voucher →
-        </a>
-      </p>
-
       <p class="enroll-trust">
         <i class="fa-solid fa-circle-info mr-1"></i>
         Vouchers are issued for events, partners, or gifted enrollments.
