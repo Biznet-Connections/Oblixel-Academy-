@@ -1139,3 +1139,8 @@ button.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ==================== FORCE HIDDEN (fixes Admin button showing for students) ==================== */
+.hidden {
+  display: none !important;
+}
