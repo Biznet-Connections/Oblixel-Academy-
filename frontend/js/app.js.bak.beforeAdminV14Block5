@@ -5118,54 +5118,15 @@ function renderAdminAnalyticsTab() {
 
 function renderAdminSettingsTab() {
   const isMain = window._adminIsMain;
-  const priv = window._adminPriv || {};
   let h = '';
-
-  h += '<div class="admin-grid-2">';
-
-  // System Info
   h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-circle-info"></i> System Info</div>';
-  h += '<div style="font-size:13px;color:var(--a-meta);line-height:2;">';
+  h += '<div style="font-size:13px;color:var(--a-meta);line-height:1.9;">';
   h += '<div>Students: <strong style="color:var(--a-text)">' + (_adminState.stats.totalStudents || 0) + '</strong></div>';
   h += '<div>Courses: <strong style="color:var(--a-text)">' + _adminState.courses.length + '</strong></div>';
-  h += '<div>Vouchers: <strong style="color:var(--a-text)">' + _adminState.vouchers.length + '</strong></div>';
   h += '<div>Total payments: <strong style="color:var(--a-text)">' + (_adminState.stats.totalPayments || 0) + '</strong></div>';
-  h += '<div>Pending certs: <strong style="color:var(--a-text)">' + _adminState.pending.length + '</strong></div>';
-  h += '</div></div>';
-
-  // Your account
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-user"></i> Your Account</div>';
-  h += '<div style="font-size:13px;color:var(--a-meta);line-height:2;">';
-  h += '<div>Name: <strong style="color:var(--a-text)">' + escapeHtml(currentUser.name || '') + '</strong></div>';
-  h += '<div>Email: <strong style="color:var(--a-text)">' + escapeHtml(currentUser.email || '') + '</strong></div>';
   h += '<div>Role: <strong style="color:var(--a-text)">' + (isMain ? '👑 Main Admin' : 'Admin') + '</strong></div>';
   h += '</div></div>';
 
-  h += '</div>'; // end grid
-
-  // Privileges
-  h += '<div class="admin-panel"><div class="admin-panel-title"><i class="fa-solid fa-key"></i> Your Admin Privileges</div>';
-  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">';
-  const privList = [
-    ['manageCourses','Manage Courses'],
-    ['manageVouchers','Manage Vouchers'],
-    ['manageUsers','Manage Users'],
-    ['manageAdmins','Manage Admins'],
-    ['approveCertificates','Approve Certificates'],
-    ['resetRevenue','Reset Revenue'],
-    ['systemSettings','System Settings'],
-    ['viewFinance','View Finance'],
-  ];
-  for (const [key, label] of privList) {
-    const has = isMain || priv[key];
-    h += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--a-elevated);border-radius:8px;font-size:12.5px;">';
-    h += '<i class="fa-solid ' + (has ? 'fa-circle-check' : 'fa-circle-xmark') + '" style="color:' + (has ? 'var(--a-success)' : 'var(--a-muted)') + ';"></i>';
-    h += '<span style="color:' + (has ? 'var(--a-text)' : 'var(--a-muted)') + ';">' + label + '</span>';
-    h += '</div>';
-  }
-  h += '</div></div>';
-
-  // Danger zone
   if (isMain) {
     h += '<div class="admin-panel" style="border-color:rgba(239,68,68,0.3)"><div class="admin-panel-title" style="color:var(--a-danger)"><i class="fa-solid fa-triangle-exclamation" style="color:var(--a-danger)"></i> Danger Zone</div>';
     h += '<p style="font-size:12.5px;color:var(--a-muted);margin-bottom:14px;">These actions cannot be undone. Use with care.</p>';
@@ -5175,7 +5136,6 @@ function renderAdminSettingsTab() {
     h += '<button class="admin-btn admin-btn-danger" onclick="window.showResetCertificatesModal()"><i class="fa-solid fa-certificate"></i> Reset All Certificates</button>';
     h += '</div></div>';
   }
-
   return h;
 }
 
@@ -5429,271 +5389,20 @@ function renderAdminPendingCertsContent() {
   wrap.innerHTML = h;
 }
 
-// Certificate template editor — inline embed using existing IDs from old admin
+// Note: cert template content reuses existing functions via the old markup.
+// For now, a note + button to open the old template editor as a modal is safer than a full rewrite.
 function renderAdminCertTemplateContent() {
   const wrap = document.getElementById('adminCertTemplateWrap');
   if (!wrap) return;
-
-  const ct = _adminState.certTemplate || {};
-  const pos = ct.positions || {};
-  const sty = ct.styles || {};
-  const sigImg = ct.signatureImage || '';
-  const hasSignature = !!(sigImg && sigImg.length > 10);
-  const expPeriod = ct.expiryPeriod || 'never';
-  const vrfBase = ct.verifyUrlBase || 'oblixelacademy.com/verify/';
-
-  let h = '';
-
-  h += '<div class="admin-grid-2">';
-
-  // LEFT — Template image + canvas + signature + test data
-  h += '<div>';
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🖼️ Template Image</div>';
-  h += '<div style="padding:12px;background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.2);border-radius:10px;text-align:center;margin-bottom:10px;">';
-  h += '<img id="certTemplatePreview" src="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" alt="Template" style="max-width:100%;max-height:180px;border-radius:6px;margin:0 auto;" onerror="this.style.display=\'none\'">';
-  h += '<p id="certTemplateName" style="font-size:11px;color:var(--a-muted);margin-top:8px;">' + escapeHtml(ct.templateImage || 'No template') + '</p></div>';
-  h += '<div style="display:flex;gap:8px;margin-bottom:12px;">';
-  h += '<label for="certFileInput" class="admin-btn admin-btn-ghost" style="flex:1;cursor:pointer;justify-content:center;"><i class="fa-solid fa-folder-open"></i> Gallery</label>';
-  h += '<input type="file" id="certFileInput" accept="image/*" style="display:none;" onchange="window.handleCertFileSelect(event)">';
-  h += '<button class="admin-btn admin-btn-danger" onclick="window.deleteCertificateTemplate()"><i class="fa-solid fa-trash"></i> Remove</button>';
-  h += '</div>';
-  h += '<input type="text" id="certTemplateImage" value="' + escapeHtml(ct.templateImage || '/images/certificate-template.png') + '" class="admin-search" style="padding-left:12px;width:100%;" placeholder="or paste URL">';
-
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;">Live Preview</div>';
-  h += '<div style="padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--a-border);border-radius:10px;">';
-  h += '<canvas id="certPreviewCanvas" width="1600" height="1131" style="max-width:100%;height:auto;border-radius:6px;cursor:default;"></canvas></div>';
-  h += '<p style="font-size:11px;color:var(--a-muted);margin-top:6px;"><i class="fa-solid fa-hand-pointer"></i> Drag elements on canvas. Sliders update live.</p>';
-
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;">✍️ Signature</div>';
-  h += '<div style="padding:12px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:10px;">';
-  h += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">';
-  h += '<div style="width:64px;height:64px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">';
-  h += '<img id="signaturePreviewImg" src="' + escapeHtml(sigImg) + '" alt="Signature" style="' + (hasSignature ? '' : 'display:none;') + 'max-width:100%;max-height:100%;object-fit:contain;">';
-  if (!hasSignature) h += '<i class="fa-solid fa-signature" style="color:#6b7280;font-size:22px;"></i>';
-  h += '</div>';
-  h += '<div><strong style="font-size:13px;">' + (hasSignature ? 'Signature Ready' : 'No Signature') + '</strong><div style="font-size:11px;color:var(--a-muted);">' + (hasSignature ? 'Drag to position' : 'Draw below') + '</div></div>';
-  h += '</div>';
-  h += '<div style="display:flex;gap:8px;">';
-  h += '<button class="admin-btn" style="background:var(--a-warning);color:#000;flex:1;" onclick="window.openSignaturePadModal()"><i class="fa-solid fa-pen"></i> ' + (hasSignature ? 'Redraw' : 'Draw Signature') + '</button>';
-  if (hasSignature) h += '<button class="admin-btn admin-btn-danger" onclick="window.clearSavedSignature()"><i class="fa-solid fa-trash"></i></button>';
-  h += '</div></div>';
-
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;">📝 Test Data</div>';
-  h += '<div style="display:grid;gap:8px;">';
-  h += '<input type="text" id="testStudentName" value="John Doe" placeholder="Student name" class="admin-search" style="padding-left:12px;width:100%;">';
-  h += '<input type="text" id="testCourseName" value="Computer Certified Professional (CCP)" placeholder="Course name" class="admin-search" style="padding-left:12px;width:100%;">';
-  h += '<input type="text" id="testIssueDate" value="24 June 2026" placeholder="Issue date" class="admin-search" style="padding-left:12px;width:100%;">';
-  h += '<input type="text" id="testCertId" value="OBX-CCP-TEST123" placeholder="Certificate ID" class="admin-search" style="padding-left:12px;width:100%;">';
-  h += '</div>';
-
-  h += '</div>'; // end LEFT
-
-  // RIGHT — Position sliders + font settings + presets + expiry + verify URL + custom text
-  h += '<div>';
-
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📍 Positions</div>';
-  h += '<div style="display:grid;gap:8px;max-height:340px;overflow-y:auto;padding-right:4px;">';
-
-  function posBlock(label, xId, yId, xVal, yVal, color) {
-    let b = '<div style="padding:10px;background:var(--a-elevated);border-radius:8px;">';
-    b += '<div style="font-size:11px;font-weight:700;color:' + (color || 'var(--a-accent)') + ';margin-bottom:6px;">' + label + '</div>';
-    b += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    b += '<div><label style="font-size:10px;color:var(--a-muted);">X: <span id="' + xId + 'Val">' + xVal + '</span></label><input type="range" id="' + xId + '" min="0" max="1600" value="' + xVal + '" style="width:100%" oninput="document.getElementById(\'' + xId + 'Val\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-    b += '<div><label style="font-size:10px;color:var(--a-muted);">Y: <span id="' + yId + 'Val">' + yVal + '</span></label><input type="range" id="' + yId + '" min="0" max="1131" value="' + yVal + '" style="width:100%" oninput="document.getElementById(\'' + yId + 'Val\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-    b += '</div></div>';
-    return b;
+  wrap.innerHTML = '<p style="color:var(--a-meta);font-size:13px;">Certificate template editor loads below ↓</p><div id="adminCertTemplateLegacy"></div>';
+  // For now, we keep using the existing template editor by injecting it here
+  // (it relies on IDs like posNameX, fontFamily, etc. which are unchanged)
+  if (typeof renderCertificateTemplateEditor === 'function') {
+    renderCertificateTemplateEditor('adminCertTemplateLegacy');
+    setTimeout(() => { if (typeof initCertDragEngine === 'function') initCertDragEngine(); if (typeof redrawCertPreviewCanvas === 'function') redrawCertPreviewCanvas(); }, 80);
+  } else {
+    wrap.innerHTML = '<p style="color:var(--a-danger);font-size:13px;">Certificate template editor not found. It will be re-wired in the next block.</p>';
   }
-
-  h += posBlock('Student Name', 'posNameX', 'posNameY', pos.nameX || 800, pos.nameY || 455, '#8b5cf6');
-  h += posBlock('Course Name', 'posCourseX', 'posCourseY', pos.courseX || 800, pos.courseY || 620, '#06b6d4');
-  h += posBlock('Issue Date', 'posDateX', 'posDateY', pos.dateX || 470, pos.dateY || 885, '#10b981');
-  h += posBlock('Certificate ID', 'posCertIdX', 'posCertIdY', pos.certIdX || 1180, pos.certIdY || 885, '#f59e0b');
-  h += posBlock('✍️ Signature', 'posSignatureX', 'posSignatureY', pos.signatureX || 800, pos.signatureY || 980, '#fbbf24');
-  h += '<div style="padding:10px;background:var(--a-elevated);border-radius:8px;"><label style="font-size:10px;color:var(--a-muted);">Signature Scale: <span id="posSignatureScaleVal">' + (pos.signatureScale || 1.0) + '</span></label><input type="range" id="posSignatureScale" min="0.1" max="3.0" step="0.1" value="' + (pos.signatureScale || 1.0) + '" style="width:100%" oninput="document.getElementById(\'posSignatureScaleVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-
-  h += '</div>'; // end positions scroll
-
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-muted);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;">🎨 Font Settings</div>';
-  h += '<div style="display:grid;gap:8px;max-height:340px;overflow-y:auto;padding-right:4px;">';
-
-  h += '<div style="padding:10px;background:var(--a-elevated);border-radius:8px;"><label style="font-size:10px;color:var(--a-muted);">Font Family</label><select id="fontFamily" class="admin-search" style="padding-left:12px;width:100%;margin-top:4px;">';
-  ['Georgia','Times New Roman','Arial','Playfair Display','Montserrat'].forEach(f => {
-    h += '<option value="' + f + '"' + (sty.fontFamily === f ? ' selected' : '') + '>' + f + '</option>';
-  });
-  h += '</select></div>';
-
-  function fontBlock(label, sizeId, colorId, colorTextId, sizeVal, colorVal, accent) {
-    let b = '<div style="padding:10px;background:var(--a-elevated);border-radius:8px;">';
-    b += '<div style="font-size:11px;font-weight:700;color:' + accent + ';margin-bottom:6px;">' + label + '</div>';
-    b += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    b += '<div><label style="font-size:10px;color:var(--a-muted);">Size: <span id="' + sizeId + 'Val">' + sizeVal + 'px</span></label><input type="range" id="' + sizeId + '" min="10" max="100" value="' + sizeVal + '" style="width:100%" oninput="document.getElementById(\'' + sizeId + 'Val\').textContent=this.value+\'px\';redrawCertPreviewCanvas();"></div>';
-    b += '<div><label style="font-size:10px;color:var(--a-muted);">Color</label><div style="display:flex;gap:4px;"><input type="color" id="' + colorId + '" value="' + colorVal + '" style="width:28px;height:28px;border:0;border-radius:6px;cursor:pointer;" oninput="document.getElementById(\'' + colorTextId + '\').value=this.value;redrawCertPreviewCanvas();"><input type="text" id="' + colorTextId + '" value="' + colorVal + '" class="admin-search" style="padding-left:8px;flex:1;height:28px;font-size:11px;" oninput="document.getElementById(\'' + colorId + '\').value=this.value;redrawCertPreviewCanvas();"></div></div>';
-    b += '</div></div>';
-    return b;
-  }
-
-  h += fontBlock('📛 Student Name', 'fontNameSize', 'fontNameColor', 'fontNameColorText', sty.nameFontSize || 52, sty.nameFontColor || '#1a1a1a', '#8b5cf6');
-  h += fontBlock('📚 Course Name', 'fontCourseSize', 'fontCourseColor', 'fontCourseColorText', sty.courseFontSize || 36, sty.courseFontColor || '#1a1a1a', '#06b6d4');
-  h += fontBlock('📅 Issue Date', 'fontDateSize', 'fontDateColor', 'fontDateColorText', sty.dateFontSize || 28, sty.dateFontColor || '#1a1a1a', '#10b981');
-  h += fontBlock('🏷️ Certificate ID', 'fontCertIdSize', 'fontCertIdColor', 'fontCertIdColorText', sty.certIdFontSize || 28, sty.certIdFontColor || '#1a1a1a', '#f59e0b');
-  h += '</div>';
-
-  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">';
-  [['GOLD','#D4AF37'],['SILVER','#C0C0C0'],['NAVY','#1B2A4A'],['BLACK','#1A1A1A']].forEach(p => {
-    h += '<button class="admin-pill-btn" onclick="window.applyColorPreset(\'' + p[1] + '\')" style="background:' + p[1] + ';color:' + (p[1] === '#C0C0C0' ? '#000' : '#fff') + ';border:none;">' + p[0] + '</button>';
-  });
-  h += '</div>';
-
-  // Expiry date
-  h += '<div style="padding:12px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:10px;margin-top:14px;">';
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-warning);margin-bottom:8px;">📅 Expiry Date (Auto-calculated)</div>';
-  h += '<select id="expiryPeriod" class="admin-search" style="padding-left:12px;width:100%;" onchange="redrawCertPreviewCanvas();">';
-  ['never','1year','2years','3years'].forEach(v => {
-    const label = { never: 'Never Expires', '1year': '1 Year', '2years': '2 Years', '3years': '3 Years' }[v];
-    h += '<option value="' + v + '"' + (expPeriod === v ? ' selected' : '') + '>' + label + '</option>';
-  });
-  h += '</select>';
-  h += '<p style="font-size:11px;color:var(--a-muted);margin-top:8px;">Preview: <strong id="expiryAutoPreview" style="color:var(--a-success);"></strong></p>';
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">X: <span id="posExpiryDateXVal">' + (pos.expiryDateX || 470) + '</span></label><input type="range" id="posExpiryDateX" min="0" max="1600" value="' + (pos.expiryDateX || 470) + '" style="width:100%" oninput="document.getElementById(\'posExpiryDateXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">Y: <span id="posExpiryDateYVal">' + (pos.expiryDateY || 920) + '</span></label><input type="range" id="posExpiryDateY" min="0" max="1131" value="' + (pos.expiryDateY || 920) + '" style="width:100%" oninput="document.getElementById(\'posExpiryDateYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-  h += '</div>';
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">Size: <span id="fontExpiryDateSizeVal">' + (sty.expiryDateFontSize || 24) + 'px</span></label><input type="range" id="fontExpiryDateSize" min="10" max="60" value="' + (sty.expiryDateFontSize || 24) + '" style="width:100%" oninput="document.getElementById(\'fontExpiryDateSizeVal\').textContent=this.value+\'px\';redrawCertPreviewCanvas();"></div>';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">Color</label><div style="display:flex;gap:4px;"><input type="color" id="fontExpiryDateColor" value="' + (sty.expiryDateFontColor || '#1a1a1a') + '" style="width:28px;height:28px;border:0;border-radius:6px;cursor:pointer;" oninput="document.getElementById(\'fontExpiryDateColorText\').value=this.value;redrawCertPreviewCanvas();"><input type="text" id="fontExpiryDateColorText" value="' + (sty.expiryDateFontColor || '#1a1a1a') + '" class="admin-search" style="padding-left:8px;flex:1;height:28px;font-size:11px;"></div></div>';
-  h += '</div></div>';
-
-  // Verify URL
-  h += '<div style="padding:12px;background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.2);border-radius:10px;margin-top:14px;">';
-  h += '<div style="font-size:12px;font-weight:700;color:#22d3ee;margin-bottom:8px;">🔗 Verify URL</div>';
-  h += '<input type="text" id="verifyUrlBase" value="' + escapeHtml(vrfBase) + '" class="admin-search" style="padding-left:12px;width:100%;" placeholder="e.g., oblixelacademy.com/verify/">';
-  h += '<p style="font-size:11px;color:var(--a-muted);margin-top:6px;">Certificate ID auto-appends → <strong style="color:#22d3ee;">' + escapeHtml(vrfBase) + 'OBX-CCP-TEST123</strong></p>';
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">X: <span id="posVerifyUrlXVal">' + (pos.verifyUrlX || 1180) + '</span></label><input type="range" id="posVerifyUrlX" min="0" max="1600" value="' + (pos.verifyUrlX || 1180) + '" style="width:100%" oninput="document.getElementById(\'posVerifyUrlXVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-  h += '<div><label style="font-size:10px;color:var(--a-muted);">Y: <span id="posVerifyUrlYVal">' + (pos.verifyUrlY || 920) + '</span></label><input type="range" id="posVerifyUrlY" min="0" max="1131" value="' + (pos.verifyUrlY || 920) + '" style="width:100%" oninput="document.getElementById(\'posVerifyUrlYVal\').textContent=this.value;redrawCertPreviewCanvas();"></div>';
-  h += '</div></div>';
-
-  // Custom text fields
-  h += '<div style="padding:12px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:10px;margin-top:14px;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-  h += '<div style="font-size:12px;font-weight:700;color:var(--a-success);">📝 Custom Text Fields</div>';
-  h += '<button class="admin-btn admin-btn-ghost" style="height:28px;font-size:11px;" onclick="window.addCustomTextField()"><i class="fa-solid fa-plus"></i> Add</button>';
-  h += '</div>';
-  h += '<div id="customTextFieldsContainer"></div>';
-  h += '</div>';
-
-  h += '</div>'; // end RIGHT
-
-  h += '</div>'; // end grid
-
-  // Bottom save buttons
-  h += '<div style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--a-border);">';
-  h += '<button class="admin-btn" id="adminSaveCertBtn" style="flex:1;justify-content:center;"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>';
-  h += '<button class="admin-btn admin-btn-ghost" id="adminTestCertBtn" style="flex:1;justify-content:center;"><i class="fa-solid fa-eye"></i> Test Full Preview</button>';
-  h += '</div>';
-
-  wrap.innerHTML = h;
-
-  // Wire up after render
-  setTimeout(() => {
-    if (typeof initCertDragEngine === 'function') initCertDragEngine();
-    if (typeof renderCustomTextFieldsList === 'function') renderCustomTextFieldsList();
-    if (typeof redrawCertPreviewCanvas === 'function') redrawCertPreviewCanvas();
-
-    // Save button
-    const saveBtn = document.getElementById('adminSaveCertBtn');
-    if (saveBtn) saveBtn.addEventListener('click', async () => {
-      await saveAdminCertSettings();
-    });
-
-    // Test preview
-    const testBtn = document.getElementById('adminTestCertBtn');
-    if (testBtn) testBtn.addEventListener('click', () => {
-      if (typeof window.showCertPreviewModal !== 'function') return;
-      const imageUrl = document.getElementById('certTemplateImage')?.value || '';
-      const positions = collectAdminCertPositions();
-      const styles = collectAdminCertStyles();
-      const testData = {
-        studentName: document.getElementById('testStudentName')?.value || 'John Doe',
-        courseName: document.getElementById('testCourseName')?.value || '',
-        issueDate: document.getElementById('testIssueDate')?.value || '',
-        certId: document.getElementById('testCertId')?.value || ''
-      };
-      const sig = window._certTemplate?.signatureImage || '';
-      const expP = document.getElementById('expiryPeriod')?.value || 'never';
-      const vBase = document.getElementById('verifyUrlBase')?.value || '';
-      showCertPreviewModal(imageUrl, positions, styles, testData, sig, expP, vBase, customTextFields);
-    });
-
-    // Live input wiring (image URL, test data)
-    ['certTemplateImage','testStudentName','testCourseName','testIssueDate','testCertId','verifyUrlBase'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('input', () => {
-        if (id === 'certTemplateImage') {
-          const p = document.getElementById('certTemplatePreview');
-          if (p) p.src = el.value;
-          const n = document.getElementById('certTemplateName');
-          if (n) n.textContent = el.value;
-        }
-        if (typeof redrawCertPreviewCanvas === 'function') redrawCertPreviewCanvas();
-      });
-    });
-  }, 80);
-}
-
-function collectAdminCertPositions() {
-  function v(id, fb) { const el = document.getElementById(id); return el ? parseInt(el.value) : fb; }
-  function vf(id, fb) { const el = document.getElementById(id); return el ? parseFloat(el.value) : fb; }
-  return {
-    nameX: v('posNameX', 800), nameY: v('posNameY', 455),
-    courseX: v('posCourseX', 800), courseY: v('posCourseY', 620),
-    dateX: v('posDateX', 470), dateY: v('posDateY', 885),
-    expiryDateX: v('posExpiryDateX', 470), expiryDateY: v('posExpiryDateY', 920),
-    certIdX: v('posCertIdX', 1180), certIdY: v('posCertIdY', 885),
-    verifyUrlX: v('posVerifyUrlX', 1180), verifyUrlY: v('posVerifyUrlY', 920),
-    signatureX: v('posSignatureX', 800), signatureY: v('posSignatureY', 980),
-    signatureScale: vf('posSignatureScale', 1.0)
-  };
-}
-
-function collectAdminCertStyles() {
-  function val(id, fb) { const el = document.getElementById(id); return el ? el.value : fb; }
-  return {
-    fontFamily: val('fontFamily', 'Georgia'),
-    nameFontSize: parseInt(val('fontNameSize', 52)),
-    nameFontColor: val('fontNameColorText', '#1a1a1a'),
-    courseFontSize: parseInt(val('fontCourseSize', 36)),
-    courseFontColor: val('fontCourseColorText', '#1a1a1a'),
-    dateFontSize: parseInt(val('fontDateSize', 28)),
-    dateFontColor: val('fontDateColorText', '#1a1a1a'),
-    expiryDateFontSize: parseInt(val('fontExpiryDateSize', 24)),
-    expiryDateFontColor: val('fontExpiryDateColorText', '#1a1a1a'),
-    certIdFontSize: parseInt(val('fontCertIdSize', 28)),
-    certIdFontColor: val('fontCertIdColorText', '#1a1a1a'),
-    verifyUrlFontSize: parseInt(val('fontVerifyUrlSize', 20)),
-    verifyUrlFontColor: val('fontVerifyUrlColorText', '#1a1a1a')
-  };
-}
-
-async function saveAdminCertSettings() {
-  try {
-    const imageUrl = document.getElementById('certTemplateImage')?.value || '';
-    const positions = collectAdminCertPositions();
-    const styles = collectAdminCertStyles();
-    const sig = window._certTemplate?.signatureImage || '';
-    const expP = document.getElementById('expiryPeriod')?.value || 'never';
-    const vBase = document.getElementById('verifyUrlBase')?.value || '';
-
-    if (typeof updateCertificateTemplateImage === 'function') await updateCertificateTemplateImage(imageUrl);
-    if (typeof updateCertificateTemplateSettings === 'function') await updateCertificateTemplateSettings(positions, styles, sig, expP, vBase, customTextFields);
-
-    if (window._certTemplate) {
-      window._certTemplate.expiryPeriod = expP;
-      window._certTemplate.verifyUrlBase = vBase;
-    }
-    showToast('Certificate settings saved!', 'success');
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
 }
 
 // ==================== CHART DRAWING ====================
