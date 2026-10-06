@@ -42,39 +42,6 @@ router.get('/', async (req, res) => {
 });
 
 // ==================== GET COURSE DETAILS (rich) ====================
-// Lookup by slug (must be BEFORE /:id so :id doesn't eat it)
-router.get('/by-slug/:slug', async (req, res) => {
-  try {
-    const course = await Course.findOne({ slug: req.params.slug.toLowerCase(), isActive: true });
-    if (!course) return res.status(404).json({ error: 'Course not found' });
-
-    res.json({
-      id: course.courseId,
-      courseId: course.courseId,
-      slug: course.slug,
-      name: course.name,
-      abbreviation: course.abbreviation,
-      description: course.description,
-      longDescription: course.longDescription,
-      price: course.price || course.examPrice || 0,
-      examPrice: course.examPrice,
-      pathPrice: course.pathPrice || course.examPrice,
-      icon: course.icon,
-      bannerImage: course.bannerImage,
-      category: course.category,
-      level: course.level,
-      duration: course.duration,
-      totalModules: course.totalModules,
-      modules: course.modules || [],
-      learningOutcomes: course.learningOutcomes || [],
-      careerPaths: course.careerPaths || [],
-      enrolledCount: course.enrolledCount || 0,
-      prerequisite: course.prerequisite
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {

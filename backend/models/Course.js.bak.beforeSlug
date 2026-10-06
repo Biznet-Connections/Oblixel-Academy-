@@ -26,7 +26,6 @@ const courseSchema = new mongoose.Schema({
   courseId:      { type: String, required: true, unique: true, lowercase: true, trim: true },
   name:          { type: String, required: true, trim: true },
   abbreviation:  { type: String, default: '' },
-  slug:          { type: String, unique: true, sparse: true, lowercase: true, trim: true },
   level:         { type: String, enum: ['Foundation', 'Associate', 'Professional', 'Expert'], default: 'Professional' },
   description:   { type: String, default: '' },
   longDescription:{ type: String, default: '' },

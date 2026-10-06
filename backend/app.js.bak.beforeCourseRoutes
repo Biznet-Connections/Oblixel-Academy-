@@ -87,61 +87,6 @@ app.get('/payment-complete', (req, res) => {
   res.sendFile(path.join(frontendPath, 'payment-complete.html'));
 });
 
-// ==================== COURSE SHARE LINKS ====================
-// The main /course/:slug route serves the SPA — frontend handles deeplink
-app.get('/course/:slug', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
-
-// Short redirects: /ncp → /course/network-certified-professional
-app.get('/:shortId([a-z0-9\-]{2,20})', async (req, res, next) => {
-  const shortId = req.params.shortId;
-  // Skip reserved paths
-  const reserved = ['api', 'verify', 'payment-complete', 'course', 'uploads', 'js', 'css', 'images', 'favicon.ico'];
-  if (reserved.includes(shortId)) return next();
-
-  try {
-    const Course = require('./models/Course');
-    const course = await Course.findOne({ courseId: shortId, isActive: true });
-    if (course && course.slug) {
-      return res.redirect(301, '/course/' + course.slug);
-    }
-  } catch (e) {}
-  next();
-});
-// ==================== END COURSE SHARE LINKS ====================
-
-// Crawler-friendly OG HTML for /course/:slug (for WhatsApp, Twitter, FB previews)
-app.get('/course/:slug/og', async (req, res) => {
-  try {
-    const Course = require('./models/Course');
-    const c = await Course.findOne({ slug: req.params.slug.toLowerCase(), isActive: true });
-    if (!c) return res.status(404).send('Course not found');
-
-    const price = c.price || c.examPrice || 0;
-    const desc = (c.description || '').substring(0, 150);
-    const url = `https://www.oblixelacademy.com/course/${c.slug}`;
-
-    res.send(`<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<title>${c.name} — obliXel Academy</title>
-<meta property="og:type" content="website">
-<meta property="og:url" content="${url}">
-<meta property="og:title" content="${c.name} — obliXel Academy">
-<meta property="og:description" content="${desc} · Get certified for $${price}.">
-<meta property="og:image" content="https://www.oblixelacademy.com/favicon-512x512.png">
-<meta property="og:site_name" content="obliXel Academy">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${c.name} — obliXel Academy">
-<meta name="twitter:description" content="${desc} · Get certified for $${price}.">
-<meta name="description" content="${desc}">
-<link rel="canonical" href="${url}">
-</head><body>
-<script>location.href = "${url}";</script>
-</body></html>`);
-  } catch (e) { res.status(500).send('Error'); }
-});
 app.get('/verify/:certificateId', (req, res) => {
   res.sendFile(path.join(frontendPath, 'verify.html'));
 });
