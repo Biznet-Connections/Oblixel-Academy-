@@ -31,8 +31,6 @@ const courseSchema = new mongoose.Schema({
   description:   { type: String, default: '' },
   longDescription:{ type: String, default: '' },
   examPrice:     { type: Number, required: true, min: 0 },
-  enrollPrice:   { type: Number, default: 0, min: 0 },
-  bundlePrice:   { type: Number, default: 0, min: 0 },
   pathPrice:     { type: Number, min: 0 },
   price:         { type: Number, default: 0 },
   icon:          { type: String, default: 'fa-certificate' },

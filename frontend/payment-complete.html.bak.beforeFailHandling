@@ -123,20 +123,7 @@ function buildWhatsApp(reason, reference) {
 }
 
 function tryAgain() {
-  // If this was an exam fee payment, go back to the course dashboard so user can retry the exam
-  if (sessionId) {
-    fetch('/api/payments/status/' + sessionId).then(r => r.json()).then(d => {
-      if (d && d.type === 'exam_fee' && d.courseId) {
-        window.location.href = '/?page=dashboard&retry_exam=' + encodeURIComponent(d.courseId);
-        return;
-      }
-      window.location.href = '/?retry=1' + (sessionId ? '&ref=' + encodeURIComponent(sessionId) : '');
-    }).catch(() => {
-      window.location.href = '/?retry=1' + (sessionId ? '&ref=' + encodeURIComponent(sessionId) : '');
-    });
-  } else {
-    window.location.href = '/?retry=1';
-  }
+  window.location.href = '/?retry=1' + (sessionId ? '&ref=' + encodeURIComponent(sessionId) : '');
 }
 
 async function recoverAccess() {
@@ -191,20 +178,6 @@ function renderFailureState(reason) {
   } else {
     title.textContent = "Payment didn't complete";
     msg.textContent = 'The payment service had a connection issue. You have NOT been charged.';
-  }
-
-  // v16: Detect exam_fee failure by session prefix
-  var isExamFee = sessionId && sessionId.indexOf('OMX-') === 0;
-  // We can't reliably know the type from URL alone — check via API
-  if (sessionId) {
-    fetch('/api/payments/status/' + sessionId).then(r => r.json()).then(d => {
-      if (d && d.type === 'exam_fee') {
-        // Customize for exam fee
-        title.textContent = 'Exam fee payment failed';
-        msg.textContent = 'Your exam fee payment didn\'t complete. You have NOT been charged. The exam is still locked.';
-        retryLabel.textContent = 'Retry exam fee payment';
-      }
-    }).catch(() => {});
   }
 
   document.getElementById('wa-failed').href = buildWhatsApp(reason || 'failed', sessionId);

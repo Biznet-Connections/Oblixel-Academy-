@@ -5959,7 +5959,7 @@ function renderAdminCoursesTableContent() {
     h += '<tr class="course-drag-row" draggable="true" data-course-id="' + c.id + '" data-display-order="' + i + '">';
     h += '<td data-label=""><span class="drag-handle" style="cursor:grab;color:var(--a-muted);"><i class="fa-solid fa-grip-vertical"></i></span></td>';
     h += '<td data-label="Course"><div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '" style="color:var(--a-accent)"></i><strong>' + escapeHtml(c.name) + '</strong></div></td>';
-    h += '<td data-label="Fee"><div style="font-weight:600">$' + (c.enrollPrice || cp) + ' enroll</div><div style="font-size:11px;color:var(--a-muted);">$' + (c.examPrice || cp) + ' exam</div></td>';
+    h += '<td data-label="Fee">$' + cp + '</td>';
     h += '<td data-label="Students">' + (c.enrolledCount || 0) + '</td>';
     h += '<td data-label="Revenue" data-course-revenue="' + c.id + '">—</td>';
     h += '<td data-label="Actions" style="text-align:right;">';
@@ -7069,8 +7069,6 @@ window.saveEditCourse = async function(courseId) {
   var n = document.getElementById('editCourseName')?.value;
   var d = document.getElementById('editCourseDesc')?.value;
   var p = document.getElementById('editCoursePrice')?.value;
-  var enrollPrice = document.getElementById('editCourseEnrollPrice')?.value;
-  var examPrice = document.getElementById('editCourseExamPrice')?.value;
   if (!n || !p) { showToast('Name and course fee required', 'error'); return; }
   try {
     await updateCourse(courseId, { name: n, description: d, price: parseFloat(p) });
