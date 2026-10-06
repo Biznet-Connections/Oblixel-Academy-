@@ -146,58 +146,6 @@ router.post('/create-checkout', authenticate, async (req, res) => {
       });
       return res.json({ sessionId, amount: retakeFee, courseId: courseId.toLowerCase(), type: 'retake', retake: true });
     }
-    // --- Exam Fee branch (v16) ---
-    // Requires user to already be enrolled in this course
-    if (type === 'exam_fee') {
-      if (!existing) return res.status(400).json({ error: 'Must be enrolled first' });
-      if (existing.examFeePaid) return res.status(400).json({ error: 'Exam fee already paid' });
-
-      const examFee = course.examPrice || 40;
-      const examSessionId = `OMX-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      const appUrl = process.env.APP_URL || 'http://localhost:5001';
-      const urls = buildCallbackUrls(examSessionId);
-
-      console.log('[INITIATE-EXAM-FEE] Amount:', examFee, 'Course:', course.courseId);
-
-      const examLink = await linkwa.createPaymentLink({
-        amount: examFee,
-        name: course.name + ' - Exam Fee',
-        description: 'Certification exam fee for ' + course.name,
-        returnUrl: urls.returnUrl,
-        cancelUrl: urls.cancelUrl,
-        failureUrl: urls.failureUrl,
-        phone: phone || req.user.phone,
-        email: req.user.email,
-        imageUrl: appUrl + '/favicon.svg'
-      });
-
-      if (!examLink.success) return res.status(400).json({ error: examLink.message || 'Linkwa failed' });
-
-      await Payment.create({
-        sessionId: examSessionId,
-        userId,
-        courseId: courseId.toLowerCase(),
-        type: 'exam_fee',
-        originalAmount: examFee,
-        discountAmount: 0,
-        amount: examFee,
-        status: 'pending',
-        paymentMethod: 'linkwa',
-        linkwaCheckoutUrl: examLink.checkoutUrl,
-        linkwaExternalLinkId: examLink.externalPaymentLinkId,
-        linkwaShortUrl: examLink.shortUrl || null,
-        billingInfo: { firstName: req.user.name || 'Student', lastName: '', email: req.user.email, phone: phone || req.user.phone || '', country: 'Zimbabwe' }
-      });
-
-      return res.json({
-        success: true,
-        sessionId: examSessionId,
-        shortUrl: examLink.shortUrl,
-        checkoutUrl: examLink.checkoutUrl,
-        amount: examFee,
-        type: 'exam_fee'
-      });
-    }
     if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
 
     let amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
@@ -549,21 +497,7 @@ router.post('/recover', async (req, res) => {
       payment.completedAt = new Date();
       await payment.save();
 
-      if (payment.type === 'exam_fee') {
-        // __examFeeHook — unlock exam on payment
-        try {
-          const enr = await Enrollment.findOne({ userId: payment.userId, courseId: payment.courseId });
-          if (enr) {
-            enr.examFeePaid = true;
-            enr.examFeePaidAt = new Date();
-            enr.examFeePaymentId = payment.sessionId;
-            await enr.save();
-            console.log('[WEBHOOK] Exam fee paid → unlocked exam for', payment.courseId, 'user', payment.userId);
-          }
-        } catch (e) {
-          console.error('[WEBHOOK] exam_fee hook error:', e.message);
-        }
-      } else if (payment.type === 'retake') {
+      if (payment.type === 'retake') {
         await __applyRetakePayment(payment);
       } else {
         const course = await Course.findOne({ courseId: payment.courseId });

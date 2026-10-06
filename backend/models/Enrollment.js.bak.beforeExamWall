@@ -29,11 +29,6 @@ const enrollmentSchema = new mongoose.Schema({
   certificateId: { type: String, default: null },
   // Retake fee system
   retakeFeeRequired: { type: Boolean, default: false },
-
-  // Exam fee gate (v16)
-  examFeePaid: { type: Boolean, default: false },
-  examFeePaidAt: { type: Date, default: null },
-  examFeePaymentId: { type: String, default: null },
   retakeFeePaid: { type: Boolean, default: false },
   retakeFeeAmount: { type: Number, default: 0 },
   totalRetakeFeesPaid: { type: Number, default: 0 },

@@ -170,19 +170,6 @@ router.post('/start', authenticate, async (req, res) => {
     }
 
     // __retakeFeeGate â€” require payment before retaking after a fail
-    // __examFeeGate (v16) — student must have paid exam fee to take final exam
-    if (enrollment.status !== 'failed' && !enrollment.examFeePaid) {
-      const courseDoc = await Course.findOne({ courseId: courseId.toLowerCase() });
-      const examFee = (courseDoc && courseDoc.examPrice) ? courseDoc.examPrice : 40;
-      return res.status(402).json({
-        error: 'exam_fee_required',
-        examFeeRequired: true,
-        examFee: examFee,
-        courseId: courseId.toLowerCase(),
-        courseName: courseDoc ? courseDoc.name : courseId,
-        message: 'Pay the exam fee to unlock the final exam.'
-      });
-    }
     if (enrollment.status === 'failed' && enrollment.retakeFeeRequired && !enrollment.retakeFeePaid) {
       const courseDoc = await Course.findOne({ courseId: courseId.toLowerCase() });
       const fee = calculateRetakeFee(courseDoc || {});

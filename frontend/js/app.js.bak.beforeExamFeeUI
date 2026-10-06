@@ -342,50 +342,6 @@ window.__showExamStartScreen = function(courseId, response) {
     return;
   }
 
-  // STATE 1.5: EXAM FEE REQUIRED (v16 — the wall)
-  if (response.error === 'exam_fee_required' || response.examFeeRequired) {
-    var examFee = response.examFee || 40;
-    var courseName = response.courseName || courseId.toUpperCase();
-    root.innerHTML = '<div class="max-w-2xl mx-auto fade-in py-8">' +
-      '<div class="glass rounded-3xl p-8 text-center">' +
-        '<div class="text-6xl mb-4">🎓</div>' +
-        '<h2 class="text-3xl font-black mb-2">Ready for the final exam?</h2>' +
-        '<p class="text-sm text-gray-300 mb-6">You have completed all modules. Now pay the exam fee to unlock your certification exam.</p>' +
-        '<div class="glass rounded-2xl p-5 mb-6 text-left border-2 border-purple-500/40">' +
-          '<p class="text-xs text-gray-400 mb-1">Course</p>' +
-          '<p class="text-lg font-bold mb-3">' + courseName + '</p>' +
-          '<p class="text-xs text-gray-400 mb-1">Exam fee</p>' +
-          '<p class="text-3xl font-black text-cyan-400">$' + examFee + ' USD</p>' +
-          '<p class="text-xs text-gray-500 mt-2">One-time payment · Unlocks final exam + certificate</p>' +
-        '</div>' +
-        '<button id="examFeePayBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold glow mb-3">🎯 Pay $' + examFee + ' & Take Exam</button>' +
-        '<button onclick="window.renderCourseDashboard(\'' + courseId + '\')" class="w-full glass px-6 py-3 rounded-xl font-bold text-sm">← Back to course</button>' +
-      '</div>' +
-    '</div>';
-
-    document.getElementById('examFeePayBtn').onclick = async function() {
-      var btn = this;
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Starting payment...';
-      try {
-        var token = localStorage.getItem('auth_token');
-        var res = await fetch('/api/payments/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ courseId: courseId, type: 'exam_fee' })
-        });
-        var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to start payment');
-        if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
-        throw new Error('No checkout URL');
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerHTML = '🎯 Pay $' + examFee + ' & Take Exam';
-        if (typeof showToast === 'function') showToast(err.message || 'Payment failed', 'error');
-      }
-    };
-    return;
-  }
   // STATE 2: RETAKE FEE REQUIRED
   if (response.retakeFeeRequired) {
     if (typeof window.__showRetakePaymentScreen === 'function') {

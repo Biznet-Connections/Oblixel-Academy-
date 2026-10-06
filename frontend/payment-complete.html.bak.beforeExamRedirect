@@ -204,17 +204,6 @@ if (reason) {
         var data = await res.json();
 
         if (data.status === 'completed' || data.status === 'paid') {
-          // v16: If this was an exam fee payment, redirect back to course
-          if (data.courseId && (data.type === 'exam_fee' || sessionId.indexOf('exam') !== -1)) {
-            document.getElementById('success-course').textContent = data.courseName || 'your course';
-            document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
-            document.getElementById('success-ref').textContent = sessionId;
-            show('success');
-            setTimeout(function() {
-              window.location.href = '/?page=dashboard&exam_paid=' + encodeURIComponent(data.courseId || '');
-            }, 2500);
-            return;
-          }
           document.getElementById('success-course').textContent = data.courseName || 'your course';
           document.getElementById('success-amount').textContent = '$' + Number(data.amount || 0).toFixed(2);
           document.getElementById('success-ref').textContent = sessionId;
