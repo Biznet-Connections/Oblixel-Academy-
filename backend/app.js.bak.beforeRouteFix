@@ -94,22 +94,16 @@ app.get('/course/:slug', (req, res) => {
 });
 
 // Short redirects: /ncp → /course/network-certified-professional
-// ONLY match paths that have NO additional slashes (blocks /js/*, /css/*, etc.)
 app.get('/:shortId([a-z0-9\-]{2,20})', async (req, res, next) => {
   const shortId = req.params.shortId;
-
-  // Hard-block everything that has a subpath or is a known static file
-  const reserved = ['api', 'verify', 'payment-complete', 'course', 'uploads', 'js', 'css', 'images', 'favicon.ico', 'favicon', 'robots.txt', 'sitemap.xml', 'manifest.json'];
+  // Skip reserved paths
+  const reserved = ['api', 'verify', 'payment-complete', 'course', 'uploads', 'js', 'css', 'images', 'favicon.ico'];
   if (reserved.includes(shortId)) return next();
-
-  // If the URL has any dot (file extension) OR additional slashes, skip
-  if (req.path.includes('.') || req.path.indexOf('/', 1) !== -1) return next();
 
   try {
     const Course = require('./models/Course');
     const course = await Course.findOne({ courseId: shortId, isActive: true });
     if (course && course.slug) {
-      console.log(`[SHORT-URL] ${shortId} → /course/${course.slug}`);
       return res.redirect(301, '/course/' + course.slug);
     }
   } catch (e) {}
