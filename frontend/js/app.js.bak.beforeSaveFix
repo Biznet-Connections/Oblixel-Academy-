@@ -7066,40 +7066,19 @@ window.showEditCourseModal = function(courseId) {
 };
 
 window.saveEditCourse = async function(courseId) {
-  var n = document.getElementById('editCourseName')?.value?.trim();
-  var d = document.getElementById('editCourseDesc')?.value?.trim();
+  var n = document.getElementById('editCourseName')?.value;
+  var d = document.getElementById('editCourseDesc')?.value;
+  var p = document.getElementById('editCoursePrice')?.value;
   var enrollPrice = document.getElementById('editCourseEnrollPrice')?.value;
   var examPrice = document.getElementById('editCourseExamPrice')?.value;
-
-  // Fallback: try the legacy price field if present
-  var legacyPrice = document.getElementById('editCoursePrice')?.value;
-
-  var enroll = enrollPrice !== undefined && enrollPrice !== '' ? parseFloat(enrollPrice) : (legacyPrice ? parseFloat(legacyPrice) : null);
-  var exam = examPrice !== undefined && examPrice !== '' ? parseFloat(examPrice) : (legacyPrice ? parseFloat(legacyPrice) : null);
-
-  if (!n) { showToast('Course name required', 'error'); return; }
-  if (enroll === null && exam === null) { showToast('At least one price required', 'error'); return; }
-  if (isNaN(enroll) && isNaN(exam)) { showToast('Invalid prices', 'error'); return; }
-
-  var body = { name: n, description: d || '' };
-  if (enroll !== null && !isNaN(enroll)) body.enrollPrice = enroll;
-  if (exam !== null && !isNaN(exam)) body.examPrice = exam;
-
+  if (!n || !p) { showToast('Name and course fee required', 'error'); return; }
   try {
-    const token = localStorage.getItem('auth_token');
-    const res = await fetch('/api/admin/courses/' + courseId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Save failed');
-    showToast('Course updated', 'success');
+    await updateCourse(courseId, { name: n, description: d, price: parseFloat(p) });
+    showToast('Course updated!', 'success');
     closeModal('editCourseModal');
-    if (typeof renderAdmin === 'function') renderAdmin();
-  } catch (e) {
-    showToast('Failed: ' + e.message, 'error');
-  }
+    await loadCourses();
+    renderAdmin();
+  } catch (err) { showToast('Failed: ' + err.message, 'error'); }
 };
 
 window.showDeleteCourseModal = function(courseId, courseName) {

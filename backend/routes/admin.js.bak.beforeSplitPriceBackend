@@ -411,36 +411,11 @@ router.put('/courses/:id/slug', async (req, res) => {
 router.put('/courses/:id', async (req, res) => {
   try {
     const updates = { ...req.body };
-
-    // Legacy price compat
-    if (updates.price !== undefined && updates.examPrice === undefined) { updates.examPrice = parseFloat(updates.price); }
-    if (updates.price !== undefined && updates.pathPrice === undefined) { updates.pathPrice = parseFloat(updates.price); }
-
-    // Split pricing (v16)
-    if (updates.enrollPrice !== undefined) updates.enrollPrice = parseFloat(updates.enrollPrice);
-    if (updates.examPrice !== undefined) updates.examPrice = parseFloat(updates.examPrice);
-
-    // Auto-compute bundle if both provided
-    if (updates.enrollPrice !== undefined && updates.examPrice !== undefined) {
-      updates.pathPrice = updates.enrollPrice + updates.examPrice;
-      updates.price = updates.pathPrice;
-    } else {
-      // Partial update — recompute from existing values
-      const existing = await Course.findOne({ courseId: req.params.id });
-      if (existing) {
-        const enroll = updates.enrollPrice !== undefined ? updates.enrollPrice : (existing.enrollPrice || 0);
-        const exam = updates.examPrice !== undefined ? updates.examPrice : (existing.examPrice || existing.price || 0);
-        if (updates.enrollPrice !== undefined || updates.examPrice !== undefined) {
-          updates.pathPrice = enroll + exam;
-          updates.price = updates.pathPrice;
-        }
-      }
-    }
-
+    if (updates.price) { updates.examPrice = parseFloat(updates.price); updates.pathPrice = parseFloat(updates.price); }
     const course = await Course.findOneAndUpdate({ courseId: req.params.id }, { $set: updates }, { returnDocument: 'after' });
     if (!course) return res.status(404).json({ error: 'Course not found' });
-    console.log('[ADMIN] Course updated:' + req.params.id + ' by ' + req.user.email);
-    res.json({ success: true, course: { id: course.courseId, name: course.name, enrollPrice: course.enrollPrice || 0, examPrice: course.examPrice || 0, pathPrice: course.pathPrice || course.price || 0 } });
+    console.log(`[ADMIN] Course updated: ${req.params.id} by ${req.user.email}`);
+    res.json({ success: true, course: { id: course.courseId, name: course.name, price: course.price || course.examPrice || 0 } });
   } catch (error) {
     console.error('[ADMIN] Update course error:', error.message);
     res.status(500).json({ error: error.message });
