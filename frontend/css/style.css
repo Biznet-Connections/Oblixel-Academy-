@@ -2796,3 +2796,64 @@ button.disabled {
   .auth-card { padding: 24px 20px; border-radius: 14px; }
   .auth-title { font-size: 20px; }
 }
+
+/* ==================== DEEPLINK COURSE HIGHLIGHT (v15) ==================== */
+.deeplink-highlight {
+  position: relative;
+  z-index: 10;
+  animation: deeplinkGlow 2s ease-in-out infinite !important;
+  transform: scale(1.03) !important;
+  transition: transform 0.4s ease !important;
+}
+
+.deeplink-highlight::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 24px;
+  padding: 2px;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa, #8b5cf6);
+  background-size: 200% 200%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: deeplinkBorder 3s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.deeplink-highlight::after {
+  content: '🎯 SHARED';
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(139,92,246,0.5);
+  animation: deeplinkBadge 0.5s ease;
+}
+
+@keyframes deeplinkGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #8b5cf6, 0 0 40px rgba(139,92,246,0.6), 0 0 80px rgba(139,92,246,0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #a78bfa, 0 0 60px rgba(139,92,246,0.8), 0 0 120px rgba(139,92,246,0.45);
+  }
+}
+
+@keyframes deeplinkBorder {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes deeplinkBadge {
+  from { opacity: 0; transform: translateY(-8px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

@@ -1172,7 +1172,7 @@ function renderLandingPage() {
         </div>
       </section>
       <section class="py-6 sm:py-10"><div class="glass rounded-3xl py-3 sm:py-6 marquee"><div class="marquee-content">${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}</div></div></section>
-      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(cert => { const enrolled = currentUser && isAlreadyEnrolled(cert.id); const coursePrice = cert.price || cert.examPrice || 0; return `<div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 card-hover" data-aos="fade-up" data-course-id="${cert.id}"><div class="flex justify-between items-start"><i class="fa-solid ${cert.icon || 'fa-certificate'} text-3xl sm:text-4xl text-purple-400"></i><span class="text-xs glass px-2 sm:px-3 py-1 rounded-full">${cert.category || 'Certification'}</span></div><h3 class="text-lg sm:text-2xl font-bold mt-3 sm:mt-4">${escapeHtml(cert.name)}</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p><div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div><p class="text-xs mt-2 text-cyan-400 font-medium">💰 Course Fee: $${coursePrice}</p><div class="mt-4 flex gap-2"><button onclick="window.handleEnrollClick('${cert.id}')" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 hover:bg-purple-500 py-2 rounded-xl text-sm font-medium transition">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button><button onclick="event.stopPropagation(); window.shareCourse('${cert.id}')" title="Share this course" class="w-10 bg-white/5 hover:bg-white/10 border border-white/10 py-2 rounded-xl text-sm transition flex items-center justify-center"><i class="fa-solid fa-share-nodes"></i></button></div></div>`; }).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
+      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(cert => { const enrolled = currentUser && isAlreadyEnrolled(cert.id); const coursePrice = cert.price || cert.examPrice || 0; return `<div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 card-hover" data-aos="fade-up"><div class="flex justify-between items-start"><i class="fa-solid ${cert.icon || 'fa-certificate'} text-3xl sm:text-4xl text-purple-400"></i><span class="text-xs glass px-2 sm:px-3 py-1 rounded-full">${cert.category || 'Certification'}</span></div><h3 class="text-lg sm:text-2xl font-bold mt-3 sm:mt-4">${escapeHtml(cert.name)}</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p><div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div><p class="text-xs mt-2 text-cyan-400 font-medium">💰 Course Fee: $${coursePrice}</p><div class="mt-4 flex gap-2"><button onclick="window.handleEnrollClick('${cert.id}')" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 hover:bg-purple-500 py-2 rounded-xl text-sm font-medium transition">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button><button onclick="event.stopPropagation(); window.shareCourse('${cert.id}')" title="Share this course" class="w-10 bg-white/5 hover:bg-white/10 border border-white/10 py-2 rounded-xl text-sm transition flex items-center justify-center"><i class="fa-solid fa-share-nodes"></i></button></div></div>`; }).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
       <section class="py-10 sm:py-16"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-4xl font-black">🌍 Global Partners</h2></div><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-5">${globalPartners.map(p => `<a href="${p.url}" target="_blank" rel="noopener noreferrer" class="glass rounded-2xl p-3 sm:p-5 text-center transition hover:scale-105"><span style="display:inline-flex;align-items:center;justify-content:center;height:40px">${__brandSvg__(p.name)}</span><h3 class="font-bold text-xs sm:text-sm mt-2">${p.name}</h3></a>`).join('')}</div></section>
       <footer class="border-t border-white/10 py-6 sm:py-12 mt-6 sm:mt-10"><div class="flex flex-wrap justify-center gap-3 sm:gap-6 mb-3 sm:mb-6 text-xl sm:text-2xl"><a href="https://www.facebook.com/obliXel" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-youtube"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="https://wa.me/263714587259" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a></div><p class="text-center text-gray-500 text-xs sm:text-sm">© 2026 obliXel Academy — The future of professional certification</p></footer>
     </div>
@@ -7862,7 +7862,7 @@ window.showChangePasswordModal = window.openChangePasswordFlow;
       // After render, scroll + highlight + show banner
       setTimeout(() => {
         showDeeplinkBanner(course);
-        robustScroll(course.courseId);
+        scrollToAndHighlight(course.courseId);
       }, 600);
     } catch (e) {
       console.error('[Deeplink] error:', e);
@@ -7872,29 +7872,24 @@ window.showChangePasswordModal = window.openChangePasswordFlow;
 
   function showDeeplinkBanner(course) {
     if (document.getElementById('deeplinkBanner')) return;
-
-    const price = course.price || course.examPrice || 0;
     const banner = document.createElement('div');
     banner.id = 'deeplinkBanner';
     banner.style.cssText = `
       position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
       z-index: 200; background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-      color: #fff; padding: 14px 18px; border-radius: 14px;
-      box-shadow: 0 20px 60px rgba(139,92,246,0.5), 0 0 0 1px rgba(255,255,255,0.1);
-      max-width: 92vw; width: 480px; display: flex; align-items: center; gap: 14px;
+      color: #fff; padding: 14px 20px; border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(139,92,246,0.5);
+      max-width: 92vw; display: flex; align-items: center; gap: 12px;
       font-size: 13.5px; font-weight: 600; animation: dlIn 0.5s ease;
     `;
     banner.innerHTML = `
-      <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="fa-solid fa-share-nodes" style="font-size:16px;"></i>
-      </div>
+      <i class="fa-solid fa-share-nodes" style="font-size:18px;"></i>
       <div style="flex:1;min-width:0;">
-        <div style="opacity:.8;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;font-weight:700;">🎯 Someone shared this with you</div>
-        <div style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${course.name}</div>
-        <div style="font-size:11.5px;opacity:.85;margin-top:1px;">From $${price} · Tap to jump</div>
+        <div style="opacity:.85;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Someone shared this course</div>
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${course.name}</div>
       </div>
-      <button id="deeplinkJump" style="background:rgba(255,255,255,0.22);border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;font-family:inherit;"><i class="fa-solid fa-arrow-down"></i>Jump</button>
-      <button id="deeplinkClose" style="background:transparent;border:none;color:#fff;width:26px;height:26px;cursor:pointer;font-size:16px;opacity:.7;">✕</button>
+      <button id="deeplinkJump" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;"><i class="fa-solid fa-arrow-down"></i></button>
+      <button id="deeplinkClose" style="background:transparent;border:none;color:#fff;width:26px;height:26px;cursor:pointer;font-size:16px;">✕</button>
     `;
     document.body.appendChild(banner);
 
@@ -7902,82 +7897,44 @@ window.showChangePasswordModal = window.openChangePasswordFlow;
     style.textContent = '@keyframes dlIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
     document.head.appendChild(style);
 
-    // Make the whole banner clickable (except close button)
-    banner.style.cursor = 'pointer';
-    banner.onclick = (e) => {
-      if (e.target.id === 'deeplinkClose' || e.target.closest('#deeplinkClose')) return;
-      scrollToAndHighlight(course.courseId);
-    };
-
-    document.getElementById('deeplinkClose').onclick = (e) => {
-      e.stopPropagation();
+    document.getElementById('deeplinkJump').onclick = () => scrollToAndHighlight(course.courseId);
+    document.getElementById('deeplinkClose').onclick = () => {
       banner.style.transition = 'opacity .3s, transform .3s';
       banner.style.opacity = '0';
       banner.style.transform = 'translateX(-50%) translateY(-20px)';
       setTimeout(() => banner.remove(), 400);
     };
 
-    // Auto-dismiss after 25s
-    setTimeout(() => { if (document.body.contains(banner)) banner.remove(); }, 25000);
+    // Auto-dismiss after 20s
+    setTimeout(() => { if (document.body.contains(banner)) banner.remove(); }, 20000);
   }
 
-  // Robust scroll - retries up to 5s if card not rendered yet
-  function robustScroll(courseId, attempt) {
-    attempt = attempt || 0;
-    var card = document.querySelector('[data-course-id="' + courseId + '"]');
-    if (!card) {
-      var btn = document.querySelector('button[onclick*="handleEnrollClick(' + String.fromCharCode(39) + courseId + String.fromCharCode(39) + ')"]');
-      if (btn) card = btn.closest('div[class*="rounded"], [data-aos]');
-    }
-    if (card) {
-      scrollToAndHighlight(courseId);
-      return;
-    }
-    if (attempt < 15) {
-      setTimeout(function() { robustScroll(courseId, attempt + 1); }, 300);
-    } else {
-      console.warn('[Deeplink] Gave up scrolling to', courseId);
-    }
-  }
   function scrollToAndHighlight(courseId) {
-    // Try precise match first
-    let card = document.querySelector('[data-course-id="' + courseId + '"]');
-
-    // Fallback 1: match by button onclick
-    if (!card) {
-      const btn = document.querySelector('button[onclick*="handleEnrollClick(' + "'" + courseId + "'" + ')"]');
-      if (btn) {
-        card = btn.closest('.glass, [data-aos], div[class*="rounded"]');
-      }
+    // Find the course card by data-course-id or containing the courseId
+    const cards = document.querySelectorAll('.glass.rounded-2xl, .glass.rounded-3xl, [data-course-id]');
+    let found = null;
+    for (const el of cards) {
+      if (el.getAttribute('data-course-id') === courseId) { found = el; break; }
+      if (el.textContent && el.textContent.includes(courseId.toUpperCase())) { /* too broad */ }
+      const btn = el.querySelector(`button[onclick*="${courseId}"]`);
+      if (btn) { found = el; break; }
     }
 
-    // Fallback 2: try case variants
-    if (!card) {
-      const variants = [courseId, courseId.toLowerCase(), courseId.toUpperCase()];
-      for (const v of variants) {
-        card = document.querySelector('[data-course-id="' + v + '"]');
-        if (card) break;
-      }
-    }
-
-    if (!card) {
-      // Last resort: scroll to certifications section
+    if (found) {
+      found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight
+      found.style.transition = 'box-shadow 0.4s, transform 0.4s';
+      found.style.boxShadow = '0 0 0 2px #8b5cf6, 0 0 40px rgba(139,92,246,0.5)';
+      found.style.transform = 'scale(1.02)';
+      setTimeout(() => {
+        found.style.boxShadow = '';
+        found.style.transform = '';
+      }, 3500);
+    } else {
+      // Fallback: scroll to courses section
       const section = document.getElementById('certifications');
       if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      console.warn('[Deeplink] Could not find card for', courseId);
-      return;
     }
-
-    // Scroll to card
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Add glow class (defined in CSS)
-    card.classList.add('deeplink-highlight');
-
-    // Auto-remove after 6 seconds
-    setTimeout(() => {
-      card.classList.remove('deeplink-highlight');
-    }, 6000);
   }
 
   // Run after DOM ready + a small delay for app.js to init

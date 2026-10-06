@@ -7921,24 +7921,6 @@ window.showChangePasswordModal = window.openChangePasswordFlow;
     setTimeout(() => { if (document.body.contains(banner)) banner.remove(); }, 25000);
   }
 
-  // Robust scroll - retries up to 5s if card not rendered yet
-  function robustScroll(courseId, attempt) {
-    attempt = attempt || 0;
-    var card = document.querySelector('[data-course-id="' + courseId + '"]');
-    if (!card) {
-      var btn = document.querySelector('button[onclick*="handleEnrollClick(' + String.fromCharCode(39) + courseId + String.fromCharCode(39) + ')"]');
-      if (btn) card = btn.closest('div[class*="rounded"], [data-aos]');
-    }
-    if (card) {
-      scrollToAndHighlight(courseId);
-      return;
-    }
-    if (attempt < 15) {
-      setTimeout(function() { robustScroll(courseId, attempt + 1); }, 300);
-    } else {
-      console.warn('[Deeplink] Gave up scrolling to', courseId);
-    }
-  }
   function scrollToAndHighlight(courseId) {
     // Try precise match first
     let card = document.querySelector('[data-course-id="' + courseId + '"]');
