@@ -95,11 +95,6 @@ app.get('/course/:slug', (req, res) => {
 
 // Short redirects: /ncp → /course/network-certified-professional
 // ONLY match paths that have NO additional slashes (blocks /js/*, /css/*, etc.)
-// EXPLICIT: serve /js and /css statically BEFORE anything else can catch them
-app.use('/js', express.static(require('path').join(__dirname, '../frontend/js')));
-app.use('/css', express.static(require('path').join(__dirname, '../frontend/css')));
-app.use('/images', express.static(require('path').join(__dirname, '../frontend/images')));
-app.use('/uploads', express.static(require('path').join(__dirname, '../frontend/uploads')));
 app.get('/:shortId([a-z0-9\-]{2,20})', async (req, res, next) => {
   const shortId = req.params.shortId;
 
