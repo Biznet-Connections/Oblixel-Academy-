@@ -34,8 +34,6 @@ const enrollmentSchema = new mongoose.Schema({
   examFeePaid: { type: Boolean, default: false },
   examFeePaidAt: { type: Date, default: null },
   examFeePaymentId: { type: String, default: null },
-  examFeeGrantedBy: { type: String, default: null },
-  examFeeGrantReason: { type: String, default: null },
   retakeFeePaid: { type: Boolean, default: false },
   retakeFeeAmount: { type: Number, default: 0 },
   totalRetakeFeesPaid: { type: Number, default: 0 },

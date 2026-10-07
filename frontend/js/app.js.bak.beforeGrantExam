@@ -6555,7 +6555,6 @@ function openAdminUserMenu(btnEl, user) {
   h += '<button class="admin-menu-item" data-action="edit-legal-name"><i class="fa-solid fa-pen"></i>Edit legal name</button>';
   h += '<button class="admin-menu-item" data-action="reset-avatar"><i class="fa-solid fa-rotate"></i>Reset avatar</button>';
   h += '<button class="admin-menu-item" data-action="reset-password"><i class="fa-solid fa-key"></i>Reset password</button>';
-  h += '<button class="admin-menu-item" data-action="grant-exam"><i class="fa-solid fa-unlock-keyhole"></i>Grant exam access</button>';
   if (user.role !== 'admin' && !user.isMainAdmin && (isMain || canManageAdmins)) {
     h += '<div class="admin-menu-divider"></div>';
     h += '<button class="admin-menu-item" data-action="make-admin"><i class="fa-solid fa-crown"></i>Make admin</button>';
@@ -6587,7 +6586,6 @@ function handleAdminUserAction(action, user) {
     case 'edit-legal-name': showAdminEditLegalNameModal(user); break;
     case 'reset-avatar': confirmAndResetAvatar(user); break;
     case 'reset-password': confirmAndResetPassword(user); break;
-    case 'grant-exam': showGrantExamAccessModal(user); break;
     case 'make-admin': if (window.showMakeAdminModal) showMakeAdminModal(user.id, user.name); break;
     case 'edit-privileges': if (window.showEditAdminPrivilegesModal) showEditAdminPrivilegesModal(user.id, user.name, user.email); break;
     case 'remove-admin': if (window.showRemoveAdminModal) showRemoveAdminModal(user.id, user.name); break;
@@ -8247,119 +8245,3 @@ function showShareModal(course, url) {
 }
 
 window.showShareModal = showShareModal;
-
-// ==================== ADMIN: GRANT / REVOKE EXAM ACCESS (v16) ====================
-window.showGrantExamAccessModal = async function(user) {
-  // Remove any existing modal
-  var existing = document.getElementById('grantExamAccessModal');
-  if (existing) existing.remove();
-
-  // Loading placeholder
-  var h = '<div id="grantExamAccessModal" class="fixed inset-0 bg-black/85 z-[1400] flex items-center justify-center p-4" style="backdrop-filter:blur(6px);">';
-  h += '<div class="admin-panel" style="max-width:560px;width:100%;margin:0;max-height:85vh;overflow-y:auto;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
-  h += '<div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-key"></i> Grant / Revoke Exam Access</div>';
-  h += '<button class="admin-icon-btn" onclick="document.getElementById(\'grantExamAccessModal\').remove()"><i class="fa-solid fa-xmark"></i></button>';
-  h += '</div>';
-  h += '<p style="font-size:12.5px;color:var(--a-meta);margin-bottom:14px;">Manually unlock or lock the final exam for a user. Use for cash payments, support tickets, or troubleshooting.</p>';
-  h += '<div style="padding:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:10px;margin-bottom:14px;font-size:13px;">';
-  h += '<div><strong style="color:var(--a-text);">' + escapeHtml(user.name || '') + '</strong></div>';
-  h += '<div style="color:var(--a-meta);">' + escapeHtml(user.email || '') + '</div>';
-  h += '</div>';
-  h += '<div id="grantExamContent" style="font-size:13px;color:var(--a-meta);">Loading enrollments...</div>';
-  h += '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-
-  // Fetch user's enrollments
-  try {
-    var token = localStorage.getItem('auth_token');
-    var res = await fetch('/api/admin/users/' + user.id + '/enrollments', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    var data = await res.json();
-    var enrollments = data.enrollments || [];
-
-    var content = document.getElementById('grantExamContent');
-
-    if (enrollments.length === 0) {
-      content.innerHTML = '<div style="padding:20px;text-align:center;background:var(--a-elevated);border-radius:10px;"><i class="fa-solid fa-inbox" style="font-size:24px;color:var(--a-muted);display:block;margin-bottom:8px;"></i><p>User has no enrollments yet.</p></div>';
-      return;
-    }
-
-    var inner = '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Select course</label><select id="grantExamCourse" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;height:40px;">';
-    enrollments.forEach(function(e, idx) {
-      var status = e.examFeePaid ? '✅ Exam Paid' : '❌ Exam Locked';
-      inner += '<option value="' + e.courseId + '" data-paid="' + (e.examFeePaid ? 'true' : 'false') + '">' + escapeHtml(e.courseName || e.courseId) + ' — ' + status + '</option>';
-    });
-    inner += '</select></div>';
-
-    inner += '<div style="padding:12px;background:var(--a-elevated);border-radius:10px;margin-bottom:14px;">';
-    inner += '<div style="font-size:12px;color:var(--a-muted);margin-bottom:4px;">Current status</div>';
-    inner += '<div id="grantExamStatus" style="font-size:16px;font-weight:700;">—</div>';
-    inner += '</div>';
-
-    inner += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Reason (audit log)</label><input id="grantExamReason" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;height:40px;" placeholder="e.g., Cash payment received" autocomplete="off"></div>';
-
-    inner += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">';
-    inner += '<button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'grantExamAccessModal\').remove()">Cancel</button>';
-    inner += '<button class="admin-btn admin-btn-danger" id="revokeExamBtn"><i class="fa-solid fa-lock"></i> Revoke Exam Access</button>';
-    inner += '<button class="admin-btn" id="grantExamBtn"><i class="fa-solid fa-key"></i> Grant Exam Access</button>';
-    inner += '</div>';
-
-    content.innerHTML = inner;
-
-    function refreshStatus() {
-      var sel = document.getElementById('grantExamCourse');
-      var opt = sel.options[sel.selectedIndex];
-      var paid = opt.getAttribute('data-paid') === 'true';
-      var statusEl = document.getElementById('grantExamStatus');
-      statusEl.textContent = paid ? '✅ Exam access UNLOCKED' : '❌ Exam access LOCKED';
-      statusEl.style.color = paid ? 'var(--a-success)' : 'var(--a-danger)';
-    }
-    refreshStatus();
-    document.getElementById('grantExamCourse').addEventListener('change', refreshStatus);
-
-    document.getElementById('grantExamBtn').addEventListener('click', function() {
-      grantOrRevokeExamAccess(user, 'grant');
-    });
-    document.getElementById('revokeExamBtn').addEventListener('click', function() {
-      grantOrRevokeExamAccess(user, 'revoke');
-    });
-
-  } catch (e) {
-    document.getElementById('grantExamContent').innerHTML = '<p style="color:var(--a-danger)">Failed to load: ' + e.message + '</p>';
-  }
-};
-
-async function grantOrRevokeExamAccess(user, action) {
-  var courseId = document.getElementById('grantExamCourse').value;
-  var reason = document.getElementById('grantExamReason').value.trim();
-
-  if (!courseId) { showToast('Select a course', 'error'); return; }
-
-  var btn = document.getElementById(action === 'grant' ? 'grantExamBtn' : 'revokeExamBtn');
-  btn.disabled = true;
-  var origText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
-
-  try {
-    var token = localStorage.getItem('auth_token');
-    var endpoint = action === 'grant' ? 'grant-exam-access' : 'revoke-exam-access';
-    var res = await fetch('/api/admin/users/' + user.id + '/' + endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ courseId: courseId, reason: reason })
-    });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed');
-
-    showToast(data.message || (action === 'grant' ? 'Exam access granted' : 'Exam access revoked'), 'success');
-    document.getElementById('grantExamAccessModal').remove();
-    renderAdmin();
-  } catch (e) {
-    btn.disabled = false;
-    btn.innerHTML = origText;
-    showToast('Failed: ' + e.message, 'error');
-  }
-}
-window.grantOrRevokeExamAccess = grantOrRevokeExamAccess;
