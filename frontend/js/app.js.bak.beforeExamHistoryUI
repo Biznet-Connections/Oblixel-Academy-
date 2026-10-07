@@ -6556,7 +6556,6 @@ function openAdminUserMenu(btnEl, user) {
   h += '<button class="admin-menu-item" data-action="reset-avatar"><i class="fa-solid fa-rotate"></i>Reset avatar</button>';
   h += '<button class="admin-menu-item" data-action="reset-password"><i class="fa-solid fa-key"></i>Reset password</button>';
   h += '<button class="admin-menu-item" data-action="grant-exam"><i class="fa-solid fa-unlock-keyhole"></i>Grant exam access</button>';
-  h += '<button class="admin-menu-item" data-action="exam-history"><i class="fa-solid fa-list-check"></i>View exam history</button>';
   if (user.role !== 'admin' && !user.isMainAdmin && (isMain || canManageAdmins)) {
     h += '<div class="admin-menu-divider"></div>';
     h += '<button class="admin-menu-item" data-action="make-admin"><i class="fa-solid fa-crown"></i>Make admin</button>';
@@ -6589,7 +6588,6 @@ function handleAdminUserAction(action, user) {
     case 'reset-avatar': confirmAndResetAvatar(user); break;
     case 'reset-password': confirmAndResetPassword(user); break;
     case 'grant-exam': showGrantExamAccessModal(user); break;
-    case 'exam-history': showExamHistoryModal(user); break;
     case 'make-admin': if (window.showMakeAdminModal) showMakeAdminModal(user.id, user.name); break;
     case 'edit-privileges': if (window.showEditAdminPrivilegesModal) showEditAdminPrivilegesModal(user.id, user.name, user.email); break;
     case 'remove-admin': if (window.showRemoveAdminModal) showRemoveAdminModal(user.id, user.name); break;
@@ -8365,99 +8363,3 @@ async function grantOrRevokeExamAccess(user, action) {
   }
 }
 window.grantOrRevokeExamAccess = grantOrRevokeExamAccess;
-// ==================== ADMIN: VIEW EXAM HISTORY (v16) ====================
-window.showExamHistoryModal = async function(user) {
-  var existing = document.getElementById('examHistoryModal');
-  if (existing) existing.remove();
-
-  var h = '<div id="examHistoryModal" class="fixed inset-0 bg-black/85 z-[1400] flex items-center justify-center p-4" style="backdrop-filter:blur(6px);">';
-  h += '<div class="admin-panel" style="max-width:780px;width:100%;margin:0;max-height:90vh;overflow-y:auto;">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;position:sticky;top:0;background:var(--a-panel);padding-bottom:12px;border-bottom:1px solid var(--a-border);z-index:2;">';
-  h += '<div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-list-check"></i> Exam History — ' + escapeHtml(user.name || user.email) + '</div>';
-  h += '<button class="admin-icon-btn" onclick="document.getElementById(\'examHistoryModal\').remove()"><i class="fa-solid fa-xmark"></i></button>';
-  h += '</div>';
-  h += '<div id="examHistoryContent" style="font-size:13px;color:var(--a-meta);">Loading exam history...</div>';
-  h += '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-
-  try {
-    var token = localStorage.getItem('auth_token');
-    var res = await fetch('/api/admin/users/' + user.id + '/exam-history', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    var data = await res.json();
-    var attempts = data.attempts || [];
-    var content = document.getElementById('examHistoryContent');
-
-    if (attempts.length === 0) {
-      content.innerHTML = '<div style="padding:32px;text-align:center;background:var(--a-elevated);border-radius:10px;"><i class="fa-solid fa-inbox" style="font-size:32px;color:var(--a-muted);display:block;margin-bottom:10px;"></i><p>No exam attempts recorded for this user.</p></div>';
-      return;
-    }
-
-    var inner = '<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">';
-    inner += '<div class="admin-kpi" style="flex:1;min-width:120px;"><div class="admin-kpi-label">Total attempts</div><div class="admin-kpi-value">' + attempts.length + '</div></div>';
-    var passedCount = attempts.filter(function(a){return a.passed;}).length;
-    var failedCount = attempts.length - passedCount;
-    inner += '<div class="admin-kpi" style="flex:1;min-width:120px;"><div class="admin-kpi-label">Passed</div><div class="admin-kpi-value" style="color:var(--a-success);">' + passedCount + '</div></div>';
-    inner += '<div class="admin-kpi" style="flex:1;min-width:120px;"><div class="admin-kpi-label">Failed</div><div class="admin-kpi-value" style="color:var(--a-danger);">' + failedCount + '</div></div>';
-    inner += '</div>';
-
-    attempts.forEach(function(a, i) {
-      var dateStr = a.completedAt ? new Date(a.completedAt).toLocaleString() : '—';
-      var statusColor = a.passed ? 'var(--a-success)' : 'var(--a-danger)';
-      var statusText = a.passed ? 'PASSED' : 'FAILED';
-
-      inner += '<div style="background:var(--a-panel);border:1px solid var(--a-border);border-radius:10px;padding:14px;margin-bottom:12px;">';
-
-      // Header
-      inner += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">';
-      inner += '<div><strong style="color:var(--a-text);font-size:14px;">' + escapeHtml(a.courseName) + '</strong>';
-      inner += '<div style="font-size:11px;color:var(--a-muted);margin-top:2px;">Attempt #' + (attempts.length - i) + ' · ' + dateStr + '</div></div>';
-      inner += '<span style="padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:' + (a.passed ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)') + ';color:' + statusColor + ';">' + statusText + '</span>';
-      inner += '</div>';
-
-      // Stats
-      inner += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;">';
-      inner += '<div style="padding:8px;background:var(--a-elevated);border-radius:8px;"><div style="font-size:10px;color:var(--a-muted);text-transform:uppercase;font-weight:700;">Score</div><div style="font-size:16px;font-weight:700;color:' + statusColor + ';">' + a.score + '%</div></div>';
-      inner += '<div style="padding:8px;background:var(--a-elevated);border-radius:8px;"><div style="font-size:10px;color:var(--a-muted);text-transform:uppercase;font-weight:700;">Correct</div><div style="font-size:16px;font-weight:700;color:var(--a-text);">' + a.correctCount + '/' + a.totalQuestions + '</div></div>';
-      inner += '<div style="padding:8px;background:var(--a-elevated);border-radius:8px;"><div style="font-size:10px;color:var(--a-muted);text-transform:uppercase;font-weight:700;">Time</div><div style="font-size:16px;font-weight:700;color:var(--a-text);">' + Math.floor((a.timeSpent || 0) / 60) + 'm ' + ((a.timeSpent || 0) % 60) + 's</div></div>';
-      if (a.ipAddress) {
-        inner += '<div style="padding:8px;background:var(--a-elevated);border-radius:8px;"><div style="font-size:10px;color:var(--a-muted);text-transform:uppercase;font-weight:700;">IP</div><div style="font-size:11px;font-weight:600;color:var(--a-text);font-family:monospace;">' + escapeHtml(a.ipAddress) + '</div></div>';
-      }
-      inner += '</div>';
-
-      // Questions toggle
-      if (a.questions && a.questions.length > 0) {
-        var qid = 'questions-' + i;
-        inner += '<button onclick="var el=document.getElementById(\'' + qid + '\'); el.style.display = el.style.display === \'none\' ? \'block\' : \'none\';" style="background:var(--a-elevated);border:1px solid var(--a-border);color:var(--a-text);padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px;"><i class="fa-solid fa-list"></i> Show all answers (' + a.questions.length + ' questions)</button>';
-        inner += '<div id="' + qid + '" style="display:none;max-height:400px;overflow-y:auto;background:var(--a-elevated);border-radius:8px;padding:12px;">';
-
-        a.questions.forEach(function(q, qIdx) {
-          var qcolor = q.isCorrect ? 'var(--a-success)' : 'var(--a-danger)';
-          var qicon = q.isCorrect ? '✅' : '❌';
-          inner += '<div style="padding:10px 0;border-bottom:1px solid var(--a-border);">';
-          inner += '<div style="font-size:12.5px;font-weight:600;color:var(--a-text);margin-bottom:6px;">' + qicon + ' Q' + (qIdx + 1) + '. ' + escapeHtml(q.text || 'Question') + '</div>';
-          if (q.options && q.options.length > 0) {
-            inner += '<div style="font-size:11px;color:var(--a-muted);margin-left:20px;">';
-            var correctOpt = q.options[q.correct] || '—';
-            var userOpt = (q.userAnswer >= 0 && q.userAnswer < q.options.length) ? q.options[q.userAnswer] : '(not answered)';
-            inner += '<div style="color:var(--a-success);margin-bottom:2px;">✓ Correct: ' + escapeHtml(correctOpt) + '</div>';
-            inner += '<div style="color:' + qcolor + ';">✗ Chose: ' + escapeHtml(userOpt) + '</div>';
-            inner += '</div>';
-          }
-          inner += '</div>';
-        });
-
-        inner += '</div>';
-      }
-
-      inner += '</div>';
-    });
-
-    content.innerHTML = inner;
-
-  } catch (e) {
-    document.getElementById('examHistoryContent').innerHTML = '<p style="color:var(--a-danger)">Failed to load: ' + e.message + '</p>';
-  }
-};
-window.showExamHistoryModal = showExamHistoryModal;

@@ -415,19 +415,6 @@ router.post('/submit', authenticate, async (req, res) => {
       await enrollment.save();
     }
 
-    // v16 — Full audit trail: save every question + user's answer
-    const auditQuestions = questions.map((q, idx) => {
-      const userAns = (answers[idx] !== undefined && answers[idx] !== null) ? parseInt(answers[idx]) : -1;
-      return {
-        id: q.id || String(idx),
-        text: q.text || '',
-        options: q.options || [],
-        correct: typeof q.correct === 'number' ? q.correct : -1,
-        userAnswer: userAns,
-        isCorrect: userAns === q.correct
-      };
-    });
-
     await ExamAttempt.create({
       userId,
       courseId: courseId.toLowerCase(),
@@ -437,12 +424,7 @@ router.post('/submit', authenticate, async (req, res) => {
       totalQuestions,
       correctCount,
       timeSpent: timeSpent || 0,
-      completedAt: new Date(),
-      questions: auditQuestions,
-      wrongAnswers: wrongAnswers || [],
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
-      userAgent: req.headers['user-agent'] || null,
-      lateSubmit: session.lateSubmit || false
+      completedAt: new Date()
     });
 
     session.status = 'completed';

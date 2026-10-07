@@ -1406,47 +1406,4 @@ router.post('/users/:userId/revoke-exam-access', isMainAdmin, async (req, res) =
     res.status(500).json({ error: e.message });
   }
 });
-
-// ==================== EXAM HISTORY (v16) ====================
-// Admin can view all exam attempts for a user (proof of pass/fail)
-router.get('/users/:userId/exam-history', async (req, res) => {
-  try {
-    const ExamAttempt = require('../models/ExamAttempt');
-    const attempts = await ExamAttempt.find({ userId: req.params.userId })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
-
-    const user = await User.findById(req.params.userId).select('name email').lean();
-    const courses = await Course.find({ courseId: { $in: attempts.map(a => a.courseId) } }).lean();
-    const courseMap = new Map(courses.map(c => [c.courseId, c.name]));
-
-    const enriched = attempts.map(a => ({
-      id: a._id,
-      sessionId: a.sessionId,
-      courseId: a.courseId,
-      courseName: courseMap.get(a.courseId) || a.courseId,
-      score: a.score,
-      passed: a.passed,
-      correctCount: a.correctCount,
-      totalQuestions: a.totalQuestions,
-      timeSpent: a.timeSpent,
-      completedAt: a.completedAt || a.createdAt,
-      questions: a.questions || [],
-      wrongAnswers: a.wrongAnswers || [],
-      ipAddress: a.ipAddress || null,
-      userAgent: a.userAgent || null,
-      lateSubmit: a.lateSubmit || false
-    }));
-
-    res.json({
-      user: { name: user ? user.name : 'Unknown', email: user ? user.email : '' },
-      attempts: enriched,
-      totalAttempts: enriched.length
-    });
-  } catch (e) {
-    console.error('[ADMIN/EXAM-HISTORY]', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
 module.exports = router;
