@@ -39,9 +39,9 @@ const COURSE_EXAM_CONFIG = {
   ccp:  { questions: 40, timeLimitSec: 75 * 60 },
   ncp:  { questions: 30, timeLimitSec: 60 * 60 },
   clp:  { questions: 20, timeLimitSec: 45 * 60 },
-  oca:  { questions: 20, timeLimitSec: 10 * 60 },  // v16: 10 min
+  oca:  { questions: 20, timeLimitSec: 45 * 60 },
   ocp:  { questions: 40, timeLimitSec: 90 * 60 },
-  aip:  { questions: 40, timeLimitSec: 10 * 60 }   // v16: 10 min
+  aip:  { questions: 40, timeLimitSec: 30 * 60 }
 };
 const DEFAULT_EXAM_CONFIG = { questions: 25, timeLimitSec: 60 * 60 };
 
