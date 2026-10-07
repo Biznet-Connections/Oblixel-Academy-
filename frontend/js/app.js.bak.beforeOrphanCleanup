@@ -7041,6 +7041,27 @@ function initDragAndDrop() {
   });
 }
 
+    });
+    row.addEventListener('dragleave', function(e) {
+      this.classList.remove('course-row-drag-over');
+    });
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('course-row-drag-over');
+      if (this !== draggedRow) {
+        var tbody = document.getElementById('adminCourseTableBody');
+        var allRows = Array.from(tbody.querySelectorAll('.course-drag-row'));
+        var draggedIndex = allRows.indexOf(draggedRow);
+        var droppedIndex = allRows.indexOf(this);
+        if (draggedIndex < droppedIndex) {
+          tbody.insertBefore(draggedRow, this.nextSibling);
+        } else {
+          tbody.insertBefore(draggedRow, this);
+        }
+      }
+    });
+  });
+}
 
 // ==================== ADMIN MODALS ====================
 function showAddAdminModal() {

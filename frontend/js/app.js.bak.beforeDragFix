@@ -6954,93 +6954,49 @@ console.log('🚀 Loading Part 3 (Admin Modals, AI Chats, Initialization)');
 
 // ==================== DRAG AND DROP FOR COURSE TABLE ====================
 function initDragAndDrop() {
-  // v16 — drag-and-drop for admin course table (reorder on landing page)
   var rows = document.querySelectorAll('#adminCourseTableBody .course-drag-row');
-  if (rows.length === 0) {
-    console.log('[DragDrop] No course rows found');
-    return;
-  }
-  console.log('[DragDrop] Wiring', rows.length, 'rows for drag');
-
   var draggedRow = null;
-
   rows.forEach(function(row) {
-    row.setAttribute('draggable', 'true');
-
     row.addEventListener('dragstart', function(e) {
       draggedRow = this;
       this.classList.add('course-row-dragging');
-      this.style.opacity = '0.4';
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', this.dataset.courseId || '');
+      e.dataTransfer.setData('text/plain', this.dataset.courseId);
     });
-
-    row.addEventListener('dragend', function() {
+    row.addEventListener('dragend', function(e) {
       this.classList.remove('course-row-dragging');
-      this.style.opacity = '';
       document.querySelectorAll('.course-drag-row').forEach(function(r) {
         r.classList.remove('course-row-drag-over');
-        r.style.borderTop = '';
-        r.style.borderBottom = '';
       });
       draggedRow = null;
     });
-
     row.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      if (this === draggedRow) return;
-      // Visual drop indicator
-      var rect = this.getBoundingClientRect();
-      var midY = rect.top + rect.height / 2;
-      if (e.clientY < midY) {
-        this.style.borderTop = '2px solid #8b5cf6';
-        this.style.borderBottom = '';
-      } else {
-        this.style.borderBottom = '2px solid #8b5cf6';
-        this.style.borderTop = '';
+      if (this !== draggedRow) {
+        this.classList.add('course-row-drag-over');
       }
     });
-
-    row.addEventListener('dragleave', function() {
-      this.style.borderTop = '';
-      this.style.borderBottom = '';
+    row.addEventListener('dragleave', function(e) {
+      this.classList.remove('course-row-drag-over');
     });
-
     row.addEventListener('drop', function(e) {
       e.preventDefault();
-      this.style.borderTop = '';
-      this.style.borderBottom = '';
-      if (this === draggedRow || !draggedRow) return;
-
-      var tbody = document.getElementById('adminCourseTableBody');
-      if (!tbody) return;
-
-      var rect = this.getBoundingClientRect();
-      var midY = rect.top + rect.height / 2;
-      var dropBefore = e.clientY < midY;
-
-      if (dropBefore) {
-        tbody.insertBefore(draggedRow, this);
-      } else {
-        tbody.insertBefore(draggedRow, this.nextSibling);
-      }
-
-      // Auto-save order after a short delay
-      if (typeof saveAdminCourseOrder === 'function') {
-        setTimeout(saveAdminCourseOrder, 300);
+      this.classList.remove('course-row-drag-over');
+      if (this !== draggedRow) {
+        var tbody = document.getElementById('adminCourseTableBody');
+        var allRows = Array.from(tbody.querySelectorAll('.course-drag-row'));
+        var draggedIndex = allRows.indexOf(draggedRow);
+        var droppedIndex = allRows.indexOf(this);
+        if (draggedIndex < droppedIndex) {
+          tbody.insertBefore(draggedRow, this.nextSibling);
+        } else {
+          tbody.insertBefore(draggedRow, this);
+        }
       }
     });
   });
-
-  // Touch support (mobile)
-  rows.forEach(function(row) {
-    row.addEventListener('touchstart', function(e) {
-      draggedRow = this;
-    }, { passive: true });
-  });
 }
-
 
 // ==================== ADMIN MODALS ====================
 function showAddAdminModal() {
