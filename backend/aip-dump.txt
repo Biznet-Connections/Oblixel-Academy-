@@ -1,0 +1,2092 @@
+{
+  "_id": "6a3267488e6569fc4fecb77e",
+  "courseId": "aip",
+  "name": "Artificial Intelligence Professional (AIP)",
+  "abbreviation": "AIP",
+  "level": "Professional",
+  "description": "AI certification covering machine learning, neural networks, NLP, and computer vision.",
+  "examPrice": 50,
+  "pathPrice": 60,
+  "icon": "fa-robot",
+  "category": "AI",
+  "color": "purple",
+  "duration": "12 weeks",
+  "totalModules": 15,
+  "modules": [
+    {
+      "moduleId": 1,
+      "title": "Introduction to AI",
+      "description": "A complete foundation: what AI is, its history, the five ML paradigms, subfields, real-world applications, myths, and the modern AI triangle.",
+      "difficulty": "easy",
+      "readMinutes": 45,
+      "lessonContent": "<h2>Part 1 — What Artificial Intelligence Actually Is</h2><p><strong>Artificial Intelligence (AI)</strong> is the science and engineering of building systems that can perform tasks normally requiring human intelligence. That includes learning, reasoning, planning, perceiving, understanding language,...[TRUNCATED 25598 chars total]",
+      "videos": [
+        {
+          "title": "AI, Machine Learning, Deep Learning Explained",
+          "youtubeId": "4RixMPF4xis",
+          "channel": "Simplilearn"
+        },
+        {
+          "title": "What is Artificial Intelligence?",
+          "youtubeId": "2ePf9rue1Ao",
+          "channel": "IBM Technology"
+        },
+        {
+          "title": "AI Explained in 10 Minutes",
+          "youtubeId": "a0_lo_GDcFw",
+          "channel": "ColdFusion"
+        },
+        {
+          "title": "The History of AI",
+          "youtubeId": "R9OHn5ZF4Uo",
+          "channel": "CrashCourse"
+        },
+        {
+          "title": "How AI Works in the Real World",
+          "youtubeId": "kWmX3pd1f10",
+          "channel": "Two Minute Papers"
+        },
+        {
+          "title": "How Large Language Models Work",
+          "youtubeId": "5sLYAQS9sWQ",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "But What Is a Neural Network?",
+          "youtubeId": "aircAruvnKk",
+          "channel": "3Blue1Brown"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "Which type of AI exists today?",
+          "options": [
+            "Narrow AI",
+            "General AI",
+            "Super AI",
+            "All of them"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "When was the term 'Artificial Intelligence' coined?",
+          "options": [
+            "1956",
+            "1990",
+            "2012",
+            "2020"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the correct hierarchy from broadest to most specific?",
+          "options": [
+            "AI → ML → Deep Learning",
+            "Deep Learning → ML → AI",
+            "ML → AI → Deep Learning",
+            "AI → Deep Learning → ML"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which three forces enabled the modern AI boom?",
+          "options": [
+            "Big data, cheap compute, better algorithms",
+            "Faster internet only",
+            "New programming languages",
+            "Government funding only"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is AlphaFold famous for?",
+          "options": [
+            "Predicting protein structures",
+            "Playing chess",
+            "Translating languages",
+            "Generating images"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which paradigm uses no labels and finds patterns?",
+          "options": [
+            "Unsupervised learning",
+            "Supervised learning",
+            "Reinforcement learning",
+            "Transfer learning"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How is GPT trained?",
+          "options": [
+            "Self-supervised learning on massive text",
+            "Supervised learning on labels",
+            "Rule-based logic",
+            "Reinforcement from humans only"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What was Deep Blue famous for?",
+          "options": [
+            "Beating Kasparov at chess in 1997",
+            "Winning Go in 2016",
+            "Discovering proteins",
+            "Winning ImageNet"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the difference between training and inference?",
+          "options": [
+            "Training learns weights; inference uses them",
+            "They are the same",
+            "Inference learns weights",
+            "Training uses GPUs only"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is a genuine current limitation of AI?",
+          "options": [
+            "Lack of true causal understanding",
+            "Cannot do math",
+            "Cannot process images",
+            "Cannot recognise speech"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 2,
+      "title": "Python for AI",
+      "description": "The essential Python libraries and workflows that power every AI project.",
+      "difficulty": "medium",
+      "readMinutes": 25,
+      "lessonContent": "<h2>Why Python Dominates AI</h2><p>Python is the language of AI. Not because it is the fastest, or the newest, or the most elegant — but because the entire AI ecosystem was built around it. Every major framework, every research paper implementation, every tutorial — all Python first.</p><p>Four reas...[TRUNCATED 16559 chars total]",
+      "videos": [
+        {
+          "title": "Python for AI — Full Course",
+          "youtubeId": "kqtD5dpn9C8",
+          "channel": "freeCodeCamp"
+        },
+        {
+          "title": "NumPy Tutorial for Beginners",
+          "youtubeId": "GB9ByFAIAH4",
+          "channel": "Keith Galli"
+        },
+        {
+          "title": "Pandas Tutorial — 10 Minutes to Pandas",
+          "youtubeId": "vmEHCJofslg",
+          "channel": "Keith Galli"
+        },
+        {
+          "title": "Scikit-learn Crash Course",
+          "youtubeId": "0B5eIE_1vpU",
+          "channel": "freeCodeCamp"
+        },
+        {
+          "title": "PyTorch vs TensorFlow in 2024",
+          "youtubeId": "Q8AR3uU9CgE",
+          "channel": "Nicholas Renotte"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "Which library is the foundation for numerical computing in Python?",
+          "options": [
+            "NumPy",
+            "Pandas",
+            "Matplotlib",
+            "Flask"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the purpose of a virtual environment?",
+          "options": [
+            "Isolate project dependencies",
+            "Speed up code",
+            "Add GPU support",
+            "Encrypt data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which Pandas object is a 2D table?",
+          "options": [
+            "DataFrame",
+            "Series",
+            "Array",
+            "Matrix"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does the '@' operator do in NumPy?",
+          "options": [
+            "Matrix multiplication",
+            "Element-wise multiply",
+            "Transpose",
+            "Broadcast"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is better for research and LLMs?",
+          "options": [
+            "PyTorch",
+            "TensorFlow",
+            "Keras",
+            "Caffe"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does df.dropna() do?",
+          "options": [
+            "Removes rows with missing values",
+            "Fills nulls",
+            "Sorts rows",
+            "Renames columns"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which library is used for classic ML (not deep learning)?",
+          "options": [
+            "scikit-learn",
+            "PyTorch",
+            "TensorFlow",
+            "Keras"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why is NumPy faster than Python lists?",
+          "options": [
+            "Vectorised C operations",
+            "Uses GPU by default",
+            "Smaller memory",
+            "Better syntax"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which visualisation library is built on Matplotlib and looks nicer?",
+          "options": [
+            "Seaborn",
+            "Plotly",
+            "Bokeh",
+            "Altair"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the correct first step in an AI project?",
+          "options": [
+            "Understand the problem",
+            "Train a model",
+            "Deploy",
+            "Collect rewards"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 3,
+      "title": "Math for AI (Practical)",
+      "description": "The linear algebra, statistics, probability, and calculus you actually need — taught through code, not chalkboards.",
+      "difficulty": "hard",
+      "readMinutes": 25,
+      "lessonContent": "<h2>Why Math Matters</h2><p>You can build working AI models without deep math. But to <strong>debug them when they fail</strong>, <strong>understand why one model beats another</strong>, and <strong>read modern research papers</strong>, you need the underlying math.</p><p>This module teaches only wh...[TRUNCATED 13241 chars total]",
+      "videos": [
+        {
+          "title": "Linear Algebra for Machine Learning",
+          "youtubeId": "kYB8IZa5AuE",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Essence of Calculus",
+          "youtubeId": "WUvTyaaNkzM",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Statistics Fundamentals",
+          "youtubeId": "xxpc-HPKN28",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Gradient Descent Explained",
+          "youtubeId": "IHZwWFHWa-w",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Math for Machine Learning — Full Course",
+          "youtubeId": "1VSZSVwXHzo",
+          "channel": "freeCodeCamp"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What is a tensor?",
+          "options": [
+            "N-dimensional array",
+            "2D array only",
+            "Single number",
+            "A vector only"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does a dot product measure?",
+          "options": [
+            "Similarity between vectors",
+            "Distance only",
+            "Average",
+            "Maximum"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "In matrix multiplication (M,N) @ (N,P), what is the result shape?",
+          "options": [
+            "(M, P)",
+            "(N, N)",
+            "(M, N)",
+            "(P, M)"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is more robust to outliers?",
+          "options": [
+            "Median",
+            "Mean",
+            "Sum",
+            "Product"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Bayes' theorem compute?",
+          "options": [
+            "P(A|B) from P(B|A)",
+            "Mean of data",
+            "Variance",
+            "Correlation"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is a gradient?",
+          "options": [
+            "Vector of partial derivatives",
+            "Average of values",
+            "Sum of squares",
+            "Max value"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What happens with too high a learning rate?",
+          "options": [
+            "Model diverges or loss explodes",
+            "Training is slow",
+            "Model overfits",
+            "Nothing"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which optimiser is most popular for deep learning?",
+          "options": [
+            "Adam",
+            "SGD",
+            "Momentum",
+            "RMSprop"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Backpropagation is based on which math rule?",
+          "options": [
+            "Chain rule",
+            "Product rule",
+            "Quotient rule",
+            "Pythagorean theorem"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the essential relationship for correlation vs causation?",
+          "options": [
+            "Correlation does not imply causation",
+            "Correlation implies causation",
+            "They are the same",
+            "Neither exists"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 4,
+      "title": "Data Preprocessing & Feature Engineering",
+      "description": "The 80% of AI work: cleaning, transforming, engineering, and preparing data for models.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>Why Data Preprocessing Matters</h2><p>Garbage in, garbage out. The single biggest predictor of model success is not the algorithm — it is the quality of the data.</p><p>Real-world data is <em>dirty</em>: missing values, outliers, inconsistent formats, imbalanced classes, irrelevant columns.</p><...[TRUNCATED 8969 chars total]",
+      "videos": [
+        {
+          "title": "Data Preprocessing in Python",
+          "youtubeId": "eKVdWAC6Uog",
+          "channel": "Krish Naik"
+        },
+        {
+          "title": "Handling Missing Values",
+          "youtubeId": "P_i8hBNj7qY",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Feature Engineering Techniques",
+          "youtubeId": "d0kHdw3t7zY",
+          "channel": "Krish Naik"
+        },
+        {
+          "title": "Data Leakage Explained",
+          "youtubeId": "f1D7Gme0rC8",
+          "channel": "Kaggle"
+        },
+        {
+          "title": "SMOTE for Imbalanced Data",
+          "youtubeId": "sHkqPg3Hm4k",
+          "channel": "StatQuest"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "Why is feature scaling needed?",
+          "options": [
+            "Algorithms using distance are dominated by larger-magnitude features",
+            "It speeds up file reading",
+            "It removes nulls",
+            "It encodes categories"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which encoding is best for many categories?",
+          "options": [
+            "Embedding or target encoding",
+            "One-hot",
+            "Label",
+            "Binary"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does SMOTE do?",
+          "options": [
+            "Creates synthetic examples of the minority class",
+            "Removes outliers",
+            "Normalises data",
+            "Encodes text"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is data leakage?",
+          "options": [
+            "Test information influencing training",
+            "Missing values",
+            "Slow queries",
+            "Too many features"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which scaler is best with outliers?",
+          "options": [
+            "Robust scaler",
+            "Min-max",
+            "Standard",
+            "None"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why stratify a train/test split?",
+          "options": [
+            "Preserves class distribution",
+            "Faster",
+            "Less memory",
+            "Removes nulls"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does IQR help detect?",
+          "options": [
+            "Outliers",
+            "Duplicates",
+            "Encoding",
+            "Scaling"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Where should you fit a scaler?",
+          "options": [
+            "On training data only",
+            "On test data only",
+            "On all data",
+            "Nowhere"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is a feature engineering example?",
+          "options": [
+            "Creating 'price per sqft' from price and sqft",
+            "Deleting columns",
+            "Renaming files",
+            "Sorting rows"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does data augmentation do?",
+          "options": [
+            "Creates synthetic variations of existing data",
+            "Deletes data",
+            "Encrypts data",
+            "Sorts data"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 5,
+      "title": "Supervised Learning",
+      "description": "Regression, classification, ensembles, evaluation metrics, and the complete supervised ML workflow.",
+      "difficulty": "hard",
+      "readMinutes": 45,
+      "lessonContent": "<h2>What Is Supervised Learning?</h2><p><strong>Supervised learning</strong> is the most common type of ML. You give the algorithm pairs of (input, correct output), and it learns a mapping.</p><p>Two flavours:</p><ul><li><strong>Classification</strong> — predict a category (spam/not spam, cat/dog)</...[TRUNCATED 10293 chars total]",
+      "videos": [
+        {
+          "title": "Linear Regression Explained",
+          "youtubeId": "nk2CQITm_eo",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Logistic Regression",
+          "youtubeId": "yIYKR4sgzI8",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Decision Trees and Random Forests",
+          "youtubeId": "J4Wdy0Wc_xQ",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "XGBoost Explained",
+          "youtubeId": "OQKz0HDuFWQ",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Confusion Matrix and Metrics",
+          "youtubeId": "Kdsp6soqA7o",
+          "channel": "StatQuest"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "Which is a regression task?",
+          "options": [
+            "Predicting house price",
+            "Classifying spam",
+            "Detecting cats",
+            "Assigning labels"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Ridge regularisation do?",
+          "options": [
+            "Penalises large weights with L2",
+            "Adds more features",
+            "Removes outliers",
+            "Scales data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Lasso regression produces what?",
+          "options": [
+            "Sparse models with some weights = 0",
+            "Dense models",
+            "Non-linear models",
+            "Tree models"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which algorithm is best for tabular data at scale?",
+          "options": [
+            "XGBoost / LightGBM",
+            "Neural networks",
+            "KNN",
+            "Naive Bayes"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "High precision means:",
+          "options": [
+            "Few false positives",
+            "Few false negatives",
+            "High accuracy",
+            "Low recall"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "High recall means:",
+          "options": [
+            "Few false negatives",
+            "Few false positives",
+            "High accuracy",
+            "Low precision"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does cross-validation do?",
+          "options": [
+            "K-fold evaluation of model stability",
+            "Split once",
+            "Boost features",
+            "Encode data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "When is accuracy a bad metric?",
+          "options": [
+            "Imbalanced classes",
+            "Balanced classes",
+            "Small datasets",
+            "Regression"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is overfitting?",
+          "options": [
+            "Model memorises training data, fails on test",
+            "Model too simple",
+            "Slow training",
+            "Bad data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is an ensemble method?",
+          "options": [
+            "Random Forest",
+            "Logistic Regression",
+            "KNN",
+            "Naive Bayes"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 6,
+      "title": "Unsupervised Learning",
+      "description": "Clustering, dimensionality reduction, anomaly detection, and association rules — finding structure without labels.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>What Is Unsupervised Learning?</h2><p><strong>Unsupervised learning</strong> finds structure in data <em>without labels</em>. No \"correct answers\" — just patterns, groupings, and anomalies the model discovers.</p><ul><li><strong>Clustering</strong> — group similar items</li><li><strong>Dimension...[TRUNCATED 6847 chars total]",
+      "videos": [
+        {
+          "title": "K-Means Clustering",
+          "youtubeId": "4b5d3muPQmA",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "PCA Explained",
+          "youtubeId": "FgakZw6K1QQ",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "t-SNE Visualisation",
+          "youtubeId": "NEaUSP4YerM",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Anomaly Detection Methods",
+          "youtubeId": "12ZqLz5tK7Y",
+          "channel": "Krish Naik"
+        },
+        {
+          "title": "Association Rules and Apriori",
+          "youtubeId": "2uQgt6TS22A",
+          "channel": "Data School"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What does K-Means require you to specify?",
+          "options": [
+            "Number of clusters K",
+            "Labels",
+            "Learning rate",
+            "Regularisation"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does PCA do?",
+          "options": [
+            "Reduces dimensions preserving variance",
+            "Clusters",
+            "Encodes categories",
+            "Augments"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is best for anomaly detection with no anomalies in training?",
+          "options": [
+            "One-Class SVM",
+            "K-Means",
+            "PCA",
+            "Linear regression"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does silhouette score measure?",
+          "options": [
+            "Cluster cohesion vs separation",
+            "Model accuracy",
+            "Null count",
+            "Speed"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does DBSCAN find that K-Means cannot?",
+          "options": [
+            "Arbitrary-shaped clusters",
+            "Faster training",
+            "Higher accuracy",
+            "Better encoding"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is t-SNE used for?",
+          "options": [
+            "Visualisation only",
+            "Production models",
+            "Scaling",
+            "Encoding"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does lift > 1 mean in association rules?",
+          "options": [
+            "Positive correlation between items",
+            "Negative",
+            "No relation",
+            "Random"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How does an autoencoder detect anomalies?",
+          "options": [
+            "High reconstruction error",
+            "Clustering",
+            "Supervised labels",
+            "Sorting"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the elbow method for?",
+          "options": [
+            "Choosing K in K-Means",
+            "Scaling data",
+            "Filling nulls",
+            "Selecting trees"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which preserves local structure better for viz?",
+          "options": [
+            "t-SNE / UMAP",
+            "PCA",
+            "Random",
+            "Label encoding"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 7,
+      "title": "Neural Networks",
+      "description": "Perceptrons, activation functions, backpropagation, training, and how to build networks in PyTorch.",
+      "difficulty": "hard",
+      "readMinutes": 45,
+      "lessonContent": "<h2>What Is a Neural Network?</h2><p>A <strong>neural network</strong> is a computing system inspired by biological neurons. It takes numeric inputs, transforms them through layers of weighted connections, and produces numeric outputs.</p><p>Everything in modern AI — GPT, image recognition, voice as...[TRUNCATED 4978 chars total]",
+      "videos": [
+        {
+          "title": "But What Is a Neural Network?",
+          "youtubeId": "aircAruvnKk",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Gradient Descent, How NNs Learn",
+          "youtubeId": "IHZwWFHWa-w",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Backpropagation Explained",
+          "youtubeId": "Ilg3gGewQ5U",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Activation Functions Explained",
+          "youtubeId": "m0pIlLfpXWE",
+          "channel": "deeplizard"
+        },
+        {
+          "title": "Build Your First Neural Network in PyTorch",
+          "youtubeId": "V_xro1bcAuA",
+          "channel": "Nicholas Renotte"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What does a perceptron compute?",
+          "options": [
+            "Weighted sum + bias then activation",
+            "Just a sum",
+            "Random output",
+            "Matrix inverse"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why are activation functions needed?",
+          "options": [
+            "Introduce non-linearity",
+            "Speed up training",
+            "Reduce parameters",
+            "Encode data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the default hidden layer activation?",
+          "options": [
+            "ReLU",
+            "Sigmoid",
+            "Softmax",
+            "Tanh"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which activation is used for multi-class output?",
+          "options": [
+            "Softmax",
+            "ReLU",
+            "Sigmoid",
+            "Tanh"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does backpropagation compute?",
+          "options": [
+            "Gradients of loss w.r.t. weights",
+            "Forward output",
+            "Learning rate",
+            "Data statistics"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does dropout do?",
+          "options": [
+            "Randomly zeroes activations during training",
+            "Removes layers",
+            "Adds noise to inputs",
+            "Speeds inference"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is the most popular optimiser?",
+          "options": [
+            "Adam",
+            "SGD",
+            "Momentum",
+            "RMSprop"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does batch normalisation do?",
+          "options": [
+            "Normalises layer inputs",
+            "Drops neurons",
+            "Clips gradients",
+            "Augments data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why do deep networks learn hierarchical features?",
+          "options": [
+            "Each layer builds on previous abstractions",
+            "They have more parameters",
+            "They use more data",
+            "They train longer"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the effect of too high a learning rate?",
+          "options": [
+            "Divergence or NaN loss",
+            "Slow convergence",
+            "Overfitting",
+            "Underfitting"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 8,
+      "title": "Deep Learning",
+      "description": "CNNs, RNNs, Transformers, transfer learning, and training deep models at scale.",
+      "difficulty": "hard",
+      "readMinutes": 45,
+      "lessonContent": "<h2>What Is Deep Learning?</h2><p><strong>Deep Learning</strong> is machine learning using neural networks with many layers. The \"deep\" refers to depth — many layers stacked together, each learning increasingly abstract features.</p><p>What makes deep learning special: it <em>learns features automat...[TRUNCATED 9345 chars total]",
+      "videos": [
+        {
+          "title": "Convolutional Neural Networks Explained",
+          "youtubeId": "YRhxdVk_sIs",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "RNN and LSTM Explained",
+          "youtubeId": "LHXXI4-IEns",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Transformers Explained Visually",
+          "youtubeId": "wjZofJX0v4M",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Transfer Learning Tutorial",
+          "youtubeId": "BqqfJCA4j_0",
+          "channel": "sentdex"
+        },
+        {
+          "title": "Training Deep Networks — Best Practices",
+          "youtubeId": "ola6nDdccRw",
+          "channel": "Andrew Ng"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What does convolution do?",
+          "options": [
+            "Slides filters over input to detect patterns",
+            "Normalises input",
+            "Pools values",
+            "Connects all neurons"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is pooling used for?",
+          "options": [
+            "Downsampling feature maps",
+            "Upsampling",
+            "Activation",
+            "Normalisation"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which architecture introduced skip connections?",
+          "options": [
+            "ResNet",
+            "AlexNet",
+            "VGG",
+            "LeNet"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What problem do RNNs have?",
+          "options": [
+            "Vanishing gradients on long sequences",
+            "Too many parameters",
+            "Cannot process text",
+            "Too fast"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the key innovation of transformers?",
+          "options": [
+            "Self-attention",
+            "Convolution",
+            "Pooling",
+            "RNN cells"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Q, K, V stand for in attention?",
+          "options": [
+            "Query, Key, Value",
+            "Quick, Known, Verified",
+            "Question, Key, Vector",
+            "Quantity, Kernel, Value"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why is transfer learning powerful?",
+          "options": [
+            "Reuse pretrained features with small data",
+            "Faster GPUs",
+            "Smaller models",
+            "No labels needed"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is mixed precision training?",
+          "options": [
+            "FP16 + FP32 for speed and stability",
+            "Half the data",
+            "Half the layers",
+            "Only inference"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does gradient accumulation do?",
+          "options": [
+            "Simulates larger batches on small GPUs",
+            "Clips gradients",
+            "Skips batches",
+            "Zeros gradients"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which model type is used for BERT?",
+          "options": [
+            "Encoder-only Transformer",
+            "Decoder-only",
+            "CNN",
+            "LSTM"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 9,
+      "title": "Natural Language Processing (NLP)",
+      "description": "Text preprocessing, embeddings, transformers, LLMs, prompt engineering, and RAG.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>What Is NLP?</h2><p><strong>Natural Language Processing (NLP)</strong> is the field of AI that enables computers to understand, interpret, and generate human language — text and speech.</p><p>It powers ChatGPT, Google Translate, Siri, sentiment analysis, spam detection, and search engines.</p><h...[TRUNCATED 5431 chars total]",
+      "videos": [
+        {
+          "title": "NLP Fundamentals",
+          "youtubeId": "CMrHM8a3hqw",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Word Embeddings — Word2Vec and GloVe",
+          "youtubeId": "viZrOnJclY0",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Transformers and Attention",
+          "youtubeId": "eMlx5fFNoYc",
+          "channel": "3Blue1Brown"
+        },
+        {
+          "title": "Prompt Engineering Guide",
+          "youtubeId": "dOxUroR57xs",
+          "channel": "OpenAI"
+        },
+        {
+          "title": "What is RAG?",
+          "youtubeId": "T-D1OfcDW1M",
+          "channel": "IBM Technology"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What is tokenisation?",
+          "options": [
+            "Splitting text into tokens",
+            "Encrypting text",
+            "Removing text",
+            "Translating"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is TF-IDF?",
+          "options": [
+            "Weighting words by frequency vs rarity",
+            "A transformer",
+            "An embedding",
+            "A tokeniser"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is the famous Word2Vec example?",
+          "options": [
+            "king - man + woman ≈ queen",
+            "cat = dog",
+            "hello = bye",
+            "a = b"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How is BERT trained?",
+          "options": [
+            "Masked language modelling",
+            "Autoregressive",
+            "Reinforcement",
+            "Rule-based"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How is GPT trained?",
+          "options": [
+            "Predict next token",
+            "Predict masked token",
+            "Classification",
+            "Clustering"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does RLHF stand for?",
+          "options": [
+            "Reinforcement Learning from Human Feedback",
+            "Rapid Learning High Frequency",
+            "Real-time Learning for Humans",
+            "Regression Loss High Frequency"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is chain-of-thought prompting?",
+          "options": [
+            "Asking the model to think step by step",
+            "Chaining multiple prompts",
+            "RAG pipeline",
+            "Fine-tuning method"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does RAG combine?",
+          "options": [
+            "Retrieval with LLM generation",
+            "Two LLMs",
+            "CNN + RNN",
+            "PCA + SVM"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "When is RAG better than fine-tuning?",
+          "options": [
+            "Frequent data updates",
+            "Style changes",
+            "Small dataset",
+            "New task"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is an embedding?",
+          "options": [
+            "Dense vector representing meaning",
+            "Token count",
+            "Regular expression",
+            "Sentence structure"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 10,
+      "title": "Computer Vision",
+      "description": "Image fundamentals, CNNs, object detection, segmentation, and vision-language models.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>What Is Computer Vision?</h2><p><strong>Computer Vision (CV)</strong> teaches machines to interpret and understand images and video. It powers face unlock, self-driving cars, medical imaging, and content moderation.</p><p>Where humans instantly see a cat, a computer sees a matrix of numbers. CV ...[TRUNCATED 7810 chars total]",
+      "videos": [
+        {
+          "title": "Computer Vision Fundamentals",
+          "youtubeId": "OcycCzF-4cY",
+          "channel": "IBM Technology"
+        },
+        {
+          "title": "YOLO Object Detection Explained",
+          "youtubeId": "svnFZRDrnCM",
+          "channel": "Roboflow"
+        },
+        {
+          "title": "Segmentation Explained",
+          "youtubeId": "RynsWaOqn5A",
+          "channel": "Roboflow"
+        },
+        {
+          "title": "CLIP by OpenAI Explained",
+          "youtubeId": "a9aQKzB6jNk",
+          "channel": "AI Coffee Break"
+        },
+        {
+          "title": "Vision Transformers (ViT)",
+          "youtubeId": "TrdevFK_am4",
+          "channel": "Yannic Kilcher"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What does CNN stand for?",
+          "options": [
+            "Convolutional Neural Network",
+            "Central Neural Network",
+            "Complex Node Network",
+            "Connected Neuron Network"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does convolution do?",
+          "options": [
+            "Slides filters to detect patterns",
+            "Pools values",
+            "Normalises",
+            "Encodes"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which architecture introduced skip connections?",
+          "options": [
+            "ResNet",
+            "VGG",
+            "AlexNet",
+            "LeNet"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does YOLO stand for?",
+          "options": [
+            "You Only Look Once",
+            "Your Object Location Option",
+            "Yield Object Label Output",
+            "Yet One Layer Object"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is IoU used for?",
+          "options": [
+            "Measuring detection box overlap",
+            "Training loss",
+            "Data cleaning",
+            "Clustering"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Semantic segmentation differs from instance segmentation by...",
+          "options": [
+            "Not separating instances of same class",
+            "Not using pixels",
+            "Using text",
+            "Using audio"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does CLIP do?",
+          "options": [
+            "Match images to text",
+            "Classify only",
+            "Detect only",
+            "Segment only"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is SAM?",
+          "options": [
+            "Segment Anything Model",
+            "Sample Accuracy Metric",
+            "Structured Attention Model",
+            "Scaled Activation Module"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why is transfer learning common in CV?",
+          "options": [
+            "Pretrained features work well with small data",
+            "Faster GPUs",
+            "Smaller models",
+            "No labels needed"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What tensor shape does PyTorch use for images?",
+          "options": [
+            "(C, H, W)",
+            "(H, W, C)",
+            "(H, C, W)",
+            "(W, C, H)"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 11,
+      "title": "Reinforcement Learning",
+      "description": "Agents, environments, rewards, Q-learning, deep RL, and RLHF for language models.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>What Is Reinforcement Learning?</h2><p><strong>Reinforcement Learning (RL)</strong> is learning by interaction. An <em>agent</em> takes actions in an <em>environment</em>, receives <em>rewards</em>, and learns a policy that maximises long-term reward.</p><p>Unlike supervised learning, RL has no ...[TRUNCATED 6155 chars total]",
+      "videos": [
+        {
+          "title": "Reinforcement Learning Basics",
+          "youtubeId": "JgvyzIkgxF0",
+          "channel": "DeepMind"
+        },
+        {
+          "title": "Q-Learning Explained",
+          "youtubeId": "qjobaymNlKA",
+          "channel": "StatQuest"
+        },
+        {
+          "title": "Deep Q-Networks (DQN)",
+          "youtubeId": "wrBmam4A6c8",
+          "channel": "DeepMind"
+        },
+        {
+          "title": "Policy Gradient Methods",
+          "youtubeId": "KHZVXaZSDJk",
+          "channel": "Stanford"
+        },
+        {
+          "title": "RLHF Explained",
+          "youtubeId": "wAdLWFnO3xE",
+          "channel": "IBM Technology"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What is the goal of an RL agent?",
+          "options": [
+            "Maximise cumulative reward",
+            "Minimise loss",
+            "Maximise accuracy",
+            "Minimise epochs"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is a policy?",
+          "options": [
+            "Mapping from states to actions",
+            "A reward function",
+            "A discount factor",
+            "A state"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does the discount factor gamma control?",
+          "options": [
+            "Weight of future rewards",
+            "Learning rate",
+            "Exploration",
+            "Memory"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Q(s,a) represent?",
+          "options": [
+            "Expected reward from taking a in s",
+            "State value",
+            "Policy",
+            "Reward"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is exploration vs exploitation?",
+          "options": [
+            "Try new vs use known actions",
+            "Train vs test",
+            "Reward vs penalty",
+            "Batch vs online"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which method trains a neural net to approximate Q?",
+          "options": [
+            "DQN",
+            "Q-table",
+            "MDP",
+            "POMDP"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does RLHF use human feedback for?",
+          "options": [
+            "Training a reward model",
+            "Data labelling only",
+            "Testing",
+            "Dataset split"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which algorithm aligned ChatGPT?",
+          "options": [
+            "PPO",
+            "A2C",
+            "REINFORCE",
+            "SAC"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which game did AlphaGo master?",
+          "options": [
+            "Go",
+            "Chess",
+            "StarCraft",
+            "Dota"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Where did Google use RL for efficiency?",
+          "options": [
+            "Data centre cooling",
+            "Search ranking",
+            "Gmail filter",
+            "YouTube encoding"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 12,
+      "title": "Generative AI",
+      "description": "GANs, diffusion, LLMs, prompt engineering, LoRA, multimodal models, and AI agents.",
+      "difficulty": "hard",
+      "readMinutes": 45,
+      "lessonContent": "<h2>What Is Generative AI?</h2><p><strong>Generative AI</strong> creates new content — text, images, audio, video, code. It is the AI you have heard the most about (ChatGPT, DALL-E, Midjourney, Sora, Suno).</p><p>Where discriminative models classify, generative models <em>create</em>.</p><h2>Part 1 ...[TRUNCATED 9093 chars total]",
+      "videos": [
+        {
+          "title": "How GANs Work",
+          "youtubeId": "8L11aMN5KY8",
+          "channel": "Two Minute Papers"
+        },
+        {
+          "title": "Diffusion Models Explained",
+          "youtubeId": "fbLgYE0Y3f0",
+          "channel": "AI Coffee Break"
+        },
+        {
+          "title": "LLMs Explained",
+          "youtubeId": "zjkBMFhNj_g",
+          "channel": "Andrej Karpathy"
+        },
+        {
+          "title": "Prompt Engineering Guide",
+          "youtubeId": "dOxUroR57xs",
+          "channel": "OpenAI"
+        },
+        {
+          "title": "LoRA Fine-Tuning",
+          "youtubeId": "t5080d0lSXA",
+          "channel": "Trelis Research"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What are the two parts of a GAN?",
+          "options": [
+            "Generator and discriminator",
+            "Encoder and decoder",
+            "Actor and critic",
+            "Query and key"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How do diffusion models generate images?",
+          "options": [
+            "Iteratively denoising from random noise",
+            "Sampling from a GAN",
+            "Retrieving from a database",
+            "Copying real images"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is mode collapse in GANs?",
+          "options": [
+            "Generator produces limited variety",
+            "Discriminator wins",
+            "Training is slow",
+            "GPU out of memory"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How are LLMs trained?",
+          "options": [
+            "Predict next token autoregressively",
+            "Classify images",
+            "Cluster data",
+            "Rank documents"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does RLHF do?",
+          "options": [
+            "Aligns model with human preferences",
+            "Trains from scratch",
+            "Reduces memory",
+            "Fine-tunes images"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is chain-of-thought prompting?",
+          "options": [
+            "Ask model to think step by step",
+            "Chain prompts together",
+            "Multi-model voting",
+            "Fine-tune on reasoning"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does LoRA do?",
+          "options": [
+            "Trains small low-rank adapters",
+            "Full fine-tune",
+            "Freezes all layers",
+            "Uses more GPUs"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "When is RAG better than fine-tuning?",
+          "options": [
+            "Frequent data updates",
+            "New capabilities",
+            "Style changes",
+            "Small dataset"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is Sora?",
+          "options": [
+            "Text-to-video model",
+            "Text-to-image",
+            "Speech model",
+            "3D renderer"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is an AI agent?",
+          "options": [
+            "LLM + tools + memory to take actions",
+            "Just an LLM",
+            "A chatbot",
+            "A classifier"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 13,
+      "title": "AI Ethics & Responsible AI",
+      "description": "Bias, fairness, explainability, privacy, safety, deepfakes, and global AI regulation.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>Why AI Ethics Matters</h2><p>AI systems make decisions that affect real people: who gets a loan, who gets hired, who gets parole. When those systems are biased, opaque, or misused, the harm is real and often invisible until it is too late.</p><div style=\"background:rgba(20,15,50,0.5);border-radi...[TRUNCATED 9121 chars total]",
+      "videos": [
+        {
+          "title": "AI Bias Explained",
+          "youtubeId": "gV0_raKR2dg",
+          "channel": "IBM Technology"
+        },
+        {
+          "title": "SHAP and LIME for Explainability",
+          "youtubeId": "VB9q8p4a7Qg",
+          "channel": "Data School"
+        },
+        {
+          "title": "What is Differential Privacy?",
+          "youtubeId": "gI0P1Bdrz8I",
+          "channel": "Google"
+        },
+        {
+          "title": "AI Alignment Problem",
+          "youtubeId": "p9L4LxZt7AU",
+          "channel": "Robert Miles"
+        },
+        {
+          "title": "EU AI Act Explained",
+          "youtubeId": "0WmnG_y4Lsw",
+          "channel": "IBM Technology"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What is historical bias in AI?",
+          "options": [
+            "Model inherits past discrimination from data",
+            "A bug in code",
+            "Old hardware",
+            "Slow training"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does SHAP provide?",
+          "options": [
+            "Per-feature contribution to a prediction",
+            "Encryption",
+            "Scaling",
+            "Clustering"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is differential privacy?",
+          "options": [
+            "Noise-based guarantee for individual records",
+            "Stronger encryption",
+            "Data deletion",
+            "Access control"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does the EU AI Act ban?",
+          "options": [
+            "Social scoring, real-time biometrics",
+            "Open source",
+            "Small models",
+            "Cloud compute"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is red teaming?",
+          "options": [
+            "Adversarial testing for harms",
+            "Team meeting",
+            "Data labelling",
+            "Model deployment"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does federated learning do?",
+          "options": [
+            "Trains on distributed data without sharing raw data",
+            "Centralises data",
+            "Encrypts models",
+            "Compresses data"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is reward hacking?",
+          "options": [
+            "AI finds loopholes in reward function",
+            "Boosting metrics",
+            "Data leakage",
+            "Overfitting"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is machine unlearning?",
+          "options": [
+            "Removing influence of specific training data",
+            "Retraining from scratch",
+            "Deleting the model",
+            "Compressing"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is a fairness definition?",
+          "options": [
+            "Demographic parity",
+            "Cross-entropy",
+            "MSE",
+            "ROC-AUC"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What are C2PA credentials?",
+          "options": [
+            "Content provenance standards",
+            "Database schema",
+            "Cloud keys",
+            "Model weights"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 14,
+      "title": "AI Deployment & MLOps",
+      "description": "Serving models, containerisation, CI/CD, monitoring, drift detection, scaling, and cost control.",
+      "difficulty": "hard",
+      "readMinutes": 40,
+      "lessonContent": "<h2>The Gap Between Notebook and Production</h2><p>A Jupyter notebook that works is 10% of the journey. The other 90% is deployment: serving, monitoring, retraining, handling failures, scaling, and keeping it alive.</p><p><strong>MLOps</strong> (Machine Learning Operations) is the discipline of gett...[TRUNCATED 8531 chars total]",
+      "videos": [
+        {
+          "title": "MLOps Fundamentals",
+          "youtubeId": "06-A0Gj0Z3U",
+          "channel": "Made With ML"
+        },
+        {
+          "title": "Deploy ML Models with FastAPI",
+          "youtubeId": "h5wLuVDr0oc",
+          "channel": "Krish Naik"
+        },
+        {
+          "title": "Docker for Data Scientists",
+          "youtubeId": "0H2C4h4dRq0",
+          "channel": "Data School"
+        },
+        {
+          "title": "Detecting Data Drift",
+          "youtubeId": "Y5X3ddR3Gs8",
+          "channel": "Evidently AI"
+        },
+        {
+          "title": "MLflow Tutorial",
+          "youtubeId": "9B0Gu6W1P3w",
+          "channel": "Data School"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "What does MLOps stand for?",
+          "options": [
+            "Machine Learning Operations",
+            "Model Learning Operations",
+            "Managed Learning Ops",
+            "Multi-Layer Operations"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is data drift?",
+          "options": [
+            "Input distribution changes over time",
+            "Model file corrupted",
+            "Slow inference",
+            "Bad labels"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Docker do?",
+          "options": [
+            "Packages app + dependencies into a container",
+            "Compresses data",
+            "Encrypts models",
+            "Trains models"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does Kubernetes provide?",
+          "options": [
+            "Container orchestration",
+            "Model training",
+            "Data labelling",
+            "Encryption"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What does MLflow track?",
+          "options": [
+            "Experiments, models, metrics",
+            "User logins",
+            "Encryption keys",
+            "Network traffic"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is a feature store?",
+          "options": [
+            "Centralised repository for ML features",
+            "A database of images",
+            "A cloud service",
+            "A model type"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which cloud service is best for GCP ML?",
+          "options": [
+            "Vertex AI",
+            "SageMaker",
+            "Azure ML",
+            "Databricks"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is model quantisation?",
+          "options": [
+            "Converting to INT8/FP16 for speed",
+            "Adding more layers",
+            "Increasing accuracy",
+            "Data cleaning"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which is a spot instance benefit?",
+          "options": [
+            "60-90% cost savings",
+            "Guaranteed availability",
+            "Faster training",
+            "Free storage"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Why monitor production models?",
+          "options": [
+            "Detect drift and performance degradation",
+            "Speed up training",
+            "Add features",
+            "Reduce cost"
+          ],
+          "correct": 0
+        }
+      ]
+    },
+    {
+      "moduleId": 15,
+      "title": "AI Career Paths & Exam Prep",
+      "description": "AI job roles, certifications, portfolio building, interviews, and how to pass the AIP final exam.",
+      "difficulty": "medium",
+      "readMinutes": 35,
+      "lessonContent": "<h2>You Made It To The Final Module</h2><p>You have covered 14 modules of AI — from history and math, through classical ML and deep learning, to generative AI, ethics, and deployment. This module prepares you for the final exam and the career ahead.</p><div style=\"background:rgba(20,15,50,0.5);borde...[TRUNCATED 8058 chars total]",
+      "videos": [
+        {
+          "title": "How to Get a Job in AI",
+          "youtubeId": "Sd1BI1MmY4s",
+          "channel": "Ken Jee"
+        },
+        {
+          "title": "AI Career Roadmap 2024",
+          "youtubeId": "vJ4TrYZ7ZBk",
+          "channel": "Data School"
+        },
+        {
+          "title": "ML Interview Questions",
+          "youtubeId": "nLuqhuyFw6E",
+          "channel": "Krish Naik"
+        },
+        {
+          "title": "Machine Learning System Design",
+          "youtubeId": "Fp2z0HyJZjE",
+          "channel": "Exponent"
+        },
+        {
+          "title": "Building an ML Portfolio",
+          "youtubeId": "aZ9EnB4U5ks",
+          "channel": "Ken Jee"
+        }
+      ],
+      "quiz": [
+        {
+          "text": "Which is the entry-level AI role?",
+          "options": [
+            "Data Analyst",
+            "AI Architect",
+            "Research Scientist",
+            "AI PM"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What cert is by Google for DL practitioners?",
+          "options": [
+            "TensorFlow Developer",
+            "CCNA",
+            "PMP",
+            "CISSP"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What do recruiters look at most?",
+          "options": [
+            "GitHub portfolio",
+            "Cover letter",
+            "Degree only",
+            "Social media"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is a take-home interview?",
+          "options": [
+            "Dataset + modelling challenge",
+            "Phone screen",
+            "Behavioural round",
+            "Reference check"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "How should you prepare for a certification exam?",
+          "options": [
+            "Study daily + practice exams + hands-on",
+            "Cram night before",
+            "Read once",
+            "Skip labs"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which algorithm for tabular data at scale?",
+          "options": [
+            "XGBoost / LightGBM",
+            "CNN",
+            "RNN",
+            "GAN"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is ML system design round about?",
+          "options": [
+            "Architecting ML solutions end-to-end",
+            "Only coding",
+            "Only math",
+            "Only theory"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Which skill matters beyond tech?",
+          "options": [
+            "Communication",
+            "Typing speed",
+            "Excel",
+            "PowerPoint"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "Where can you find AI research papers?",
+          "options": [
+            "arXiv",
+            "Reddit only",
+            "TikTok",
+            "Newspapers"
+          ],
+          "correct": 0
+        },
+        {
+          "text": "What is agentic AI?",
+          "options": [
+            "Autonomous AI performing multi-step tasks",
+            "A single LLM",
+            "A classifier",
+            "A dataset"
+          ],
+          "correct": 0
+        }
+      ]
+    }
+  ],
+  "enrolledCount": 1655,
+  "prerequisite": null,
+  "isActive": true,
+  "__v": 0,
+  "createdAt": "2026-06-17T09:22:17.122Z",
+  "updatedAt": "2026-10-07T00:16:07.293Z",
+  "price": 60,
+  "slug": "artificial-intelligence-professional",
+  "enrollPrice": 10,
+  "displayOrder": 2
+}

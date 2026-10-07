@@ -68,7 +68,6 @@
         });
         if (fresh) {
           course.name = fresh.name || course.name;
-          course.enrollPrice = fresh.enrollPrice || 0;
           course.examPrice = fresh.examPrice || fresh.price || 0;
           course.pathPrice = fresh.pathPrice || fresh.examPrice || fresh.price || 0;
           course.icon = fresh.icon || course.icon;
