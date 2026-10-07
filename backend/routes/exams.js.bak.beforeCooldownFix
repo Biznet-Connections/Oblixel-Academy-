@@ -488,10 +488,10 @@ router.post('/submit', authenticate, async (req, res) => {
       retakeDateFormatted,
       hoursLeft,
       minutesLeft,
-      cooldownHours: getCooldownHours(enrollment ? enrollment.examAttempts : 0),
+      cooldownHours: EXAM_COOLDOWN_HOURS,
       message: passed
         ? `🎉 Congratulations ${user.fullName || user.name}! You passed with ${score}%! Your certificate is ready for download!`
-        : `Œ ${score}%. Need 70%. Retake available after ${getCooldownHours(enrollment ? enrollment.examAttempts : 0)} hours.`
+        : `Œ ${score}%. Need 70%. Retake available after ${EXAM_COOLDOWN_HOURS} hours.`
     });
   } catch (error) {
     console.error('[EXAM] Submit error:', error.message);
