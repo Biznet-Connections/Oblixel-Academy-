@@ -49,9 +49,7 @@
   var currentPrice = 0;
 
   function getCourseFee(course) {
-    // v16: Show ENROLL fee (not bundle total) — exam fee shown later at the exam wall
-    var enroll = Number(course.enrollPrice || 0);
-    if (enroll > 0) return enroll;
+    // Prefer pathPrice (Full Learning Path), fall back to examPrice
     var p = Number(course.pathPrice || 0);
     if (p > 0) return p;
     return Number(course.examPrice || 0);
