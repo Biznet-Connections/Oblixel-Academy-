@@ -5,7 +5,7 @@ const enrollmentSchema = new mongoose.Schema({
   courseId: { type: String, required: true, lowercase: true, trim: true },
   courseName: { type: String, default: '' },
   courseIcon: { type: String, default: 'fa-certificate' },
-  type: { type: String, enum: ['exam_only', 'learning', 'enroll_only', 'full', 'retake'], default: 'enroll_only' },
+  type: { type: String, enum: ['exam_only', 'learning'], default: 'exam_only' },
   status: { type: String, enum: ['enrolled', 'passed_waiting', 'failed', 'certified'], default: 'enrolled' },
   progress: { type: Number, default: 0, min: 0, max: 100 },
   moduleProgress: {
