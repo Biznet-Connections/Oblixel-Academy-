@@ -1024,26 +1024,20 @@ setInterval(__tagCourseCards, 1500);
 try { setTimeout(function() { if (typeof window.__preloadHeroImages === 'function') window.__preloadHeroImages(); }, 0); } catch (_) {}
 
 const __heroPhotos__ = [
-  // === PEXELS (reliable, education-themed) ===
-  'https://images.pexels.com/photos/1181533/pexels-photo-1181533.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1595391/pexels-photo-1595391.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/256490/pexels-photo-256490.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/159844/cellular-education-classroom-159844.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  // === PICSUM (never 404s, seeded for consistency) ===
-  'https://picsum.photos/seed/obliXel1/1920/1080',
-  'https://picsum.photos/seed/obliXel2/1920/1080',
-  'https://picsum.photos/seed/obliXel3/1920/1080',
-  'https://picsum.photos/seed/obliXel4/1920/1080',
-  // === UNSPLASH (working ones only) ===
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=1920&q=80&fit=crop',
   'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80&fit=crop',
-  // === PLACEHOLD (ultimate fallback — never fails) ===
-  'https://placehold.co/1920x1080/1a1a2e/eee?text=obliXel+Academy',
-  'https://placehold.co/1920x1080/16213e/eee?text=Learn+Anywhere'
+  'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&q=80&fit=crop'
 ];
 
 const __preloadHeroImages = function() {
@@ -1093,10 +1087,9 @@ function __startHeroSlideshow__() {
       current = next;
     };
     nextImg.onerror = function() {
-    console.warn('[HERO] Skipping broken image', __heroPhotos__[next]);
-    // Replace broken URL with a guaranteed-working fallback
-    __heroPhotos__[next] = 'https://picsum.photos/seed/fallback' + next + '/1920/1080';
-  };
+      // Skip broken image — don't switch, try the next one on the following tick
+      console.warn('[HERO] Skipping broken image', __heroPhotos__[next]);
+    };
     nextImg.src = __heroPhotos__[next];
   }, 5000);
 
