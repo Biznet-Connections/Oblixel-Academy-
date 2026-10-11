@@ -1024,41 +1024,36 @@ setInterval(__tagCourseCards, 1500);
 try { setTimeout(function() { if (typeof window.__preloadHeroImages === 'function') window.__preloadHeroImages(); }, 0); } catch (_) {}
 
 const __heroPhotos__ = [
-  // === COLLEGE / STUDENTS / CAMPUS (Pexels) ===
-  'https://images.pexels.com/photos/1181533/pexels-photo-1181533.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1595391/pexels-photo-1595391.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/256490/pexels-photo-256490.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/159844/cellular-education-classroom-159844.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1205651/pexels-photo-1205651.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  // === CODING / PROGRAMMING (Pexels + Unsplash) ===
-  'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/1181677/pexels-photo-1181677.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/546819/pexels-photo-546819.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/11035380/pexels-photo-11035380.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1920&q=80&fit=crop',
-  // === AI / ML / DATA SCIENCE (Pexels + Unsplash) ===
-  'https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/373543/pexels-photo-373543.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/18069157/pexels-photo-18069157.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.pexels.com/photos/17483874/pexels-photo-17483874.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1920&q=80&fit=crop',
-  // === TECH / ROBOTICS / INNOVATION (Unsplash + Pexels) ===
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&q=80&fit=crop',
-  'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1920&q=80&fit=crop',
-  'https://images.pexels.com/photos/2085831/pexels-photo-2085831.jpeg?auto=compress&cs=tinysrgb&w=1920',
-  // === PICSUM (never 404s — ultimate fallback) ===
-  'https://picsum.photos/seed/obliXel1/1920/1080',
-  'https://picsum.photos/seed/obliXel2/1920/1080'
+  '/images/hero/1.jpg',
+  '/images/hero/2.jpg',
+  '/images/hero/3.jpg',
+  '/images/hero/4.jpg',
+  '/images/hero/5.jpg',
+  '/images/hero/6.jpg',
+  '/images/hero/7.jpg',
+  '/images/hero/8.jpg',
+  '/images/hero/9.jpg',
+  '/images/hero/10.jpg',
+  '/images/hero/11.jpg',
+  '/images/hero/12.jpg',
+  '/images/hero/13.jpg',
+  '/images/hero/14.jpg',
+  '/images/hero/15.jpg',
+  '/images/hero/16.jpg',
+  '/images/hero/17.jpg',
+  '/images/hero/18.jpg',
+  '/images/hero/19.jpg',
+  '/images/hero/20.jpg',
+  '/images/hero/21.jpg',
+  '/images/hero/22.jpg',
+  '/images/hero/23.jpg',
+  '/images/hero/24.jpg',
+  '/images/hero/25.jpg',
+  '/images/hero/26.jpg',
+  '/images/hero/27.jpg',
+  '/images/hero/28.jpg',
+  '/images/hero/29.jpg',
+  '/images/hero/30.jpg'
 ];
 
 const __preloadHeroImages = function() {
@@ -1108,9 +1103,8 @@ function __startHeroSlideshow__() {
       current = next;
     };
     nextImg.onerror = function() {
-    console.warn('[HERO] Skipping broken image', __heroPhotos__[next]);
-    // Replace broken URL with a guaranteed-working fallback
-    __heroPhotos__[next] = 'https://picsum.photos/seed/fallback' + next + '/1920/1080';
+    console.warn('[HERO] Broken image, using local fallback', __heroPhotos__[next]);
+    __heroPhotos__[next] = '/images/hero/1.jpg';
   };
     nextImg.src = __heroPhotos__[next];
   }, 5000);
