@@ -1209,20 +1209,7 @@ function renderLandingPage() {
   root.innerHTML = `
     <div class="max-w-7xl mx-auto">
       <section class="hero-slideshow relative min-h-[80vh] flex items-center overflow-hidden">
-        <div class="hero-slide active" style="background-image:url('${__heroPhotos__[0]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[1]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[2]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[3]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[4]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[5]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[6]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[7]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[8]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[9]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[10]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[11]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[12]}')"></div>
-        <div class="hero-slide" style="background-image:url('${__heroPhotos__[13]}')"></div>
+        ${__heroPhotos__.map(function(url, i) { return `<div class="hero-slide${i === 0 ? ' active' : ''}" style="background-image:url('${url}')"></div>`; }).join('')}
         <div class="hero-overlay"></div>
         <div class="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6">
           <div class="max-w-2xl" data-aos="fade-right">
