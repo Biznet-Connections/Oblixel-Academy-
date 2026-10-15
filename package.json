@@ -1,11 +1,11 @@
-{
+﻿{
   "name": "oblixel-academy",
   "version": "4.0.0",
   "description": "Professional Certification Platform",
   "main": "backend/app.js",
   "scripts": {
     "start": "node backend/app.js",
-    "dev": "concurrently \"cd backend && node app.js\" \"cd frontend && python3 -m http.server 5500\""
+    "dev": "concurrently \"cd backend && node app.js\" \"cd frontend && npx serve . -p 5500\""
   },
   "dependencies": {
     "axios": "^1.18.1",

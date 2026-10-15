@@ -205,15 +205,19 @@ async function seedDatabase() {
       console.log(`👥 ${userCount} users in database`);
     }
 
-    const courseCount = await Course.countDocuments();
-    if (courseCount === 0) {
-      console.log('🌱 Seeding courses...');
-      await Course.insertMany(getSeedCourses());
-      console.log(`✅ Courses seeded`);
+    const existingCourses = await Course.find({}, { courseId: 1 }).lean();
+    const existingCourseIds = new Set(existingCourses.map(c => c.courseId));
+    const seedCoursesList = getSeedCourses();
+    const missingCourses = seedCoursesList.filter(c => !existingCourseIds.has(c.courseId));
+    if (missingCourses.length > 0) {
+      console.log('🌱 Seeding ' + missingCourses.length + ' new courses...');
+      await Course.insertMany(missingCourses);
+      console.log('✅ Seeded ' + missingCourses.length + ' new courses (' + existingCourses.length + ' already existed)');
     } else {
-      await Course.deleteMany({ courseId: { $in: ['ona', 'onp'] } });
-      console.log(`📚 ${courseCount} courses in database`);
+      console.log('📚 ' + existingCourses.length + ' courses in database (all up to date)');
     }
+    // Clean up legacy course IDs
+    await Course.deleteMany({ courseId: { $in: ['ona', 'onp'] } });
 
     const questionCount = await ExamQuestion.countDocuments();
     if (questionCount < 50) {
@@ -269,7 +273,30 @@ function getSeedCourses() {
     { courseId:'csp',name:'Customer Service Professional (CSP)',abbreviation:'CSP',level:'Professional',description:'Customer service certification covering communication, conflict resolution, and client management.',examPrice:299,pathPrice:499,icon:'fa-headset',category:'Service',color:'green',enrolledCount:2876,duration:'5 weeks',totalModules:5},
     { courseId:'esp',name:'Entrepreneurship Skills Professional (ESP)',abbreviation:'ESP',level:'Professional',description:'Entrepreneurship certification covering business planning, funding, marketing, and growth strategies.',examPrice:429,pathPrice:649,icon:'fa-lightbulb',category:'Business',color:'gold',enrolledCount:1432,duration:'8 weeks',totalModules:8},
     { courseId:'lcp',name:'Leadership Certified Professional (LCP)',abbreviation:'LCP',level:'Professional',description:'Leadership certification covering team management, decision making, and organizational behavior.',examPrice:399,pathPrice:599,icon:'fa-crown',category:'Leadership',color:'purple',enrolledCount:1876,duration:'6 weeks',totalModules:6},
-    { courseId:'ttp',name:'Technical Training Professional (TTP)',abbreviation:'TTP',level:'Professional',description:'Technical training certification covering instructional design, delivery methods, and assessment.',examPrice:379,pathPrice:579,icon:'fa-chalkboard-teacher',category:'Education',color:'blue',enrolledCount:876,duration:'6 weeks',totalModules:6}
+    { courseId:'ttp',name:'Technical Training Professional (TTP)',abbreviation:'TTP',level:'Professional',description:'Technical training certification covering instructional design, delivery methods, and assessment.',examPrice:379,pathPrice:579,icon:'fa-chalkboard-teacher',category:'Education',color:'blue',enrolledCount:876,duration:'6 weeks',totalModules:6},
+    // ===== NEW COURSES (catalog depth expansion) =====
+    { courseId:'jsd',name:'JavaScript Developer Professional (JSD)',abbreviation:'JSD',level:'Professional',description:'Modern JavaScript mastery covering ES6+, async patterns, DOM, fetch API, and testing frameworks.',examPrice:399,pathPrice:629,icon:'fa-js',category:'Development',color:'yellow',enrolledCount:1842,duration:'8 weeks',totalModules:8},
+    { courseId:'rjp',name:'React and Next.js Professional (RJP)',abbreviation:'RJP',level:'Professional',description:'React 18, Next.js 14, server components, hooks, state management, and deployment.',examPrice:449,pathPrice:699,icon:'fa-react',category:'Development',color:'cyan',enrolledCount:2231,duration:'10 weeks',totalModules:10},
+    { courseId:'pyw',name:'Python Web Developer (PYW)',abbreviation:'PYW',level:'Professional',description:'Python web development with Django, Flask, FastAPI, REST APIs, and PostgreSQL.',examPrice:429,pathPrice:679,icon:'fa-python',category:'Development',color:'blue',enrolledCount:1654,duration:'9 weeks',totalModules:9},
+    { courseId:'fsw',name:'Full-Stack Developer Professional (FSW)',abbreviation:'FSW',level:'Professional',description:'End-to-end full-stack certification: frontend, backend, databases, DevOps, and deployment.',examPrice:599,pathPrice:899,icon:'fa-layer-group',category:'Development',color:'purple',enrolledCount:2817,duration:'12 weeks',totalModules:12},
+    { courseId:'mlf',name:'Machine Learning Foundations (MLF)',abbreviation:'MLF',level:'Foundation',description:'Core ML concepts: regression, classification, clustering, model evaluation, and scikit-learn.',examPrice:399,pathPrice:629,icon:'fa-brain',category:'AI',color:'purple',enrolledCount:2453,duration:'8 weeks',totalModules:8},
+    { courseId:'dlp',name:'Deep Learning Professional (DLP)',abbreviation:'DLP',level:'Professional',description:'Neural networks, CNNs, RNNs, transformers, and TensorFlow/PyTorch mastery.',examPrice:549,pathPrice:849,icon:'fa-brain',category:'AI',color:'purple',enrolledCount:1876,duration:'10 weeks',totalModules:10},
+    { courseId:'nlp',name:'NLP Specialist (NLPS)',abbreviation:'NLPS',level:'Professional',description:'Natural language processing: tokenization, embeddings, BERT, and production NLP pipelines.',examPrice:499,pathPrice:749,icon:'fa-comment-dots',category:'AI',color:'purple',enrolledCount:1654,duration:'9 weeks',totalModules:9},
+    { courseId:'cvp',name:'Computer Vision Professional (CVP)',abbreviation:'CVP',level:'Professional',description:'Image processing, object detection, YOLO, segmentation, and vision transformers.',examPrice:499,pathPrice:749,icon:'fa-eye',category:'AI',color:'purple',enrolledCount:1342,duration:'9 weeks',totalModules:9},
+    { courseId:'llm',name:'LLM Engineering Professional (LLM)',abbreviation:'LLM',level:'Expert',description:'Build with LLMs: prompt engineering, RAG, fine-tuning, agents, and evaluation.',examPrice:649,pathPrice:949,icon:'fa-robot',category:'AI',color:'purple',enrolledCount:2187,duration:'10 weeks',totalModules:10},
+    { courseId:'aws',name:'AWS Solutions Architect (AWS)',abbreviation:'AWS',level:'Professional',description:'AWS certification prep: EC2, S3, VPC, Lambda, RDS, IAM, and architecting solutions.',examPrice:499,pathPrice:749,icon:'fa-cloud',category:'Cloud',color:'orange',enrolledCount:3241,duration:'10 weeks',totalModules:10},
+    { courseId:'azr',name:'Azure Cloud Professional (AZR)',abbreviation:'AZR',level:'Professional',description:'Microsoft Azure: VMs, AKS, Functions, DevOps, security, and cost optimization.',examPrice:499,pathPrice:749,icon:'fa-cloud',category:'Cloud',color:'blue',enrolledCount:2134,duration:'10 weeks',totalModules:10},
+    { courseId:'k8s',name:'Kubernetes Administrator (K8S)',abbreviation:'K8S',level:'Professional',description:'Kubernetes: pods, services, ingress, Helm, operators, and cluster operations.',examPrice:549,pathPrice:849,icon:'fa-cube',category:'Cloud',color:'cyan',enrolledCount:1876,duration:'9 weeks',totalModules:9},
+    { courseId:'dev',name:'DevOps Engineer Professional (DEV)',abbreviation:'DEV',level:'Professional',description:'CI/CD, Docker, Kubernetes, Terraform, monitoring, and platform engineering.',examPrice:599,pathPrice:899,icon:'fa-infinity',category:'Cloud',color:'purple',enrolledCount:2453,duration:'10 weeks',totalModules:10},
+    { courseId:'pyd',name:'Python for Data Science (PYD)',abbreviation:'PYD',level:'Foundation',description:'Python, NumPy, Pandas, Matplotlib, and Jupyter for data analysis.',examPrice:299,pathPrice:449,icon:'fa-python',category:'Data Science',color:'teal',enrolledCount:3128,duration:'6 weeks',totalModules:6},
+    { courseId:'sqm',name:'SQL Mastery Professional (SQM)',abbreviation:'SQM',level:'Foundation',description:'SQL from basics to advanced: joins, CTEs, window functions, and optimization.',examPrice:299,pathPrice:449,icon:'fa-database',category:'Data Science',color:'teal',enrolledCount:2841,duration:'6 weeks',totalModules:6},
+    { courseId:'mld',name:'ML for Data Scientists (MLD)',abbreviation:'MLD',level:'Professional',description:'Applied machine learning for analysts: scikit-learn, feature engineering, and deployment.',examPrice:499,pathPrice:749,icon:'fa-chart-line',category:'Data Science',color:'teal',enrolledCount:1987,duration:'9 weeks',totalModules:9},
+    { courseId:'bis',name:'Business Intelligence Specialist (BIS)',abbreviation:'BIS',level:'Professional',description:'Power BI, Tableau, DAX, dashboards, and data storytelling for business.',examPrice:449,pathPrice:699,icon:'fa-chart-pie',category:'Data Science',color:'teal',enrolledCount:2265,duration:'8 weeks',totalModules:8},
+    { courseId:'cnp',name:'Cisco Network Professional (CNP)',abbreviation:'CNP',level:'Professional',description:'Cisco CCNA/CCNP track: routing, switching, wireless, and automation.',examPrice:479,pathPrice:729,icon:'fa-network-wired',category:'Networking',color:'blue',enrolledCount:2876,duration:'10 weeks',totalModules:10},
+    { courseId:'sdn',name:'Software-Defined Networking (SDN)',abbreviation:'SDN',level:'Expert',description:'SDN architecture, OpenFlow, controllers, network automation, and NFV.',examPrice:599,pathPrice:899,icon:'fa-project-diagram',category:'Networking',color:'blue',enrolledCount:1187,duration:'9 weeks',totalModules:9},
+    { courseId:'nse',name:'Network Security Engineer (NSE)',abbreviation:'NSE',level:'Professional',description:'Firewalls, VPNs, IDS/IPS, zero trust, and network defense architecture.',examPrice:549,pathPrice:849,icon:'fa-shield-halved',category:'Networking',color:'blue',enrolledCount:1934,duration:'10 weeks',totalModules:10},
+    { courseId:'cet',name:'Certified Ethical Hacker Track (CET)',abbreviation:'CET',level:'Professional',description:'Ethical hacking, pen testing, exploitation, and CEH exam preparation.',examPrice:599,pathPrice:899,icon:'fa-user-secret',category:'Cybersecurity',color:'cyan',enrolledCount:2543,duration:'10 weeks',totalModules:10},
+    { courseId:'csa',name:'Cloud Security Architect (CSA)',abbreviation:'CSA',level:'Expert',description:'Cloud security architecture: IAM, encryption, compliance, and multi-cloud defense.',examPrice:649,pathPrice:949,icon:'fa-shield-virus',category:'Cybersecurity',color:'cyan',enrolledCount:1654,duration:'10 weeks',totalModules:10}
   ];
 
   return list.map(c => {

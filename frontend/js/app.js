@@ -984,6 +984,1030 @@ window.__getModuleHeaderBg = __getModuleHeaderBg;
   document.head.appendChild(s);
 })();
 
+// ==================== UNIFIED TRUSTED-BY CSS ====================
+(function() {
+  if (document.getElementById('trusted-by-css')) return;
+  var s = document.createElement('style');
+  s.id = 'trusted-by-css';
+  s.textContent = `
+    .trusted-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 20px 24px;
+      margin-top: 32px;
+      align-items: center;
+    }
+    .trusted-logo {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      text-decoration: none;
+      padding: 16px 8px;
+      border-radius: 14px;
+      transition: transform .2s ease, background .2s ease;
+    }
+    .trusted-logo:hover {
+      transform: translateY(-3px);
+      background: rgba(124,58,237,0.06);
+    }
+    .trusted-logo-inner {
+      height: 44px; display: flex; align-items: center; justify-content: center;
+      filter: grayscale(0.3);
+      transition: filter .2s ease;
+    }
+    .trusted-logo:hover .trusted-logo-inner { filter: grayscale(0); }
+    .trusted-logo-name {
+      font-size: 11px; font-weight: 600;
+      color: #64748b;
+      text-align: center;
+    }
+    .trusted-business-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 700;
+      color: #7c3aed;
+      text-decoration: none;
+      padding: 12px 24px;
+      border: 2px solid #7c3aed;
+      border-radius: 12px;
+      transition: background .2s ease, color .2s ease;
+    }
+    .trusted-business-cta:hover {
+      background: #7c3aed;
+      color: #fff;
+    }
+    @media (max-width: 640px) {
+      .trusted-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .trusted-logo { padding: 8px 4px; }
+      .trusted-logo-inner { height: 32px; }
+      .trusted-logo-inner svg { max-width: 60px; max-height: 32px; }
+    }
+  `;
+  document.head.appendChild(s);
+})();
+// ==================== LANDING SECTIONS (Phase 2) ====================
+(function() {
+  if (document.getElementById('landing-sections-css')) return;
+  var s = document.createElement('style');
+  s.id = 'landing-sections-css';
+  s.textContent = `
+    /* Section wrappers with subtle contrast */
+    .ls-section { position: relative; padding: 60px 0; }
+    .ls-section-tight { padding: 32px 0; }
+    .ls-section-alt {
+      background: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.03) 100%);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    /* ===== Category tiles ===== */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .cat-tile {
+      position: relative;
+      padding: 24px 20px;
+      border-radius: 20px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+      border: 1px solid rgba(255,255,255,0.08);
+      min-height: 160px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      text-decoration: none; color: inherit;
+    }
+    .cat-tile::before {
+      content: '';
+      position: absolute; inset: 0;
+      opacity: .18;
+      transition: opacity .25s ease;
+      background-size: cover; background-position: center;
+    }
+    .cat-tile:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .cat-tile:hover::before { opacity: .3; }
+    .cat-tile > * { position: relative; z-index: 1; }
+    .cat-icon {
+      font-size: 32px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      background: rgba(0,0,0,0.4);
+    }
+    .cat-name { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .cat-desc { font-size: 12.5px; color: rgba(255,255,255,0.75); line-height: 1.4; }
+    .cat-explore {
+      font-size: 12px; font-weight: 700; color: #fff;
+      margin-top: 12px; display: inline-flex; align-items: center; gap: 4px;
+      opacity: .85;
+    }
+    .cat-tile:hover .cat-explore { opacity: 1; gap: 8px; }
+
+    /* ===== Dark Why-Us panel ===== */
+    .whyus-panel {
+      background: linear-gradient(135deg, #0f172a 0%, #1a0b3d 100%);
+      border: 1px solid rgba(168,85,247,0.2);
+      border-radius: 28px;
+      padding: 40px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .whyus-panel::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -10%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .whyus-title {
+      font-size: 28px; font-weight: 900; color: #fff;
+      margin-bottom: 12px; line-height: 1.15;
+    }
+    .whyus-sub {
+      font-size: 15px; color: #cbd5e1; line-height: 1.6;
+      margin-bottom: 24px; max-width: 520px;
+    }
+    .whyus-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+    .whyus-item {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 14.5px; color: #e2e8f0;
+    }
+    .whyus-check {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: #fff; flex-shrink: 0;
+    }
+    .whyus-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px; border-radius: 14px;
+      background: #fff; color: #0a0a1a;
+      font-weight: 800; font-size: 15px;
+      text-decoration: none;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .whyus-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,255,255,0.2); }
+    .whyus-price { font-size: 13px; color: #94a3b8; margin-top: 16px; }
+
+    /* ===== Testimonials ===== */
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; margin-top: 32px;
+    }
+    .testi-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px;
+      transition: transform .2s ease, border-color .2s ease;
+    }
+    .testi-card:hover { transform: translateY(-3px); border-color: rgba(168,85,247,0.4); }
+    .testi-quote { font-size: 32px; color: #7c3aed; line-height: 1; margin-bottom: 8px; }
+    .testi-text { font-size: 14px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; }
+    .testi-user { display: flex; align-items: center; gap: 12px; }
+    .testi-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 15px;
+      flex-shrink: 0;
+    }
+    .testi-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .testi-role { font-size: 12px; color: #94a3b8; }
+
+    /* ===== Career paths ===== */
+    .career-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px; margin-top: 32px;
+    }
+    .career-card {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+      text-decoration: none; color: inherit;
+      display: block;
+    }
+    .career-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .career-img {
+      height: 140px;
+      background-size: cover; background-position: center;
+      position: relative;
+    }
+    .career-img::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 100%);
+    }
+    .career-body { padding: 18px 20px 20px; }
+    .career-name { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .career-meta { display: flex; gap: 12px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
+    .career-meta span { display: inline-flex; align-items: center; gap: 4px; }
+    .career-rating { color: #f59e0b; font-weight: 700; }
+
+    /* ===== Final CTA ===== */
+    .final-cta {
+      background: linear-gradient(135deg, #1a0b3d 0%, #0a2e3d 100%);
+      border: 1px solid rgba(168,85,247,0.25);
+      border-radius: 28px;
+      padding: 48px 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .final-cta::before {
+      content: '';
+      position: absolute;
+      bottom: -50%; left: -10%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .final-cta-title {
+      font-size: 30px; font-weight: 900; color: #fff;
+      margin-bottom: 12px; line-height: 1.2;
+      position: relative;
+    }
+    .final-cta-sub {
+      font-size: 15px; color: #cbd5e1; margin-bottom: 28px;
+      position: relative;
+    }
+    .final-cta-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 16px 36px; border-radius: 14px;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      color: #fff; font-weight: 800; font-size: 15px;
+      border: none; cursor: pointer;
+      text-decoration: none;
+      transition: transform .2s ease, box-shadow .2s ease;
+      position: relative;
+    }
+    .final-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124,58,237,0.4); }
+
+    /* ===== Section headers (shared) ===== */
+    .ls-header { text-align: center; margin-bottom: 8px; }
+    .ls-header h2 {
+      font-size: 30px; font-weight: 900; color: #fff;
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .ls-header p { font-size: 14px; color: #94a3b8; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .whyus-panel, .final-cta { padding: 32px 20px; }
+      .whyus-title, .final-cta-title { font-size: 22px; }
+      .ls-header h2 { font-size: 22px; }
+      .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .cat-tile { padding: 16px 14px; min-height: 130px; }
+      .cat-icon { width: 44px; height: 44px; font-size: 24px; }
+      .cat-name { font-size: 14px; }
+      .cat-desc { font-size: 11px; }
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ==================== LANDING SECTION RENDERERS (Phase 2) ====================
+
+// A) CATEGORY TILES
+// ==================== CATEGORY MAP + LOGIC ====================
+var __categoryTileMap__ = {
+  ai:    { label: 'AI & Machine Learning', desc: 'LLMs, neural networks, deep learning', icon: 'fa-robot',          cats: ['AI'] },
+  it:    { label: 'IT Certifications',     desc: 'CompTIA, Cisco, Microsoft, AWS',         icon: 'fa-certificate',    cats: ['Networking', 'Telecommunications'] },
+  cloud: { label: 'Cloud Computing',       desc: 'AWS, Azure, GCP, Kubernetes',            icon: 'fa-cloud',          cats: ['Cloud'] },
+  cyber: { label: 'Cybersecurity',         desc: 'SOC, threat detection, ethical hacking', icon: 'fa-shield-halved',  cats: ['Cybersecurity'] },
+  web:   { label: 'Web Development',       desc: 'HTML, CSS, JS, React, Node.js',          icon: 'fa-code',           cats: ['Development'] },
+  pm:    { label: 'Project Management',    desc: 'PMP, Agile, Scrum, PRINCE2',             icon: 'fa-diagram-project', cats: ['Business', 'Marketing', 'Leadership', 'Finance'] }
+};
+
+function __countCoursesInCategory__(tileId) {
+  var tile = __categoryTileMap__[tileId];
+  if (!tile || !coursesData) return 0;
+  return coursesData.filter(function(c) { return tile.cats.indexOf(c.category) !== -1; }).length;
+}
+
+function renderCategoryPage(tileId, levelFilter) {
+  var tile = __categoryTileMap__[tileId];
+  if (!tile) { renderPage('landing'); return; }
+
+  try { if (typeof window.__stopHeroSlideshow__ === 'function') window.__stopHeroSlideshow(); } catch(e) {}
+
+  var matching = (coursesData || []).filter(function(c) {
+    return tile.cats.indexOf(c.category) !== -1;
+  }).sort(function(a, b) {
+    // Sort: Bestseller (enrolledCount >= 2000) first, then by rating
+    var aBest = (a.enrolledCount || 0) >= 2000 ? 1 : 0;
+    var bBest = (b.enrolledCount || 0) >= 2000 ? 1 : 0;
+    if (aBest !== bBest) return bBest - aBest;
+    return (b.enrolledCount || 0) - (a.enrolledCount || 0);
+  });
+
+  if (levelFilter && levelFilter !== 'all') {
+    matching = matching.filter(function(c) {
+      return (c.level || '').toLowerCase() === levelFilter.toLowerCase();
+    });
+  }
+
+  var totalInCat = (coursesData || []).filter(function(c) {
+    return tile.cats.indexOf(c.category) !== -1;
+  }).length;
+
+  var h = '<div style="max-width:1280px;margin:0 auto;padding:24px 20px 60px;">';
+  h += '<a onclick="window.renderPage(\'landing\')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:24px;text-decoration:none;"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>';
+
+  // Category banner image — unique per tile
+  var bannerImgs = {
+    ai:    'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1600&q=70&fit=crop',
+    it:    'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1600&q=70&fit=crop',
+    cloud: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1600&q=70&fit=crop',
+    cyber: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1600&q=70&fit=crop',
+    web:   'https://images.unsplash.com/photo-1547658719-da2b51169166?w=1600&q=70&fit=crop',
+    pm:    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1600&q=70&fit=crop'
+  };
+  var bannerUrl = bannerImgs[tileId] || bannerImgs.ai;
+  h += '<div style="position:relative;border-radius:24px;overflow:hidden;margin-bottom:32px;min-height:220px;background-image:url(\'' + bannerUrl + '\');background-size:cover;background-position:center;">';
+  h += '<div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,10,26,0.75) 0%,rgba(10,10,26,0.5) 100%);"></div>';
+  h += '<div style="position:relative;z-index:2;padding:36px 32px;">';
+  h += '<div style="font-size:34px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:8px;text-shadow:0 2px 12px rgba(0,0,0,0.5);">' + tile.label + '</div>';
+  h += '<div style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.5;text-shadow:0 1px 6px rgba(0,0,0,0.5);">' + tile.desc + '</div>';
+  h += '<div style="display:inline-block;margin-top:12px;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;background:rgba(16,185,129,0.3);color:#6ee7b7;border:1px solid rgba(16,185,129,0.5);backdrop-filter:blur(8px);">' + totalInCat + ' ' + (totalInCat === 1 ? 'course' : 'courses') + ' available</div>';
+  h += '</div>';
+  h += '</div>';
+
+  // Level filters
+  var levels = ['all', 'Foundation', 'Associate', 'Professional', 'Expert'];
+  h += '<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">';
+  levels.forEach(function(lvl) {
+    var isActive = (!levelFilter && lvl === 'all') || (levelFilter === lvl);
+    var label = lvl === 'all' ? 'All Levels' : lvl;
+    h += '<button onclick="window.renderCategoryPage(\'' + tileId + '\', \'' + lvl + '\')" style="padding:8px 16px;border-radius:10px;background:' + (isActive ? 'linear-gradient(90deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.04)') + ';border:1px solid ' + (isActive ? 'transparent' : 'rgba(255,255,255,0.08)') + ';color:' + (isActive ? '#fff' : '#cbd5e1') + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">' + label + '</button>';
+  });
+  h += '</div>';
+
+  // Course grid
+  if (matching.length > 0) {
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">';
+    matching.forEach(function(c) {
+      h += (typeof renderCourseCard === 'function') ? renderCourseCard(c) : '<div style="padding:20px;background:rgba(255,255,255,0.04);border-radius:16px;">' + c.name + '</div>';
+    });
+    h += '</div>';
+  } else {
+    h += '<div style="text-align:center;padding:80px 20px;color:#94a3b8;"><i class="fa-solid fa-inbox" style="font-size:56px;color:rgba(124,58,237,0.35);margin-bottom:20px;display:block;"></i><h3 style="color:#fff;font-size:20px;margin-bottom:8px;">No courses found</h3><p>Try a different level filter or browse all categories.</p></div>';
+  }
+
+  h += '</div>';
+
+  var root = document.getElementById('app-root');
+  if (root) { root.innerHTML = h; window.scrollTo(0, 0); }
+  currentPage = 'category:' + tileId;
+}
+
+window.renderCategoryPage = renderCategoryPage;
+window.__countCoursesInCategory__ = __countCoursesInCategory__;
+window.__categoryTileMap__ = __categoryTileMap__;
+// ==================== GET CERTIFIED SECTION ====================
+function renderCategoryTiles() {
+  var categories = [
+    { id: 'ai', name: 'AI & Machine Learning', desc: 'LLMs, neural networks, deep learning', icon: 'fa-robot',
+      bg: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&q=60&fit=crop' },
+    { id: 'it', name: 'IT Certifications', desc: 'CompTIA, Cisco, Microsoft, AWS', icon: 'fa-certificate',
+      bg: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=60&fit=crop' },
+    { id: 'cloud', name: 'Cloud Computing', desc: 'AWS, Azure, GCP, Kubernetes', icon: 'fa-cloud',
+      bg: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=600&q=60&fit=crop' },
+    { id: 'cyber', name: 'Cybersecurity', desc: 'SOC, threat detection, ethical hacking', icon: 'fa-shield-halved',
+      bg: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=60&fit=crop' },
+    { id: 'web', name: 'Web Development', desc: 'HTML, CSS, JS, React, Node.js', icon: 'fa-code',
+      bg: 'https://images.unsplash.com/photo-1547658719-da2b51169166?w=600&q=60&fit=crop' },
+    { id: 'pm', name: 'Project Management', desc: 'PMP, Agile, Scrum, PRINCE2', icon: 'fa-diagram-project',
+      bg: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=60&fit=crop' }
+  ];
+
+  var html = '<section class="ls-section">';
+  html += '<div class="ls-header">';
+  html += '<h2>Explore by category</h2>';
+  html += '<p>Find the certification path that matches your career goals</p>';
+  html += '</div>';
+  html += '<div class="cat-grid">';
+
+  categories.forEach(function(cat) {
+    html += '<a class="cat-tile" href="#" onclick="event.preventDefault(); window.renderCategoryPage(\'' + cat.id + '\')" data-cat="' + cat.id + '">';
+    html += '<div class="cat-tile-inner" style="background-image:url(\'' + cat.bg + '\');position:absolute;inset:0;opacity:.22;background-size:cover;background-position:center;"></div>';
+    html += '<div class="cat-icon"><i class="fa-solid ' + cat.icon + '"></i></div>';
+    html += '<div>';
+    html += '<div class="cat-name">' + cat.name + '</div>';
+    html += '<div class="cat-desc">' + cat.desc + '</div>';
+    html += '<div class="cat-explore">Explore <i class="fa-solid fa-arrow-right"></i></div>';
+    html += '</div>';
+    html += '</a>';
+  });
+
+  html += '</div>';
+  html += '</section>';
+  return html;
+}
+
+// B) DARK WHY-US PANEL
+function renderWhyUsPanel() {
+  return `
+    <section class="ls-section">
+      <div class="whyus-panel">
+        <h2 class="whyus-title">Reimagine your career<br>in the AI era</h2>
+        <p class="whyus-sub">Future-proof your skills with obliXel Academy. Get certified in weeks, not months. Learn from industry experts and practice with real-world labs.</p>
+        <div class="whyus-list">
+          <div class="whyus-item"><div class="whyus-check"><i class="fa-solid fa-check"></i></div> Learn AI and emerging tech</div>
+          <div class="whyus-item"><div class="whyus-check"><i class="fa-solid fa-check"></i></div> Prep for industry certifications</div>
+          <div class="whyus-item"><div class="whyus-check"><i class="fa-solid fa-check"></i></div> Practice with hands-on labs</div>
+          <div class="whyus-item"><div class="whyus-check"><i class="fa-solid fa-check"></i></div> Advance your career</div>
+        </div>
+        <a href="#certifications" class="whyus-cta">Explore Certifications <i class="fa-solid fa-arrow-right"></i></a>
+        <p class="whyus-price">Starting at $15 per certification</p>
+      </div>
+    </section>
+  `;
+}
+
+// C) TESTIMONIALS
+function renderTestimonials() {
+  var testis = [
+    { text: 'The NCP course changed my career. Landed a network engineer role within 6 weeks of finishing.', name: 'Cris M.', role: 'Network Engineer · NCP Graduate', initials: 'CM' },
+    { text: 'Best $50 I ever spent. The hands-on labs made everything click. Got my first IT job after CCP.', name: 'John D.', role: 'IT Support · CCP Graduate', initials: 'JD' },
+    { text: 'The AI certification opened doors I didn\'t know existed. Now working on production ML models.', name: 'Amina K.', role: 'ML Engineer · AIP Graduate', initials: 'AK' }
+  ];
+
+  var html = '<section class="ls-section ls-section-alt">';
+  html += '<div class="ls-header">';
+  html += '<h2>Join others transforming their careers</h2>';
+  html += '<p>Real students, real results</p>';
+  html += '</div>';
+  html += '<div class="testi-grid">';
+
+  testis.forEach(function(t) {
+    html += '<div class="testi-card">';
+    html += '<div class="testi-quote">❝</div>';
+    html += '<p class="testi-text">' + t.text + '</p>';
+    html += '<div class="testi-user">';
+    html += '<div class="testi-avatar">' + t.initials + '</div>';
+    html += '<div><div class="testi-name">' + t.name + '</div><div class="testi-role">' + t.role + '</div></div>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+  html += '</section>';
+  return html;
+}
+
+// D) CAREER PATHS
+function renderCareerPaths() {
+  var careers = [
+    { name: 'Cloud Engineer', rating: '4.7', reviews: '336K', hours: '29h', img: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=70&fit=crop' },
+    { name: 'Data Scientist', rating: '4.5', reviews: '229K', hours: '47h', img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=70&fit=crop' },
+    { name: 'Cybersecurity Analyst', rating: '4.6', reviews: '189K', hours: '35h', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=70&fit=crop' }
+  ];
+
+  var html = '<section class="ls-section">';
+  html += '<div class="ls-header">';
+  html += '<h2>Ready to reimagine your career?</h2>';
+  html += '<p>Get the skills and real-world experience employers want</p>';
+  html += '</div>';
+  html += '<div class="career-grid">';
+
+  careers.forEach(function(c) {
+    html += '<a class="career-card" href="#" onclick="event.preventDefault(); window.renderPage && window.renderPage(\'courses\')">';
+    html += '<div class="career-img" style="background-image:url(\'' + c.img + '\')"></div>';
+    html += '<div class="career-body">';
+    html += '<div class="career-name">' + c.name + '</div>';
+    html += '<div class="career-meta">';
+    html += '<span class="career-rating">⭐ ' + c.rating + '</span>';
+    html += '<span>(' + c.reviews + ')</span>';
+    html += '<span>⏱ ' + c.hours + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</a>';
+  });
+
+  html += '</div>';
+  html += '</section>';
+  return html;
+}
+
+// E) FINAL CTA
+function renderFinalCTA() {
+  return `
+    <section class="ls-section">
+      <div class="final-cta">
+        <h2 class="final-cta-title">Ready to transform your career?</h2>
+        <p class="final-cta-sub">Join 42,000+ learners already building their future with obliXel Academy</p>
+        <button class="final-cta-btn" onclick="window.renderPage && window.renderPage('courses')">
+          Start Learning Free <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+// F) UNIFIED TRUSTED-BY (merged with Global Partners — no repetition)
+function renderTrustedBy() {
+  var partners = [
+    { name: "Google", icon: "fab fa-google", url: "https://cloud.google.com", color: "#4285F4" },
+    { name: "AWS", icon: "fab fa-aws", url: "https://aws.amazon.com", color: "#FF9900" },
+    { name: "Meta", icon: "fab fa-meta", url: "https://meta.com", color: "#0064E1" },
+    { name: "Microsoft", icon: "fab fa-microsoft", url: "https://microsoft.com", color: "#00A4EF" },
+    { name: "Cisco", icon: "fab fa-cisco", url: "https://cisco.com", color: "#1BA0D7" },
+    { name: "Oracle", icon: "fas fa-database", url: "https://oracle.com", color: "#C74634" },
+    { name: "IBM", icon: "fab fa-ibm", url: "https://ibm.com", color: "#052FAD" },
+    { name: "Harvard", icon: "fas fa-university", url: "https://harvard.edu", color: "#A51C30" },
+    { name: "MIT", icon: "fas fa-link", url: "https://mit.edu", color: "#A31F34" },
+    { name: "Stanford", icon: "fas fa-robot", url: "https://stanford.edu", color: "#8C1515" }
+  ];
+
+  var html = '<section class="ls-section ls-section-alt">';
+  html += '<div class="ls-header">';
+  html += '<h2>Trusted by 17,000+ companies worldwide</h2>';
+  html += '<p>Join professionals from the world\'s leading organizations</p>';
+  html += '</div>';
+  html += '<div class="trusted-grid">';
+
+  partners.forEach(function(p) {
+    var svg = (typeof __brandSvg__ === 'function') ? __brandSvg__(p.name) : '';
+    var display = svg || '<i class="' + p.icon + '" style="color:' + p.color + ';font-size:28px"></i>';
+    html += '<a class="trusted-logo" href="' + p.url + '" target="_blank" rel="noopener noreferrer" title="' + p.name + '">';
+    html += '<div class="trusted-logo-inner">' + display + '</div>';
+    html += '<span class="trusted-logo-name">' + p.name + '</span>';
+    html += '</a>';
+  });
+
+  html += '</div>';
+  html += '<div style="text-align:center;margin-top:32px">';
+  html += '<a href="#" class="trusted-business-cta">Try obliXel for Business <i class="fa-solid fa-arrow-right"></i></a>';
+  html += '</div>';
+  html += '</section>';
+  return html;
+}
+
+// Expose to window
+window.renderCategoryTiles = renderCategoryTiles;
+window.renderWhyUsPanel = renderWhyUsPanel;
+window.renderTestimonials = renderTestimonials;
+window.renderCareerPaths = renderCareerPaths;
+window.renderFinalCTA = renderFinalCTA;
+window.renderTrustedBy = renderTrustedBy;
+// ==================== WHITE THEME TEST ====================
+(function() {
+  if (document.getElementById('white-theme-test')) return;
+  var s = document.createElement('style');
+  s.id = 'white-theme-test';
+  s.textContent = `
+    /* Force white bg everywhere */
+    html, body {
+      background: #ffffff !important;
+      color: #1e293b !important;
+    }
+
+    /* Nav becomes white */
+    nav, header, .navbar {
+      background: #ffffff !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+    }
+    nav a, header a, .navbar a, nav span, header span {
+      color: #1e293b !important;
+    }
+
+    /* Section backgrounds */
+    .ls-section, .ls-section-alt {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Section headers */
+    .ls-header h2 { color: #0f172a !important; }
+    .ls-header p { color: #64748b !important; }
+
+    /* Hero text — keep readable */
+    .hero-slideshow h1, .hero-slideshow h2 { color: #ffffff !important; }
+    .hero-slideshow p { color: #e2e8f0 !important; }
+
+    /* Course cards on white */
+    .rc-card {
+      background: #ffffff !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .rc-card:hover {
+      box-shadow: 0 12px 40px rgba(124,58,237,0.15) !important;
+      border-color: #a855f7 !important;
+    }
+    .rc-title { color: #0f172a !important; }
+    .rc-instructor { color: #64748b !important; }
+    .rc-price { color: #0f172a !important; }
+    .rc-price-old { color: #94a3b8 !important; }
+    .rc-rating { color: #475569 !important; }
+    .rc-meta { color: #64748b !important; }
+
+    /* Category tiles on white */
+    .cat-tile {
+      border: 1px solid #e2e8f0 !important;
+    }
+    .cat-name { color: #0f172a !important; }
+    .cat-desc { color: #64748b !important; }
+    .cat-explore { color: #7c3aed !important; }
+    .cat-icon {
+      background: rgba(255,255,255,0.85) !important;
+      color: #7c3aed !important;
+    }
+
+    /* Testimonials on white */
+    .testi-card {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+    .testi-text { color: #334155 !important; }
+    .testi-name { color: #0f172a !important; }
+    .testi-role { color: #64748b !important; }
+
+    /* Career cards */
+    .career-card {
+      border: 1px solid #e2e8f0 !important;
+      background: #ffffff !important;
+    }
+    .career-name { color: #0f172a !important; }
+    .career-meta { color: #64748b !important; }
+
+    /* Dark panels stay dark (why-us + final CTA) */
+    .whyus-panel, .final-cta {
+      /* keep their gradients */
+    }
+    .whyus-panel * , .final-cta * {
+      /* keep text white in dark panels */
+    }
+
+    /* Marquee strip */
+    .marquee {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    /* Trusted-by */
+    .ls-section-alt p { color: #334155 !important; }
+
+    /* Existing glass class becomes subtle on white */
+    .glass {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    /* Nav buttons */
+    #landingStartBtn { color: #ffffff !important; }
+
+    /* Footer */
+    footer {
+      background: #ffffff !important;
+      border-top: 1px solid #e2e8f0 !important;
+      color: #64748b !important;
+    }
+    footer p { color: #64748b !important; }
+    footer a { color: #475569 !important; }
+    footer a:hover { color: #7c3aed !important; }
+
+    /* Feature cert header */
+    #certifications h2 { color: #0f172a !important; }
+    #certifications p { color: #64748b !important; }
+
+    /* Global partners grid */
+    .glass.rounded-2xl h3 { color: #0f172a !important; }
+  `;
+  document.head.appendChild(s);
+})();
+// ==================== END WHITE THEME TEST ====================
+// ==================== REDESIGNED COURSE CARDS (Phase 1) ====================
+(function() {
+  if (document.getElementById('redesigned-course-cards-css')) return;
+  var s = document.createElement('style');
+  s.id = 'redesigned-course-cards-css';
+  s.textContent = `
+    .rc-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+      display: flex; flex-direction: column;
+      height: 100%;
+    }
+    .rc-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(168,85,247,0.5);
+      box-shadow: 0 12px 40px rgba(168,85,247,0.18);
+    }
+    .rc-thumb {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background-size: cover;
+      background-position: center;
+      background-color: #1a1a2e;
+      overflow: hidden;
+    }
+    .rc-thumb::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.65) 100%);
+    }
+    .rc-badges {
+      position: absolute; top: 12px; left: 12px;
+      display: flex; gap: 6px; z-index: 2;
+    }
+    .rc-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 4px 10px; border-radius: 6px;
+      letter-spacing: .3px;
+      backdrop-filter: blur(8px);
+    }
+    .rc-badge-best { background: #fef3c7; color: #92400e; }
+    .rc-badge-prem { background: #7c3aed; color: #fff; }
+    .rc-icon-overlay {
+      position: absolute; bottom: 12px; right: 12px;
+      width: 40px; height: 40px; border-radius: 12px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      color: #a855f7; font-size: 18px;
+      z-index: 2;
+    }
+    .rc-body {
+      padding: 16px 18px 18px;
+      display: flex; flex-direction: column;
+      flex: 1;
+    }
+    .rc-chips {
+      display: flex; gap: 6px; margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .rc-chip {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px;
+      background: rgba(168,85,247,0.12);
+      color: #c4b5fd;
+      border: 1px solid rgba(168,85,247,0.25);
+    }
+    .rc-chip-alt {
+      background: rgba(6,182,212,0.12);
+      color: #67e8f9;
+      border: 1px solid rgba(6,182,212,0.25);
+    }
+    .rc-title {
+      font-size: 17px; font-weight: 700;
+      line-height: 1.3; color: #fff;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .rc-instructor {
+      font-size: 12px; color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .rc-rating {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .rc-rating-stars { color: #f59e0b; font-weight: 700; }
+    .rc-rating-count { color: #64748b; font-size: 12px; }
+    .rc-meta {
+      display: flex; gap: 14px;
+      font-size: 12px; color: #94a3b8;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .rc-meta span { display: inline-flex; align-items: center; gap: 5px; }
+    .rc-price-row {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: 12px;
+      margin-top: auto;
+    }
+    .rc-price { font-size: 22px; font-weight: 800; color: #fff; }
+    .rc-price-old { font-size: 14px; color: #64748b; text-decoration: line-through; }
+    .rc-discount {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px;
+      background: rgba(16,185,129,0.15);
+      color: #34d399;
+      margin-left: auto;
+    }
+    .rc-cta-row { display: flex; gap: 8px; }
+    .rc-btn-enroll {
+      flex: 1;
+      background: linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%);
+      color: #fff; font-weight: 700;
+      padding: 11px 16px; border-radius: 12px;
+      border: none; cursor: pointer;
+      font-size: 14px;
+      transition: opacity .2s ease, transform .15s ease;
+    }
+    .rc-btn-enroll:hover { opacity: .9; transform: translateY(-1px); }
+    .rc-btn-enroll.rc-enrolled {
+      background: rgba(16,185,129,0.15);
+      color: #34d399;
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+    .rc-btn-share {
+      width: 42px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #cbd5e1;
+      border-radius: 12px; cursor: pointer;
+      transition: background .2s ease;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rc-btn-share:hover { background: rgba(255,255,255,0.1); }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ==================== COURSE CARD RENDERER (Phase 1) ====================
+// ==================== COURSE THUMBNAIL SOURCES ====================
+var __courseThumbnails__ = {
+  'AI':                 ['https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=70&fit=crop'],
+  'Data Science':       ['https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=70&fit=crop'],
+  'Networking':         ['https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=70&fit=crop'],
+  'Telecommunications': ['https://images.unsplash.com/photo-1516110833967-0b5716ca1387?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=600&q=70&fit=crop'],
+  'Cloud':              ['https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=70&fit=crop'],
+  'Cybersecurity':      ['https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=600&q=70&fit=crop'],
+  'Development':        ['https://images.unsplash.com/photo-1547658719-da2b51169166?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=70&fit=crop'],
+  'Business':           ['https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=70&fit=crop'],
+  'Marketing':          ['https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=70&fit=crop'],
+  'Finance':            ['https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=70&fit=crop'],
+  'Leadership':         ['https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&q=70&fit=crop'],
+  'Professional Skills':['https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=70&fit=crop'],
+  'Education':          ['https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&q=70&fit=crop'],
+  '_default':           ['https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&q=70&fit=crop', 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=70&fit=crop']
+};
+
+function __getCourseThumbnail__(cert) {
+  if (!cert) return __courseThumbnails__._default[0];
+  // 1. Admin uploaded banner
+  if (cert.bannerImage && cert.bannerImage.trim()) return cert.bannerImage;
+  // 2. Category default (rotating by course id for variety)
+  var cat = cert.category || '';
+  var pool = __courseThumbnails__[cat] || __courseThumbnails__._default;
+  var idx = (String(cert.id || cert.courseId || '0').split('').reduce(function(a, c) { return a + c.charCodeAt(0); }, 0)) % pool.length;
+  return pool[idx];
+}
+// ==================== UNIQUE COURSE IMAGES (one per course) ====================
+var __courseImageMap__ = {
+  // Networking
+  'ncp': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=70&fit=crop',
+  'one': 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=70&fit=crop',
+  'cnp': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=70&fit=crop',
+  'sdn': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=70&fit=crop',
+  'nse': 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=800&q=70&fit=crop',
+  // Development
+  'ccp': 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=70&fit=crop',
+  'wdp': 'https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=70&fit=crop',
+  'jsd': 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&q=70&fit=crop',
+  'rjp': 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=70&fit=crop',
+  'pyw': 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=800&q=70&fit=crop',
+  'fsw': 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=70&fit=crop',
+  'adp': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=70&fit=crop',
+  // AI
+  'aip': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=70&fit=crop',
+  'mlf': 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=70&fit=crop',
+  'dlp': 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&q=70&fit=crop',
+  'nlp': 'https://images.unsplash.com/photo-1655720828018-edd2daec9349?w=800&q=70&fit=crop',
+  'cvp': 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=70&fit=crop',
+  'llm': 'https://images.unsplash.com/photo-1684369175809-f9642140a1bd?w=800&q=70&fit=crop',
+  // Cloud
+  'clp': 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=70&fit=crop',
+  'aws': 'https://images.unsplash.com/photo-1607799279861-4dd421887fb3?w=800&q=70&fit=crop',
+  'azr': 'https://images.unsplash.com/photo-1614064642639-e398cf05badb?w=800&q=70&fit=crop',
+  'k8s': 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=70&fit=crop',
+  'dev': 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&q=70&fit=crop',
+  // Cybersecurity
+  'oca': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=70&fit=crop',
+  'ocp': 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=800&q=70&fit=crop',
+  'oce': 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=70&fit=crop',
+  'cet': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=70&fit=crop',
+  'csa': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=70&fit=crop',
+  'ehp': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=70&fit=crop',
+  // Data Science
+  'dap': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=70&fit=crop',
+  'pyd': 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=800&q=70&fit=crop',
+  'sqm': 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&q=70&fit=crop',
+  'mld': 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&q=70&fit=crop',
+  'bis': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=70&fit=crop',
+  // Business & Marketing
+  'bap': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=70&fit=crop',
+  'dmp': 'https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=800&q=70&fit=crop',
+  'fmp': 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=70&fit=crop',
+  'acp': 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=70&fit=crop',
+  'hrp': 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=70&fit=crop',
+  'esp': 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=70&fit=crop',
+  'lcp': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=70&fit=crop',
+  'pmp': 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&q=70&fit=crop',
+  // Telecom & Engineering
+  'tcp': 'https://images.unsplash.com/photo-1516110833967-0b5716ca1387?w=800&q=70&fit=crop',
+  'mcp': 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=70&fit=crop',
+  'ecp': 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800&q=70&fit=crop',
+  'acp-auto': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=70&fit=crop',
+  // Creative
+  'gdp': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&q=70&fit=crop',
+  'mep': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&q=70&fit=crop',
+  // Support & Service
+  'hsp': 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&q=70&fit=crop',
+  'csp': 'https://images.unsplash.com/photo-1553775282-20af80779df7?w=800&q=70&fit=crop',
+  // Education
+  'ttp': 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=70&fit=crop',
+  'ocp-core': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=70&fit=crop',
+  // Default
+  '_default': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=70&fit=crop'
+};
+
+function __getUniqueCourseImage__(cert) {
+  if (!cert) return __courseImageMap__._default;
+  // Admin uploaded banner takes priority
+  if (cert.bannerImage && String(cert.bannerImage).trim()) return cert.bannerImage;
+  var id = String(cert.id || cert.courseId || '').toLowerCase();
+  return __courseImageMap__[id] || __courseImageMap__._default;
+}
+function renderCourseCard(cert) {
+  if (!cert) return '';
+  var enrolled = (typeof currentUser !== 'undefined' && currentUser && typeof isAlreadyEnrolled === 'function')
+    ? isAlreadyEnrolled(cert.id)
+    : false;
+
+  var enrollPrice = Number(cert.enrollPrice || cert.price || cert.examPrice || 0);
+  var oldPrice = Math.round(enrollPrice * 2);
+  var discountPct = oldPrice > 0 ? Math.round(((oldPrice - enrollPrice) / oldPrice) * 100) : 0;
+
+  var enrolledCount = Number(cert.enrolledCount || 0);
+  var isBestseller = enrolledCount >= 2000;
+  var isPremium = enrollPrice >= 100;
+
+  // Stable fake rating: derived from enrollment so it never changes on reload
+  var rating = 4.5 + ((enrolledCount % 5) / 10);
+  var ratingText = rating.toFixed(1);
+  var reviews = Math.round(enrolledCount * 0.73);
+
+  // Thumbnail: admin bannerImage > __moduleHeaderBg > fallback gradient
+  var thumb = (typeof __getUniqueCourseImage__ === 'function') ? __getUniqueCourseImage__(cert) : (cert.bannerImage || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1600&q=75&fit=crop');
+
+  var icon = cert.icon || 'fa-certificate';
+  var abbr = cert.abbreviation || (cert.id ? String(cert.id).toUpperCase() : '');
+  var category = cert.category || 'Professional';
+  var duration = cert.duration || '8 weeks';
+  var modules = cert.totalModules || 8;
+
+  return `
+    <div class="rc-card" data-course-id="${cert.id}">
+      <div class="rc-thumb" style="background-image:url('${thumb}')">
+        <div class="rc-badges">
+          ${isBestseller ? '<span class="rc-badge rc-badge-best">🏆 Bestseller</span>' : ''}
+          ${isPremium ? '<span class="rc-badge rc-badge-prem">💎 Premium</span>' : ''}
+        </div>
+        <div class="rc-icon-overlay"><i class="fa-solid ${icon}"></i></div>
+      </div>
+      <div class="rc-body">
+        <div class="rc-chips">
+          ${abbr ? `<span class="rc-chip">${abbr}</span>` : ''}
+          <span class="rc-chip rc-chip-alt">${category}</span>
+        </div>
+        <h3 class="rc-title">${escapeHtml(cert.name || 'Untitled Course')}</h3>
+        <p class="rc-instructor">By obliXel Faculty</p>
+        <div class="rc-rating">
+          <span class="rc-rating-stars">⭐ ${ratingText}</span>
+          <span class="rc-rating-count">(${reviews.toLocaleString()} ratings)</span>
+        </div>
+        <div class="rc-meta">
+          <span><i class="fa-solid fa-users"></i> ${enrolledCount.toLocaleString()} students</span>
+          <span><i class="fa-solid fa-book"></i> ${modules} modules</span>
+          <span><i class="fa-solid fa-clock"></i> ${duration}</span>
+        </div>
+        <div class="rc-price-row">
+          <span class="rc-price">$${enrollPrice}</span>
+          ${oldPrice > enrollPrice ? `<span class="rc-price-old">$${oldPrice}</span>` : ''}
+          ${discountPct > 0 ? `<span class="rc-discount">${discountPct}% OFF</span>` : ''}
+        </div>
+        <div class="rc-cta-row">
+          <button class="rc-btn-enroll ${enrolled ? 'rc-enrolled' : ''}"
+                  onclick="event.stopPropagation(); window.handleEnrollClick('${cert.id}')">
+            ${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}
+          </button>
+          <button class="rc-btn-share"
+                  onclick="event.stopPropagation(); window.shareCourse('${cert.id}')"
+                  title="Share this course">
+            <i class="fa-solid fa-share-nodes"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+window.renderCourseCard = renderCourseCard;
 // ==================== HERO SLIDESHOW ====================
 
 // Auto-tag course cards with background class
@@ -1169,7 +2193,49 @@ window.__stopHeroSlideshow__ = __stopHeroSlideshow__;
 
 // Hero slideshow CSS
 (function() {
-  if (document.getElementById('hero-slideshow-css')) return;
+  // ==================== HERO FULL-BLEED OVERRIDE ====================
+(function() {
+  if (document.getElementById('hero-fullbleed-css')) return;
+  var s = document.createElement('style');
+  s.id = 'hero-fullbleed-css';
+  s.textContent = `
+    /* Make hero full-bleed: escape any parent max-width container */
+    .hero-slideshow {
+      position: relative !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin-left: calc(-50vw + 50%) !important;
+      margin-right: calc(-50vw + 50%) !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Slides fill 100% of hero */
+    .hero-slide {
+      background-size: cover !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+    }
+
+    /* Kill parent max-width padding bleed for the hero's siblings */
+    .hero-slideshow ~ * {
+      /* preserve layout of next siblings */
+    }
+
+    @media (max-width: 768px) {
+      .hero-slideshow {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        margin-left: calc(-50vw + 50%) !important;
+        margin-right: calc(-50vw + 50%) !important;
+      }
+    }
+  `;
+  document.head.appendChild(s);
+})();
+if (document.getElementById('hero-slideshow-css')) return;
   var style = document.createElement('style');
   style.id = 'hero-slideshow-css';
   style.textContent = '.hero-slideshow { position: relative; }' +
@@ -1221,9 +2287,14 @@ function renderLandingPage() {
           </div>
         </div>
       </section>
+      ${renderCategoryTiles()}
+      ${renderWhyUsPanel()}
       <section class="py-6 sm:py-10"><div class="glass rounded-3xl py-3 sm:py-6 marquee"><div class="marquee-content">${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}</div></div></section>
-      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(cert => { const enrolled = currentUser && isAlreadyEnrolled(cert.id); const coursePrice = cert.enrollPrice || cert.price || cert.examPrice || 0; return `<div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 card-hover" data-aos="fade-up" data-course-id="${cert.id}"><div class="flex justify-between items-start"><i class="fa-solid ${cert.icon || 'fa-certificate'} text-3xl sm:text-4xl text-purple-400"></i><span class="text-xs glass px-2 sm:px-3 py-1 rounded-full">${cert.category || 'Certification'}</span></div><h3 class="text-lg sm:text-2xl font-bold mt-3 sm:mt-4">${escapeHtml(cert.name)}</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">${escapeHtml(cert.description?.substring(0, 80) || 'Professional certification')}</p><div class="flex items-center gap-2 mt-2 text-gray-400 text-xs"><i class="fa-solid fa-users"></i><span>${(cert.enrolledCount || 0).toLocaleString()}+ students</span></div><p class="text-xs mt-2 text-cyan-400 font-medium">💰 Enrollment Fee: $${coursePrice}</p><div class="mt-4 flex gap-2"><button onclick="window.handleEnrollClick('${cert.id}')" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 hover:bg-purple-500 py-2 rounded-xl text-sm font-medium transition">${enrolled ? '📖 Continue Learning' : '🎯 Enroll Now'}</button><button onclick="event.stopPropagation(); window.shareCourse('${cert.id}')" title="Share this course" class="w-10 bg-white/5 hover:bg-white/10 border border-white/10 py-2 rounded-xl text-sm transition flex items-center justify-center"><i class="fa-solid fa-share-nodes"></i></button></div></div>`; }).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
-      <section class="py-10 sm:py-16"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-4xl font-black">🌍 Global Partners</h2></div><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-5">${globalPartners.map(p => `<a href="${p.url}" target="_blank" rel="noopener noreferrer" class="glass rounded-2xl p-3 sm:p-5 text-center transition hover:scale-105"><span style="display:inline-flex;align-items:center;justify-content:center;height:40px">${__brandSvg__(p.name)}</span><h3 class="font-bold text-xs sm:text-sm mt-2">${p.name}</h3></a>`).join('')}</div></section>
+      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(renderCourseCard).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
+      ${renderTestimonials()}
+      ${renderCareerPaths()}
+      ${renderFinalCTA()}
+      ${renderTrustedBy()}
       <footer class="border-t border-white/10 py-6 sm:py-12 mt-6 sm:mt-10"><div class="flex flex-wrap justify-center gap-3 sm:gap-6 mb-3 sm:mb-6 text-xl sm:text-2xl"><a href="https://www.facebook.com/obliXel" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-youtube"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="https://wa.me/263714587259" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a></div><p class="text-center text-gray-500 text-xs sm:text-sm">© 2026 obliXel Academy — The future of professional certification</p></footer>
     </div>
   `;
@@ -2016,7 +3087,7 @@ window.startExamCheck = async function(courseId) {
 // ==================== COURSES PAGE ====================
 // ==================== COURSES v15 (Shell + Filters) ====================
 async function renderCourses() {
-  if (!currentUser) { renderPage('login'); return; }
+  // Anonymous browsing allowed — enroll will gate when needed
   hideAIWidget();
   const root = document.getElementById('app-root');
   root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading courses...</p></div>';
@@ -8470,3 +9541,44 @@ window.showExamHistoryModal = async function(user) {
   }
 };
 window.showExamHistoryModal = showExamHistoryModal;
+// ==================== BOOT / INIT (restored) ====================
+async function __obliXelBoot__() {
+  try {
+    console.log('🚀 obliXel Academy v13.0 - Booting...');
+    
+    // 1. Load courses from API
+    try {
+      await loadCourses();
+      console.log('✅ Loaded ' + coursesData.length + ' courses');
+    } catch (e) {
+      console.warn('⚠️  Course load failed:', e.message);
+    }
+    
+    // 2. Render landing page
+    if (typeof renderLandingPage === 'function') {
+      renderLandingPage();
+      console.log('✅ Landing page rendered');
+    } else {
+      console.error('❌ renderLandingPage not defined');
+    }
+    
+    // 3. Init AOS animations if available
+    try {
+      if (window.AOS && typeof window.AOS.init === 'function') {
+        window.AOS.init({ duration: 700, once: true });
+      }
+    } catch (e) {}
+    
+    console.log('🎉 ALL FEATURES READY');
+  } catch (e) {
+    console.error('❌ Boot failed:', e.message);
+    console.error('Stack:', e.stack);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', __obliXelBoot__);
+} else {
+  // DOM already ready — run immediately
+  __obliXelBoot__();
+}
