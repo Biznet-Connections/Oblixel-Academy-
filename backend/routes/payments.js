@@ -198,7 +198,18 @@ router.post('/create-checkout', authenticate, async (req, res) => {
         type: 'exam_fee'
       });
     }
-    if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+    // v17 — allow exam-only payments when already enrolled (learning tier)
+    var isExamPayment = type === 'exam_only' || type === 'exam_fee';
+    var isEnrollmentPayment = !isExamPayment && type !== 'retake';
+
+    if (existing && isEnrollmentPayment) {
+      return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+    }
+
+    if (isExamPayment) {
+      if (!existing) return res.status(400).json({ error: 'Must enroll in the course first' });
+      if (existing.examFeePaid) return res.status(400).json({ error: 'Exam fee already paid', alreadyPaid: true });
+    }
 
     let amount = type === 'exam_only' ? course.examPrice : (course.pathPrice || course.examPrice);
     let discount = 0;
@@ -361,7 +372,18 @@ router.post('/initiate', authenticate, async (req, res) => {
     }
 
 
-    if (existing) return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+    // v17 — allow exam-only payments when already enrolled (learning tier)
+    var isExamPayment = type === 'exam_only' || type === 'exam_fee';
+    var isEnrollmentPayment = !isExamPayment && type !== 'retake';
+
+    if (existing && isEnrollmentPayment) {
+      return res.status(400).json({ error: 'Already enrolled', alreadyEnrolled: true, courseId });
+    }
+
+    if (isExamPayment) {
+      if (!existing) return res.status(400).json({ error: 'Must enroll in the course first' });
+      if (existing.examFeePaid) return res.status(400).json({ error: 'Exam fee already paid', alreadyPaid: true });
+    }
 
     // v16 — Separate enroll vs exam pricing
     let amount;
