@@ -1556,129 +1556,115 @@ window.renderTestimonials = renderTestimonials;
 window.renderCareerPaths = renderCareerPaths;
 window.renderFinalCTA = renderFinalCTA;
 window.renderTrustedBy = renderTrustedBy;
-// ==================== WHITE THEME TEST ====================
+// ==================== WHITE THEME TEST (landing-only, scoped) ====================
 (function() {
   if (document.getElementById('white-theme-test')) return;
   var s = document.createElement('style');
   s.id = 'white-theme-test';
   s.textContent = `
-    /* Force white bg everywhere */
-    html, body {
+    /* ===== WHITE THEME — ONLY applies when body.landing-mode ===== */
+    body.landing-mode {
       background: #ffffff !important;
       color: #1e293b !important;
     }
 
-    /* Nav becomes white */
-    nav, header, .navbar {
+    body.landing-mode nav,
+    body.landing-mode header,
+    body.landing-mode .navbar {
       background: #ffffff !important;
       border-bottom: 1px solid #e2e8f0 !important;
     }
-    nav a, header a, .navbar a, nav span, header span {
+    body.landing-mode nav a,
+    body.landing-mode nav span,
+    body.landing-mode header a,
+    body.landing-mode header span {
       color: #1e293b !important;
     }
 
-    /* Section backgrounds */
-    .ls-section, .ls-section-alt {
+    body.landing-mode .ls-section,
+    body.landing-mode .ls-section-alt {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
     }
 
-    /* Section headers */
-    .ls-header h2 { color: #0f172a !important; }
-    .ls-header p { color: #64748b !important; }
+    body.landing-mode .ls-header h2 { color: #0f172a !important; }
+    body.landing-mode .ls-header p { color: #64748b !important; }
 
-    /* Hero text — keep readable */
-    .hero-slideshow h1, .hero-slideshow h2 { color: #ffffff !important; }
-    .hero-slideshow p { color: #e2e8f0 !important; }
+    /* Hero text — keep readable on photos */
+    body.landing-mode .hero-slideshow h1,
+    body.landing-mode .hero-slideshow h2 { color: #ffffff !important; }
+    body.landing-mode .hero-slideshow p { color: #e2e8f0 !important; }
 
-    /* Course cards on white */
-    .rc-card {
+    /* Course cards */
+    body.landing-mode .rc-card {
       background: #ffffff !important;
       border: 1px solid #e2e8f0 !important;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .rc-card:hover {
+    body.landing-mode .rc-card:hover {
       box-shadow: 0 12px 40px rgba(124,58,237,0.15) !important;
       border-color: #a855f7 !important;
     }
-    .rc-title { color: #0f172a !important; }
-    .rc-instructor { color: #64748b !important; }
-    .rc-price { color: #0f172a !important; }
-    .rc-price-old { color: #94a3b8 !important; }
-    .rc-rating { color: #475569 !important; }
-    .rc-meta { color: #64748b !important; }
+    body.landing-mode .rc-title { color: #0f172a !important; }
+    body.landing-mode .rc-instructor { color: #64748b !important; }
+    body.landing-mode .rc-price { color: #0f172a !important; }
+    body.landing-mode .rc-price-old { color: #94a3b8 !important; }
+    body.landing-mode .rc-rating { color: #475569 !important; }
+    body.landing-mode .rc-meta { color: #64748b !important; }
 
-    /* Category tiles on white */
-    .cat-tile {
-      border: 1px solid #e2e8f0 !important;
-    }
-    .cat-name { color: #0f172a !important; }
-    .cat-desc { color: #64748b !important; }
-    .cat-explore { color: #7c3aed !important; }
-    .cat-icon {
+    /* Category tiles */
+    body.landing-mode .cat-tile { border: 1px solid #e2e8f0 !important; }
+    body.landing-mode .cat-name { color: #0f172a !important; }
+    body.landing-mode .cat-desc { color: #64748b !important; }
+    body.landing-mode .cat-explore { color: #7c3aed !important; }
+    body.landing-mode .cat-icon {
       background: rgba(255,255,255,0.85) !important;
       color: #7c3aed !important;
     }
 
-    /* Testimonials on white */
-    .testi-card {
+    /* Testimonials */
+    body.landing-mode .testi-card {
       background: #f8fafc !important;
       border: 1px solid #e2e8f0 !important;
     }
-    .testi-text { color: #334155 !important; }
-    .testi-name { color: #0f172a !important; }
-    .testi-role { color: #64748b !important; }
+    body.landing-mode .testi-text { color: #334155 !important; }
+    body.landing-mode .testi-name { color: #0f172a !important; }
+    body.landing-mode .testi-role { color: #64748b !important; }
 
     /* Career cards */
-    .career-card {
+    body.landing-mode .career-card {
       border: 1px solid #e2e8f0 !important;
       background: #ffffff !important;
     }
-    .career-name { color: #0f172a !important; }
-    .career-meta { color: #64748b !important; }
+    body.landing-mode .career-name { color: #0f172a !important; }
+    body.landing-mode .career-meta { color: #64748b !important; }
 
-    /* Dark panels stay dark (why-us + final CTA) */
-    .whyus-panel, .final-cta {
-      /* keep their gradients */
-    }
-    .whyus-panel * , .final-cta * {
-      /* keep text white in dark panels */
-    }
-
-    /* Marquee strip */
-    .marquee {
+    /* Marquee */
+    body.landing-mode .marquee {
       background: #f8fafc !important;
       border: 1px solid #e2e8f0 !important;
     }
 
-    /* Trusted-by */
-    .ls-section-alt p { color: #334155 !important; }
-
-    /* Existing glass class becomes subtle on white */
-    .glass {
+    /* Existing glass becomes light on white */
+    body.landing-mode .glass {
       background: #f8fafc !important;
       border: 1px solid #e2e8f0 !important;
     }
-
-    /* Nav buttons */
-    #landingStartBtn { color: #ffffff !important; }
 
     /* Footer */
-    footer {
+    body.landing-mode footer {
       background: #ffffff !important;
       border-top: 1px solid #e2e8f0 !important;
       color: #64748b !important;
     }
-    footer p { color: #64748b !important; }
-    footer a { color: #475569 !important; }
-    footer a:hover { color: #7c3aed !important; }
+    body.landing-mode footer p { color: #64748b !important; }
+    body.landing-mode footer a { color: #475569 !important; }
+    body.landing-mode footer a:hover { color: #7c3aed !important; }
 
-    /* Feature cert header */
-    #certifications h2 { color: #0f172a !important; }
-    #certifications p { color: #64748b !important; }
-
-    /* Global partners grid */
-    .glass.rounded-2xl h3 { color: #0f172a !important; }
+    /* Featured cert header */
+    body.landing-mode #certifications h2 { color: #0f172a !important; }
+    body.landing-mode #certifications p { color: #64748b !important; }
+    body.landing-mode .glass.rounded-2xl h3 { color: #0f172a !important; }
   `;
   document.head.appendChild(s);
 })();
@@ -2247,6 +2233,7 @@ if (document.getElementById('hero-slideshow-css')) return;
 })();
 
 function renderLandingPage() {
+  document.body.classList.add('landing-mode');
   console.log('🏠 Rendering landing page with', coursesData.length, 'courses');
   const root = document.getElementById('app-root');
   const ncpCourse = coursesData.find(c => c.id === 'ncp');
@@ -2682,6 +2669,7 @@ function renderLogin() {
 // ==================== DASHBOARD PAGE ====================
 // ==================== DASHBOARD v15 (Sidebar + Next Step) ====================
 async function renderDashboard() {
+  document.body.classList.remove('landing-mode');
   if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
   const root = document.getElementById('app-root');
@@ -3087,6 +3075,7 @@ window.startExamCheck = async function(courseId) {
 // ==================== COURSES PAGE ====================
 // ==================== COURSES v15 (Shell + Filters) ====================
 async function renderCourses() {
+  document.body.classList.remove('landing-mode');
   // Anonymous browsing allowed — enroll will gate when needed
   hideAIWidget();
   const root = document.getElementById('app-root');
@@ -3622,6 +3611,7 @@ window.__showCooldownFullScreen = function(courseId, score, retakeTimeIso, fee) 
 };
 
 async function renderCourseDashboard(courseId) {
+  document.body.classList.remove('landing-mode');
   hideAIWidget();
   if (!currentUser) { renderPage('login'); return; }
   const root = document.getElementById('app-root');
@@ -6504,6 +6494,7 @@ let _adminState = {
 };
 
 async function renderAdmin() {
+  document.body.classList.remove('landing-mode');
   hideAIWidget();
   if (!currentUser || currentUser.role !== 'admin') { renderPage('dashboard'); showToast('Admin access required', 'error'); return; }
   const root = document.getElementById('app-root');
