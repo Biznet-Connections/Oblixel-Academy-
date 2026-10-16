@@ -9615,7 +9615,6 @@ window.showExamHistoryModal = async function(user) {
     document.getElementById('examHistoryContent').innerHTML = '<p style="color:var(--a-danger)">Failed to load: ' + e.message + '</p>';
   }
 };
-window.showExamHistoryModal = showExamHistoryModal;
 // ==================== BOOT / INIT (restored) ====================
 async function __obliXelBoot__() {
   try {
