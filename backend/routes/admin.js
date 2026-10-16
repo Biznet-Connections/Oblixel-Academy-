@@ -7,6 +7,7 @@ const Voucher = require('../models/Voucher');
 const Payment = require('../models/Payment');
 const Certificate = require('../models/Certificate');
 const CertificateTemplate = require('../models/CertificateTemplate');
+const { parseExpiryPeriod, calculateExpiryDate } = require('../utils/certExpiry');
 const ModuleProgress = require('../models/ModuleProgress');
 const ExamQuestion = require('../models/ExamQuestion');
 const ExamSession = require('../models/ExamSession');
@@ -1518,6 +1519,10 @@ router.post('/users/:userId/force-pass', isMainAdmin, async (req, res) => {
 
     const now = new Date();
     const template = await CertificateTemplate.findOne();
+    const expiryPeriodStr = template ? template.expiryPeriod : null;
+    const expiryPeriod = parseExpiryPeriod(expiryPeriodStr);
+    const expiryDate = calculateExpiryDate(now, expiryPeriod);
+    console.log('[ADMIN/FORCE-PASS] Expiry:', expiryDate ? expiryDate.toISOString() : 'never (period: ' + expiryPeriodStr + ')');
     const verifyBase = (template && template.verifyUrlBase) ? template.verifyUrlBase : 'oblixelacademy.com/verify/';
     const verifyUrl = verifyBase + certificateCode;
 
@@ -1535,7 +1540,7 @@ router.post('/users/:userId/force-pass', isMainAdmin, async (req, res) => {
       status: 'issued',
       type: enrollment.type,
       issueDate: now,
-      expiryDate: null,
+      expiryDate: expiryDate,
       verifyUrl: verifyUrl,
       submittedAt: now,
       issuedAt: now,
