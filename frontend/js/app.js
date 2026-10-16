@@ -6526,7 +6526,7 @@ async function renderAdmin() {
   try { _adminState.stats = await getAdminStats(); } catch (e) { console.error('Stats error:', e); }
   try { const vd = await getVouchers(); _adminState.vouchers = vd.vouchers || []; } catch (e) { console.error('Vouchers error:', e); }
   try { const pd = await getPendingCertificates(); _adminState.pending = pd.pending || []; } catch (e) { console.error('Pending error:', e); }
-  try { const ud = await getAllUsers(); _adminState.users = ud.users || []; } catch (e) { console.error('Users error:', e); }
+  try { const ud = await getAllUsers(); _adminState.users = (ud.users || []).map(u => Object.assign({}, u, { id: u.id || (u._id ? String(u._id) : '') })); console.log('[ADMIN] Loaded ' + _adminState.users.length + ' users, sample id:', _adminState.users[0] && _adminState.users[0].id); } catch (e) { console.error('Users error:', e); }
   try { _adminState.courses = await getCourses(); } catch (e) { console.error('Courses error:', e); }
   try { _adminState.finance = await getFinanceData(); } catch (e) { console.error('Finance error:', e); }
 
@@ -9404,6 +9404,90 @@ window.showGrantExamAccessModal = async function(user) {
   }
 };
 
+// ==================== ADMIN: CLEAR RETAKE FEE MODAL ====================
+async function showClearRetakeModal(user) {
+  try {
+    var uid = user.id || user._id;
+    var token = localStorage.getItem('auth_token');
+    var res = await fetch('/api/admin/users/' + uid + '/enrollments', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    var data = await res.json();
+    var enrollments = data.enrollments || data || [];
+
+    // Filter to only enrollments with a retake fee
+    var eligible = enrollments.filter(function(e) { return e.retakeFeeRequired || e.status === 'failed'; });
+
+    var h = '<div id="clearRetakeModal" class="fixed inset-0 bg-black/80 z-[1300] flex items-center justify-center p-4" style="backdrop-filter:blur(4px);" onclick="if(event.target===this)this.remove()">';
+    h += '<div class="admin-panel" style="max-width:560px;width:100%;margin:0;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-broom"></i> Clear Retake Fee</div><button class="admin-icon-btn" onclick="document.getElementById(\'clearRetakeModal\').remove()"><i class="fa-solid fa-xmark"></i></button></div>';
+
+    // Info
+    h += '<div style="padding:10px 12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--a-meta);">';
+    h += '<div><strong style="color:var(--a-text);">' + escapeHtml(user.name || '') + '</strong></div>';
+    h += '<div>' + escapeHtml(user.email || '') + '</div>';
+    h += '</div>';
+
+    if (eligible.length === 0) {
+      h += '<p style="padding:16px;color:var(--a-muted);font-size:13px;">No enrollments with retake fees found for this user.</p>';
+      h += '<div style="display:flex;justify-content:flex-end;"><button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'clearRetakeModal\').remove()">Close</button></div>';
+    } else {
+      // Course dropdown
+      h += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Course</label>';
+      h += '<select id="clearRetakeCourse" class="admin-search" style="width:100%;margin-top:6px;height:40px;">';
+      eligible.forEach(function(e) {
+        h += '<option value="' + e.courseId + '">' + escapeHtml(e.courseName || e.courseId) + ' — status: ' + e.status + '</option>';
+      });
+      h += '</select></div>';
+
+      // Reason
+      h += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Reason (audit log)</label>';
+      h += '<input id="clearRetakeReason" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;height:40px;" placeholder="e.g., Goodwill retake" autocomplete="off"></div>';
+
+      // Buttons
+      h += '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">';
+      h += '<button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'clearRetakeModal\').remove()">Cancel</button>';
+      h += '<button class="admin-btn" id="clearRetakeBtn"><i class="fa-solid fa-broom"></i> Clear Retake Fee</button>';
+      h += '</div>';
+    }
+
+    h += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', h);
+
+    var btn = document.getElementById('clearRetakeBtn');
+    if (btn) {
+      btn.addEventListener('click', async function() {
+        var courseId = document.getElementById('clearRetakeCourse').value;
+        var reason = document.getElementById('clearRetakeReason').value.trim();
+        btn.disabled = true;
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+        try {
+          var r = await fetch('/api/admin/users/' + uid + '/clear-retake-fee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ courseId: courseId, reason: reason })
+          });
+          var result = await r.json();
+          if (!r.ok) throw new Error(result.error || 'Failed');
+          showToast(result.message || 'Retake fee cleared', 'success');
+          document.getElementById('clearRetakeModal').remove();
+          renderAdmin();
+        } catch (err) {
+          btn.disabled = false;
+          btn.innerHTML = orig;
+          showToast('Failed: ' + err.message, 'error');
+        }
+      });
+    }
+  } catch (e) {
+    console.error('showClearRetakeModal error:', e);
+    showToast('Failed to open modal: ' + e.message, 'error');
+  }
+}
+window.showClearRetakeModal = showClearRetakeModal;
 async function grantOrRevokeExamAccess(user, action) {
   var courseId = document.getElementById('grantExamCourse').value;
   var reason = document.getElementById('grantExamReason').value.trim();
