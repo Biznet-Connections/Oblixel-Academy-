@@ -9660,3 +9660,25 @@ if (document.readyState === 'loading') {
   // DOM already ready — run immediately
   __obliXelBoot__();
 }
+// ==================== BULLETPROOF ADMIN USER.ID PATCH ====================
+(function() {
+  // Wait for all functions to be defined
+  setTimeout(function() {
+    if (typeof window.showExamHistoryModal === 'function') {
+      var origExamHistory = window.showExamHistoryModal;
+      window.showExamHistoryModal = function(user) {
+        if (user && !user.id && user._id) user.id = String(user._id);
+        if (user && !user.id) { console.warn('[PATCH] user has no id or _id:', user); }
+        return origExamHistory.call(this, user);
+      };
+    }
+    if (typeof window.showGrantExamAccessModal === 'function') {
+      var origGrant = window.showGrantExamAccessModal;
+      window.showGrantExamAccessModal = function(user) {
+        if (user && !user.id && user._id) user.id = String(user._id);
+        return origGrant.call(this, user);
+      };
+    }
+    console.log('✅ [PATCH] Admin modals patched with _id fallback');
+  }, 100);
+})();
