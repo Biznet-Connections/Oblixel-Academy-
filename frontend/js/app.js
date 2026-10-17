@@ -7623,9 +7623,9 @@ function openAdminUserMenu(btnEl, user) {
   h += '<button class="admin-menu-item" data-action="reset-avatar"><i class="fa-solid fa-rotate"></i>Reset avatar</button>';
   h += '<button class="admin-menu-item" data-action="reset-password"><i class="fa-solid fa-key"></i>Reset password</button>';
   h += '<button class="admin-menu-item" data-action="grant-exam"><i class="fa-solid fa-unlock-keyhole"></i>Grant exam access</button>';
-  h += '<button class=""admin-menu-item"" data-action=""exam-history""><i class=""fa-solid fa-list-check""></i>View exam history</button>';
-  h += '<button class=""admin-menu-item"" data-action=""clear-retake""><i class=""fa-solid fa-broom""></i>Clear retake fee</button>';
-  h += '<button class=""admin-menu-item"" data-action=""force-pass""><i class=""fa-solid fa-medal""></i>Force pass exam</button>';
+  h += '<button class="admin-menu-item" data-action="exam-history"><i class="fa-solid fa-list-check"></i>View exam history</button>';
+  h += '<button class="admin-menu-item" data-action="clear-retake"><i class="fa-solid fa-broom"></i>Clear retake fee</button>';
+  h += '<button class="admin-menu-item" data-action="force-pass"><i class="fa-solid fa-medal"></i>Force pass exam</button>';
   if (user.role !== 'admin' && !user.isMainAdmin && (isMain || canManageAdmins)) {
     h += '<div class="admin-menu-divider"></div>';
     h += '<button class="admin-menu-item" data-action="make-admin"><i class="fa-solid fa-crown"></i>Make admin</button>';
