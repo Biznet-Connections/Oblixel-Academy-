@@ -7652,6 +7652,7 @@ function openAdminUserMenu(btnEl, user) {
 }
 
 function handleAdminUserAction(action, user) {
+  if (!user.id && user._id) user.id = String(user._id);
   switch (action) {
     case 'view-user': showAdminUserDetails(user); break;
     case 'edit-legal-name': showAdminEditLegalNameModal(user); break;
@@ -9346,7 +9347,8 @@ window.showGrantExamAccessModal = async function(user) {
   // Fetch user's enrollments
   try {
     var token = localStorage.getItem('auth_token');
-    var res = await fetch('/api/admin/users/' + user.id + '/enrollments', {
+    var uid = user.id || (user._id ? String(user._id) : '');
+    var res = await fetch('/api/admin/users/' + uid + '/enrollments', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     var data = await res.json();
@@ -9502,7 +9504,8 @@ async function grantOrRevokeExamAccess(user, action) {
   try {
     var token = localStorage.getItem('auth_token');
     var endpoint = action === 'grant' ? 'grant-exam-access' : 'revoke-exam-access';
-    var res = await fetch('/api/admin/users/' + user.id + '/' + endpoint, {
+    var uid = user.id || (user._id ? String(user._id) : '');
+    var res = await fetch('/api/admin/users/' + uid + '/' + endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ courseId: courseId, reason: reason })
@@ -9537,7 +9540,8 @@ window.showExamHistoryModal = async function(user) {
 
   try {
     var token = localStorage.getItem('auth_token');
-    var res = await fetch('/api/admin/users/' + user.id + '/exam-history', {
+    var uid = user.id || (user._id ? String(user._id) : '');
+    var res = await fetch('/api/admin/users/' + uid + '/exam-history', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     var data = await res.json();
