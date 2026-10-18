@@ -2334,8 +2334,9 @@ if (document.getElementById('hero-slideshow-css')) return;
 
 // ==================== OBLIXEL LIBRARY (STOREFRONT) ====================
 function renderLibrarySection() {
-  const books = libraryBooksData || [];
-  if (books.length === 0) return '';
+  const allBooks = libraryBooksData || [];
+  if (allBooks.length === 0) return '';
+  const books = allBooks.slice(0, 6); // Show only 6 on landing page
 
   var h = '<section style="padding:60px 0; background:#0a0a1a; border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05);">';
   h += '<div class="max-w-7xl mx-auto px-4">';
