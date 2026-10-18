@@ -8,6 +8,7 @@ console.log('🚀 obliXel Academy v13.0 - Loading Complete App Part 1');
 let currentUser = null;
 let currentPage = "landing";
 let coursesData = [];
+let libraryBooksData = [];
 let currentCourseModules = null;
 let currentModuleProgress = null;
 let currentQuizQuestions = null;
@@ -2233,66 +2234,40 @@ if (document.getElementById('hero-slideshow-css')) return;
 })();
 
 // ==================== OBLIXEL LIBRARY (STOREFRONT) ====================
-async function renderLibrarySection() {
-  try {
-    // Fetch live books from the API
-    const res = await fetch('/api/library');
-    const data = await res.json();
-    const books = data.books || [];
+function renderLibrarySection() {
+  const books = libraryBooksData || [];
+  if (books.length === 0) return '';
 
-    if (books.length === 0) return ''; // Hide section if no books
+  var h = '<section class="ls-section ls-section-alt" style="padding:60px 0;">';
+  h += '<div class="max-w-7xl mx-auto px-4">';
+  h += '<div style="text-align:center;margin-bottom:40px;">';
+  h += '<h2 style="font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;">📚 The obliXel Library</h2>';
+  h += '<p style="font-size:15px;color:#94a3b8;">Read exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:24px;">';
 
-    var h = '<section class="ls-section ls-section-alt" style="padding:60px 0;">';
-    h += '<div class="max-w-7xl mx-auto px-4">';
-    
-    // Header
-    h += '<div style="text-align:center;margin-bottom:40px;">';
-    h += '<h2 style="font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;">📚 The obliXel Library</h2>';
-    h += '<p style="font-size:15px;color:#94a3b8;">Read exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p>';
+  books.forEach(function(book) {
+    var isFree = book.price === 0;
+    var priceTag = isFree ? 'FREE' : '$' + book.price.toFixed(2);
+    var priceColor = isFree ? '#10b981' : '#a855f7';
+    var cover = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=70&fit=crop';
+
+    h += '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">';
+    h += '<div style="height:280px;background-image:url(' + String.fromCharCode(39) + cover + String.fromCharCode(39) + ');background-size:cover;background-position:center;position:relative;">';
+    h += '<div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(transparent, #0f172a);"></div>';
     h += '</div>';
+    h += '<div style="padding:16px;">';
+    h += '<div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:4px;">' + (book.category || 'General') + '</div>';
+    h += '<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:4px;">' + (book.title || 'Untitled') + '</div>';
+    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">By ' + (book.author || 'obliXel') + '</div>';
+    h += '<button onclick="window.openBookCheckout(' + String.fromCharCode(39) + book._id + String.fromCharCode(39) + ', ' + String.fromCharCode(39) + priceTag + String.fromCharCode(39) + ')" style="width:100%;padding:10px;border-radius:10px;background:' + priceColor + ';color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">';
+    if (isFree) { h += '📖 Read Free'; } else { h += '🛒 Buy ' + priceTag; }
+    h += '</button>';
+    h += '</div></div>';
+  });
 
-    // Grid
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:24px;">';
-    
-    books.forEach(function(book) {
-      var isFree = book.price === 0;
-      var priceTag = isFree ? 'FREE' : '$' + book.price.toFixed(2);
-      var priceColor = isFree ? '#10b981' : '#a855f7';
-      var cover = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=70&fit=crop'; // Fallback book cover
-      
-      h += '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;transition:transform 0.2s ease;" onmouseover="this.style.transform=\'translateY(-5px)\'" onmouseout="this.style.transform=\'translateY(0)\'">';
-      
-      // Cover Image
-      h += '<div style="height:280px;background:url(\'' + cover + '\') center/cover no-repeat;position:relative;">';
-      h += '<div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(transparent, #0f172a);"></div>';
-      h += '</div>';
-      
-      // Details
-      h += '<div style="padding:16px;">';
-      h += '<div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:4px;">' + book.category + '</div>';
-      h += '<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + book.title + '</div>';
-      h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">By ' + book.author + '</div>';
-      
-      // Button
-      h += '<button onclick="window.openBookCheckout(\'' + book._id + '\', \'' + priceTag + '\')" style="width:100%;padding:10px;border-radius:10px;background:' + priceColor + ';color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:6px;">';
-      if (isFree) {
-        h += '<i class="fa-solid fa-book-open"></i> Read Free';
-      } else {
-        h += '<i class="fa-solid fa-shopping-cart"></i> Buy ' + priceTag;
-      }
-      h += '</button>';
-      
-      h += '</div></div>';
-    });
-
-    h += '</div>';
-    h += '</div></section>';
-    return h;
-
-  } catch (e) {
-    console.warn('Library section failed to load:', e);
-    return '';
-  }
+  h += '</div></div></section>';
+  return h;
 }
 
 // Temporary checkout handler (Phase 3 will add Linkwa)
@@ -9704,6 +9679,17 @@ async function __obliXelBoot__() {
       console.log('✅ Loaded ' + coursesData.length + ' courses');
     } catch (e) {
       console.warn('⚠️  Course load failed:', e.message);
+    }
+    
+    // Load library books
+    try {
+      const libRes = await fetch('/api/library');
+      const libData = await libRes.json();
+      libraryBooksData = libData.books || [];
+      console.log('✅ Loaded ' + libraryBooksData.length + ' library books');
+    } catch (e) {
+      console.warn('⚠️  Library load failed:', e.message);
+      libraryBooksData = [];
     }
     
     // 2. Render landing page
