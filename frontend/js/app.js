@@ -2336,14 +2336,19 @@ if (document.getElementById('hero-slideshow-css')) return;
 function renderLibrarySection() {
   const allBooks = libraryBooksData || [];
   if (allBooks.length === 0) return '';
-  const books = allBooks.slice(0, 6); // Show only 6 on landing page
+  const books = allBooks.slice(0, 5); // Show only 5 on landing
 
+  // Dark background wrapper
   var h = '<section style="padding:60px 0; background:#0a0a1a; border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05);">';
   h += '<div class="max-w-7xl mx-auto px-4">';
+
+  // Header
   h += '<div style="text-align:center;margin-bottom:40px;">';
   h += '<h2 style="font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;">📚 The obliXel Library</h2>';
   h += '<p style="font-size:15px;color:#94a3b8;">Read exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p>';
   h += '</div>';
+
+  // Books Grid
   h += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:24px;">';
 
   books.forEach(function(book) {
@@ -2367,9 +2372,12 @@ function renderLibrarySection() {
   });
 
   h += '</div>';
+
+  // See More Button
   h += '<div style="text-align:center;margin-top:40px;">';
-  h += '<button id="exploreLibraryBtn" style="padding:14px 32px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;font-weight:700;font-size:15px;border:none;cursor:pointer;">📚 Explore Full Library →</button>';
+  h += '<button onclick="window.renderPage(' + String.fromCharCode(39) + 'library' + String.fromCharCode(39) + ')" style="padding:14px 32px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;font-weight:700;font-size:15px;border:none;cursor:pointer;">📚 See more books →</button>';
   h += '</div>';
+
   h += '</div></section>';
   return h;
 }
