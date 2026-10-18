@@ -1681,6 +1681,7 @@ window.renderTrustedBy = renderTrustedBy;
     }
 
     body.landing-mode .ls-section,
+    body.landing-mode section[style*='background:#0a0a1a'] { background:#0a0a1a !important; }
     body.landing-mode .ls-section-alt {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
@@ -2336,7 +2337,7 @@ function renderLibrarySection() {
   const books = libraryBooksData || [];
   if (books.length === 0) return '';
 
-  var h = '<section class="ls-section ls-section-alt" style="padding:60px 0;">';
+  var h = '<section style="padding:60px 0; background:#0a0a1a; border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05);">';
   h += '<div class="max-w-7xl mx-auto px-4">';
   h += '<div style="text-align:center;margin-bottom:40px;">';
   h += '<h2 style="font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;">📚 The obliXel Library</h2>';
@@ -9854,7 +9855,8 @@ if (document.readyState === 'loading') {
   }, 100);
 })();// ==================== OBLIXEL LIBRARY PAGE ====================
 function renderLibraryPage() {
-  if (typeof document.body.classList !== 'undefined') document.body.classList.remove('landing-mode');
+  document.body.classList.remove('landing-mode');
+  document.body.style.background = '#0a0a1a';
   const books = window.libraryBooksData || [];
   
   const cats = ['All'];
