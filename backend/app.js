@@ -60,6 +60,7 @@ app.use(express.urlencoded({ extended: true }));
 console.log('📦 Loading route modules...');
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
+app.use('/api/library', require('./routes/library'));
 app.use('/api/exams', require('./routes/exams'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/certificates', require('./routes/certificates'));

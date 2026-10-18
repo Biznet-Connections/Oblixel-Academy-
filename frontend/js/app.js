@@ -2232,6 +2232,79 @@ if (document.getElementById('hero-slideshow-css')) return;
   document.head.appendChild(style);
 })();
 
+// ==================== OBLIXEL LIBRARY (STOREFRONT) ====================
+async function renderLibrarySection() {
+  try {
+    // Fetch live books from the API
+    const res = await fetch('/api/library');
+    const data = await res.json();
+    const books = data.books || [];
+
+    if (books.length === 0) return ''; // Hide section if no books
+
+    var h = '<section class="ls-section ls-section-alt" style="padding:60px 0;">';
+    h += '<div class="max-w-7xl mx-auto px-4">';
+    
+    // Header
+    h += '<div style="text-align:center;margin-bottom:40px;">';
+    h += '<h2 style="font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;">📚 The obliXel Library</h2>';
+    h += '<p style="font-size:15px;color:#94a3b8;">Read exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p>';
+    h += '</div>';
+
+    // Grid
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:24px;">';
+    
+    books.forEach(function(book) {
+      var isFree = book.price === 0;
+      var priceTag = isFree ? 'FREE' : '$' + book.price.toFixed(2);
+      var priceColor = isFree ? '#10b981' : '#a855f7';
+      var cover = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=70&fit=crop'; // Fallback book cover
+      
+      h += '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;transition:transform 0.2s ease;" onmouseover="this.style.transform=\'translateY(-5px)\'" onmouseout="this.style.transform=\'translateY(0)\'">';
+      
+      // Cover Image
+      h += '<div style="height:280px;background:url(\'' + cover + '\') center/cover no-repeat;position:relative;">';
+      h += '<div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(transparent, #0f172a);"></div>';
+      h += '</div>';
+      
+      // Details
+      h += '<div style="padding:16px;">';
+      h += '<div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:4px;">' + book.category + '</div>';
+      h += '<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + book.title + '</div>';
+      h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">By ' + book.author + '</div>';
+      
+      // Button
+      h += '<button onclick="window.openBookCheckout(\'' + book._id + '\', \'' + priceTag + '\')" style="width:100%;padding:10px;border-radius:10px;background:' + priceColor + ';color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;display:flex;justify-content:center;align-items:center;gap:6px;">';
+      if (isFree) {
+        h += '<i class="fa-solid fa-book-open"></i> Read Free';
+      } else {
+        h += '<i class="fa-solid fa-shopping-cart"></i> Buy ' + priceTag;
+      }
+      h += '</button>';
+      
+      h += '</div></div>';
+    });
+
+    h += '</div>';
+    h += '</div></section>';
+    return h;
+
+  } catch (e) {
+    console.warn('Library section failed to load:', e);
+    return '';
+  }
+}
+
+// Temporary checkout handler (Phase 3 will add Linkwa)
+window.openBookCheckout = function(bookId, priceTag) {
+  if (priceTag === 'FREE') {
+    window.location.href = '/api/library/' + bookId + '/read'; // Placeholder for PDF view
+  } else {
+    showToast('Payment gateway coming soon for ' + priceTag, 'info');
+    // TODO: Call /api/payments/initiate with type: 'book'
+  }
+};
+
 function renderLandingPage() {
   document.body.classList.add('landing-mode');
   console.log('🏠 Rendering landing page with', coursesData.length, 'courses');
@@ -2281,6 +2354,7 @@ function renderLandingPage() {
       ${renderTestimonials()}
       ${renderCareerPaths()}
       ${renderFinalCTA()}
+      ${renderLibrarySection()}
       ${renderTrustedBy()}
       <footer class="border-t border-white/10 py-6 sm:py-12 mt-6 sm:mt-10"><div class="flex flex-wrap justify-center gap-3 sm:gap-6 mb-3 sm:mb-6 text-xl sm:text-2xl"><a href="https://www.facebook.com/obliXel" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-youtube"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="https://wa.me/263714587259" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a></div><p class="text-center text-gray-500 text-xs sm:text-sm">© 2026 obliXel Academy — The future of professional certification</p></footer>
     </div>
