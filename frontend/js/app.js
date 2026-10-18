@@ -840,6 +840,103 @@ async function loadCourses() {
 }
 
 // ==================== PAGE RENDERING DISPATCHER ====================
+
+// ==================== OBLIXEL LIBRARY PAGE ====================
+function renderLibraryPage() {
+  document.body.classList.remove('landing-mode');
+  const books = libraryBooksData || [];
+  
+  // Get unique categories
+  const cats = ['All'];
+  books.forEach(b => {
+    if (b.category && !cats.includes(b.category)) cats.push(b.category);
+  });
+  
+  var h = '<div style="max-width:1280px;margin:0 auto;padding:40px 20px 80px;">';
+  
+  // Header
+  h += '<div style="text-align:center;margin-bottom:40px;">';
+  h += '<h1 style="font-size:42px;font-weight:900;color:#fff;margin-bottom:12px;">📚 The obliXel Library</h1>';
+  h += '<p style="font-size:16px;color:#94a3b8;max-width:600px;margin:0 auto;">Exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p>';
+  h += '</div>';
+  
+  // Search + Filters
+  h += '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px;justify-content:space-between;align-items:center;">';
+  h += '<input id="librarySearch" type="text" placeholder="🔍 Search books..." style="flex:1;min-width:240px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:14px;" oninput="window.filterLibraryBooks()">';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  cats.forEach((cat, i) => {
+    h += '<button class="lib-cat-btn" data-cat="' + cat + '" onclick="window.filterLibraryByCat(\'' + cat + '\')" style="padding:8px 16px;border-radius:10px;background:' + (i === 0 ? 'linear-gradient(90deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.05)') + ';border:1px solid ' + (i === 0 ? 'transparent' : 'rgba(255,255,255,0.1)') + ';color:#fff;font-size:13px;font-weight:600;cursor:pointer;">' + cat + '</button>';
+  });
+  h += '</div>';
+  h += '</div>';
+  
+  // Books grid
+  h += '<div id="libraryGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:24px;">';
+  h += renderLibraryBooks(books);
+  h += '</div>';
+  
+  h += '</div>';
+  
+  var root = document.getElementById('app-root');
+  if (root) {
+    root.innerHTML = h;
+    window.scrollTo(0, 0);
+  }
+}
+
+function renderLibraryBooks(books) {
+  if (books.length === 0) {
+    return '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#94a3b8;"><i class="fa-solid fa-book" style="font-size:48px;opacity:0.3;margin-bottom:16px;"></i><p>No books match your search.</p></div>';
+  }
+  
+  var h = '';
+  books.forEach(function(book) {
+    var isFree = book.price === 0;
+    var priceTag = isFree ? 'FREE' : '$' + book.price.toFixed(2);
+    var priceColor = isFree ? '#10b981' : '#a855f7';
+    var cover = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=70&fit=crop';
+    
+    h += '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">';
+    h += '<div style="height:320px;background-image:url(' + String.fromCharCode(39) + cover + String.fromCharCode(39) + ');background-size:cover;background-position:center;position:relative;">';
+    h += '<div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(transparent, #0f172a);"></div>';
+    h += '</div>';
+    h += '<div style="padding:18px;">';
+    h += '<div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:6px;">' + (book.category || 'General') + '</div>';
+    h += '<div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:6px;">' + (book.title || 'Untitled') + '</div>';
+    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">By ' + (book.author || 'obliXel') + '</div>';
+    h += '<button onclick="window.openBookCheckout(' + String.fromCharCode(39) + book._id + String.fromCharCode(39) + ', ' + String.fromCharCode(39) + priceTag + String.fromCharCode(39) + ')" style="width:100%;padding:12px;border-radius:10px;background:' + priceColor + ';color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">';
+    if (isFree) { h += '📖 Read Free'; } else { h += '🛒 Buy ' + priceTag; }
+    h += '</button>';
+    h += '</div></div>';
+  });
+  return h;
+}
+
+// Filter functions
+window.filterLibraryByCat = function(cat) {
+  document.querySelectorAll('.lib-cat-btn').forEach(b => {
+    const isActive = b.getAttribute('data-cat') === cat;
+    b.style.background = isActive ? 'linear-gradient(90deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.05)';
+    b.style.borderColor = isActive ? 'transparent' : 'rgba(255,255,255,0.1)';
+  });
+  window._activeLibraryCat = cat;
+  window.filterLibraryBooks();
+};
+
+window.filterLibraryBooks = function() {
+  var search = (document.getElementById('librarySearch')?.value || '').toLowerCase();
+  var cat = window._activeLibraryCat || 'All';
+  var all = libraryBooksData || [];
+  var filtered = all.filter(function(b) {
+    var matchCat = (cat === 'All' || b.category === cat);
+    var matchSearch = !search || (b.title || '').toLowerCase().includes(search) || (b.author || '').toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  var grid = document.getElementById('libraryGrid');
+  if (grid) grid.innerHTML = renderLibraryBooks(filtered);
+};
+
+window.renderLibraryPage = renderLibraryPage;
 function renderPage(page) {
   if (page !== 'landing' && typeof window.__stopHeroSlideshow__ === 'function') window.__stopHeroSlideshow__();
   // Handle ?page=dashboard&enrolled=xyz from payment redirect
@@ -858,6 +955,7 @@ function renderPage(page) {
   debugLog(`Rendering page: ${page}`);
   if (page === 'landing') renderLandingPage();
   else if (page === 'dashboard') renderDashboard();
+  else if (page === 'library') { if (typeof renderLibraryPage === 'function') renderLibraryPage(); else renderLandingPage(); }
   else if (page === 'courses') renderCourses();
   else if (page === 'exams') renderExams();
   else if (page === 'certificates') renderCertificates();
@@ -2266,7 +2364,11 @@ function renderLibrarySection() {
     h += '</div></div>';
   });
 
-  h += '</div></div></section>';
+  h += '</div>';
+  h += '<div style="text-align:center;margin-top:40px;">';
+  h += '<button id="exploreLibraryBtn" style="padding:14px 32px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;font-weight:700;font-size:15px;border:none;cursor:pointer;">📚 Explore Full Library →</button>';
+  h += '</div>';
+  h += '</div></section>';
   return h;
 }
 
@@ -9696,6 +9798,15 @@ async function __obliXelBoot__() {
     if (typeof renderLandingPage === 'function') {
       renderLandingPage();
       console.log('✅ Landing page rendered');
+      
+      // Attach library CTA listener
+      setTimeout(function() {
+        var libBtn = document.getElementById('exploreLibraryBtn');
+        if (libBtn && !libBtn._wired) {
+          libBtn._wired = true;
+          libBtn.addEventListener('click', function() { window.renderPage('library'); });
+        }
+      }, 100);
     } else {
       console.error('❌ renderLandingPage not defined');
     }
@@ -9741,4 +9852,79 @@ if (document.readyState === 'loading') {
     }
     console.log('✅ [PATCH] Admin modals patched with _id fallback');
   }, 100);
-})();
+})();// ==================== OBLIXEL LIBRARY PAGE ====================
+function renderLibraryPage() {
+  if (typeof document.body.classList !== 'undefined') document.body.classList.remove('landing-mode');
+  const books = window.libraryBooksData || [];
+  
+  const cats = ['All'];
+  books.forEach(function(b) { if (b.category && cats.indexOf(b.category) === -1) cats.push(b.category); });
+  
+  var h = '<div style="max-width:1280px;margin:0 auto;padding:40px 20px 80px;">';
+  h += '<div style="text-align:center;margin-bottom:40px;"><h1 style="font-size:42px;font-weight:900;color:#fff;margin-bottom:12px;">📚 The obliXel Library</h1><p style="font-size:16px;color:#94a3b8;max-width:600px;margin:0 auto;">Exclusive guides, books, and resources. Free for enrolled students, or buy individually.</p></div>';
+  
+  h += '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px;justify-content:space-between;align-items:center;">';
+  h += '<input id="librarySearch" type="text" placeholder="🔍 Search books..." style="flex:1;min-width:240px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:14px;" oninput="window.filterLibraryBooks()">';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  cats.forEach(function(cat, i) {
+    h += '<button class="lib-cat-btn" data-cat="' + cat + '" onclick="window.filterLibraryByCat(this.getAttribute(' + String.fromCharCode(39) + 'data-cat' + String.fromCharCode(39) + '))" style="padding:8px 16px;border-radius:10px;background:' + (i === 0 ? 'linear-gradient(90deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.05)') + ';border:1px solid ' + (i === 0 ? 'transparent' : 'rgba(255,255,255,0.1)') + ';color:#fff;font-size:13px;font-weight:600;cursor:pointer;">' + cat + '</button>';
+  });
+  h += '</div></div>';
+  
+  h += '<div id="libraryGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:24px;">';
+  h += window.renderLibraryBooks(books);
+  h += '</div></div>';
+  
+  var root = document.getElementById('app-root');
+  if (root) { root.innerHTML = h; window.scrollTo(0, 0); }
+}
+
+function renderLibraryBooks(books) {
+  if (books.length === 0) return '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#94a3b8;"><i class="fa-solid fa-book" style="font-size:48px;opacity:0.3;margin-bottom:16px;"></i><p>No books match your search.</p></div>';
+  var h = '';
+  books.forEach(function(book) {
+    var isFree = book.price === 0;
+    var priceTag = isFree ? 'FREE' : '$' + book.price.toFixed(2);
+    var priceColor = isFree ? '#10b981' : '#a855f7';
+    var cover = book.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=70&fit=crop';
+    
+    h += '<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">';
+    h += '<div style="height:320px;background-image:url(' + String.fromCharCode(39) + cover + String.fromCharCode(39) + ');background-size:cover;background-position:center;position:relative;">';
+    h += '<div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(transparent, #0f172a);"></div></div>';
+    h += '<div style="padding:18px;">';
+    h += '<div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:6px;">' + (book.category || 'General') + '</div>';
+    h += '<div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:6px;">' + (book.title || 'Untitled') + '</div>';
+    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">By ' + (book.author || 'obliXel') + '</div>';
+    h += '<button data-bookid="' + book._id + '" data-pricetag="' + priceTag + '" class="lib-book-btn" style="width:100%;padding:12px;border-radius:10px;background:' + priceColor + ';color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;">';
+    if (isFree) { h += '📖 Read Free'; } else { h += '🛒 Buy ' + priceTag; }
+    h += '</button></div></div>';
+  });
+  return h;
+}
+
+window.filterLibraryByCat = function(cat) {
+  document.querySelectorAll('.lib-cat-btn').forEach(function(b) {
+    var isActive = b.getAttribute('data-cat') === cat;
+    b.style.background = isActive ? 'linear-gradient(90deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.05)';
+    b.style.borderColor = isActive ? 'transparent' : 'rgba(255,255,255,0.1)';
+  });
+  window._activeLibraryCat = cat;
+  window.filterLibraryBooks();
+};
+
+window.filterLibraryBooks = function() {
+  var searchEl = document.getElementById('librarySearch');
+  var search = (searchEl ? searchEl.value : '').toLowerCase();
+  var cat = window._activeLibraryCat || 'All';
+  var all = window.libraryBooksData || [];
+  var filtered = all.filter(function(b) {
+    var matchCat = (cat === 'All' || b.category === cat);
+    var matchSearch = !search || (b.title || '').toLowerCase().indexOf(search) !== -1 || (b.author || '').toLowerCase().indexOf(search) !== -1;
+    return matchCat && matchSearch;
+  });
+  var grid = document.getElementById('libraryGrid');
+  if (grid) grid.innerHTML = window.renderLibraryBooks(filtered);
+};
+
+window.renderLibraryPage = renderLibraryPage;
+window.renderLibraryBooks = renderLibraryBooks;
