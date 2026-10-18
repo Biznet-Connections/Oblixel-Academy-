@@ -1614,7 +1614,7 @@ function renderTrustedBy() {
   var partners = [
     { name: "Google", icon: "fab fa-google", url: "https://cloud.google.com", color: "#4285F4" },
     { name: "AWS", icon: "fab fa-aws", url: "https://aws.amazon.com", color: "#FF9900" },
-    { name: "Meta", icon: "fab fa-meta", url: "https://meta.com", color: "#0064E1" },
+    
     { name: "Microsoft", icon: "fab fa-microsoft", url: "https://microsoft.com", color: "#00A4EF" },
     { name: "Cisco", icon: "fab fa-cisco", url: "https://cisco.com", color: "#1BA0D7" },
     { name: "Oracle", icon: "fas fa-database", url: "https://oracle.com", color: "#C74634" },
@@ -2394,7 +2394,7 @@ function renderLandingPage() {
   const globalPartners = [
     { name: "Google", icon: "fab fa-google", url: "https://cloud.google.com", color: "#4285F4" },
     { name: "AWS", icon: "fab fa-aws", url: "https://aws.amazon.com", color: "#FF9900" },
-    { name: "Meta", icon: "fab fa-meta", url: "https://meta.com", color: "#0064E1" },
+    
     { name: "Microsoft", icon: "fab fa-microsoft", url: "https://microsoft.com", color: "#00A4EF" },
     { name: "Cisco", icon: "fab fa-cisco", url: "https://cisco.com", color: "#1BA0D7" },
     { name: "Oracle", icon: "fas fa-database", url: "https://oracle.com", color: "#C74634" },
