@@ -1682,6 +1682,7 @@ window.renderTrustedBy = renderTrustedBy;
 
     body.landing-mode .ls-section,
     body.landing-mode section[style*='background:#0a0a1a'] { background:#0a0a1a !important; }
+    body.landing-mode #obliXelLibrary { background: #0a0a1a !important; border-top: 1px solid rgba(255,255,255,0.05) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
     body.landing-mode .ls-section-alt {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
@@ -2339,7 +2340,7 @@ function renderLibrarySection() {
   const books = allBooks.slice(0, 5); // Show only 5 on landing
 
   // Dark background wrapper
-  var h = '<section style="padding:60px 0; background:#0a0a1a; border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05);">';
+  var h = '<section id="obliXelLibrary" style="padding:60px 0;">';
   h += '<div class="max-w-7xl mx-auto px-4">';
 
   // Header
