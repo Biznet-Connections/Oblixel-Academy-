@@ -1485,7 +1485,7 @@ function renderCategoryTiles() {
       bg: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=60&fit=crop' }
   ];
 
-  var html = '<section class="ls-section">';
+  var html = '<section class="ls-section" style="background:#ffffff !important; color:#1e293b !important;">';
   html += '<div class="ls-header">';
   html += '<h2>Explore by category</h2>';
   html += '<p>Find the certification path that matches your career goals</p>';
@@ -1568,7 +1568,7 @@ function renderCareerPaths() {
     { name: 'Cybersecurity Analyst', rating: '4.6', reviews: '189K', hours: '35h', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=70&fit=crop' }
   ];
 
-  var html = '<section class="ls-section">';
+  var html = '<section class="ls-section" style="background:#ffffff !important; color:#1e293b !important;">';
   html += '<div class="ls-header">';
   html += '<h2>Ready to reimagine your career?</h2>';
   html += '<p>Get the skills and real-world experience employers want</p>';
@@ -1690,6 +1690,15 @@ window.renderTrustedBy = renderTrustedBy;
 
     body.landing-mode .ls-header h2 { color: #0f172a !important; }
     body.landing-mode .ls-header p { color: #64748b !important; }
+    /* Specific override for category tiles header */
+    body.landing-mode .ls-section[style*='#ffffff'] .ls-header h2 { color: #0f172a !important; }
+    body.landing-mode .ls-section[style*='#ffffff'] .ls-header p { color: #64748b !important; }
+    /* Ensure the icon chip is dark purple on light bg */
+    .cat-icon {
+      background: rgba(0,0,0,0.4) !important;
+      color: #fff !important;
+      border: none !important;
+    }
 
     /* Hero text — keep readable on photos */
     body.landing-mode .hero-slideshow h1,
