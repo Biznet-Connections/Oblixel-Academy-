@@ -9866,7 +9866,7 @@ if (document.readyState === 'loading') {
 })();// ==================== OBLIXEL LIBRARY PAGE ====================
 function renderLibraryPage() {
   document.body.classList.remove('landing-mode');
-  document.body.style.background = '#0a0a1a';
+  document.body.style.background = ''; // Reset background — CSS will handle it
   const books = window.libraryBooksData || [];
   
   const cats = ['All'];
