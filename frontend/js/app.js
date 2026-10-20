@@ -817,9 +817,9 @@ function updateAuthUI() {
     if (hamburgerBtn) hamburgerBtn.style.display = 'block';
     const navbarLogo = document.getElementById('navbarLogo');
     if (navbarLogo) navbarLogo.style.display = 'none';
-    if (currentUser.role === 'admin') {
-      if (adminLink) { adminLink.classList.remove('hidden'); adminLink.classList.add('show-admin'); }
-      if (adminLinkMobile) { adminLinkMobile.classList.remove('hidden'); adminLinkMobile.classList.add('show-admin'); }
+    if (currentUser.role === 'admin' || currentUser.isMainAdmin) {
+      if (adminLink) { adminLink.classList.remove('hidden'); adminLink.style.display = 'flex'; }
+      if (adminLinkMobile) { adminLinkMobile.classList.remove('hidden'); adminLinkMobile.style.display = 'block'; }
     } else {
       if (adminLink) adminLink.classList.add('hidden');
       if (adminLinkMobile) adminLinkMobile.classList.add('hidden');
@@ -9782,6 +9782,16 @@ async function __obliXelBoot__() {
       localStorage.removeItem('auth_token');
     }
     updateAuthUI();
+    // HARD GUARANTEE: Force admin links visible
+    if (currentUser && (currentUser.role === 'admin' || currentUser.isMainAdmin)) {
+      setTimeout(function() {
+        var al = document.getElementById('admin-nav-link');
+        var alm = document.getElementById('admin-nav-link-mobile');
+        if (al) { al.classList.remove('hidden'); al.style.setProperty('display', 'flex', 'important'); }
+        if (alm) { alm.classList.remove('hidden'); alm.style.setProperty('display', 'block', 'important'); }
+        console.log('✅ Admin links forcibly shown');
+      }, 100);
+    }
 
     // 1. Load courses from API
     try {
