@@ -215,21 +215,48 @@ function updateNavbarStyle() {
 function initNavbarAutoHide() {
   const navbar = document.getElementById('mainNavbar');
   if (!navbar) return;
+
+  // Ensure navbar is visible on load
+  navbar.classList.remove('navbar-hidden');
+  navbarVisible = true;
+  lastScrollY = 0;
+
   window.addEventListener('scroll', () => {
     const currentScrollY = window.scrollY;
-    if (currentScrollY > lastScrollY && currentScrollY > 100) {
-      if (navbarVisible) { navbar.classList.add('navbar-hidden'); navbarVisible = false; }
-    } else {
-      if (!navbarVisible) { navbar.classList.remove('navbar-hidden'); navbarVisible = true; }
+    
+    // Always show navbar at the very top
+    if (currentScrollY <= 10) {
+      navbar.classList.remove('navbar-hidden');
+      navbarVisible = true;
+      lastScrollY = currentScrollY;
+      return;
     }
+
+    // Only auto-hide on mobile (<= 768px) AND if not on admin dashboard
+    if (window.innerWidth <= 768) {
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        if (navbarVisible) { navbar.classList.add('navbar-hidden'); navbarVisible = false; }
+      } else {
+        if (!navbarVisible) { navbar.classList.remove('navbar-hidden'); navbarVisible = true; }
+      }
+    } else {
+      // Desktop: never auto-hide
+      navbar.classList.remove('navbar-hidden');
+      navbarVisible = true;
+    }
+    
     lastScrollY = currentScrollY;
   });
+
   document.addEventListener('touchstart', (e) => {
     if (e.touches[0].clientY < 80 && !navbarVisible) {
       navbar.classList.remove('navbar-hidden');
       navbarVisible = true;
       setTimeout(() => {
-        if (window.scrollY > 100 && navbarVisible) { navbar.classList.add('navbar-hidden'); navbarVisible = false; }
+        if (window.scrollY > 100 && window.innerWidth <= 768 && navbarVisible) { 
+          navbar.classList.add('navbar-hidden'); 
+          navbarVisible = false; 
+        }
       }, 3000);
     }
   });
