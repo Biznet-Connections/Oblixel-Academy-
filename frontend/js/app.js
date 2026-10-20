@@ -2037,8 +2037,8 @@ function renderCourseCard(cert) {
     : false;
 
   var enrollPrice = Number(cert.enrollPrice || cert.price || cert.examPrice || 0);
-  var oldPrice = Math.round(enrollPrice * 2);
-  var discountPct = oldPrice > 0 ? Math.round(((oldPrice - enrollPrice) / oldPrice) * 100) : 0;
+  var oldPrice = 0;
+  var discountPct = 0;
 
   var enrolledCount = Number(cert.enrolledCount || 0);
   var isBestseller = enrolledCount >= 2000;
@@ -2086,7 +2086,7 @@ function renderCourseCard(cert) {
         <div class="rc-price-row">
           <span class="rc-price">$${enrollPrice}</span>
           ${oldPrice > enrollPrice ? `<span class="rc-price-old">$${oldPrice}</span>` : ''}
-          ${discountPct > 0 ? `<span class="rc-discount">${discountPct}% OFF</span>` : ''}
+          ${discountPct > 0 ? `` : ''}
         </div>
         <div class="rc-cta-row">
           <button class="rc-btn-enroll ${enrolled ? 'rc-enrolled' : ''}"
@@ -3351,41 +3351,30 @@ function renderCoursesGrid() {
     list = list.filter(c => (c.name || '').toLowerCase().includes(state.search) || (c.description || '').toLowerCase().includes(state.search));
   }
 
-  // Enrolled first
+  // Sort: Bestsellers first, then enrolled, then by enrolledCount
   list.sort((a, b) => {
-    const aEnrolled = state.enrolledIds.includes(a.id) ? 1 : 0;
-    const bEnrolled = state.enrolledIds.includes(b.id) ? 1 : 0;
-    if (aEnrolled !== bEnrolled) return bEnrolled - aEnrolled;
+    const aBest = (a.enrolledCount || 0) >= 2000 ? 1 : 0;
+    const bBest = (b.enrolledCount || 0) >= 2000 ? 1 : 0;
+    if (aBest !== bBest) return bBest - aBest;
     return (b.enrolledCount || 0) - (a.enrolledCount || 0);
   });
 
   if (list.length === 0) {
-    grid.innerHTML = '<div class="u-empty"><i class="fa-solid fa-magnifying-glass"></i>No courses match your filter.</div>';
+    grid.innerHTML = '<div class="u-empty" style="padding:40px;text-align:center;color:#94a3b8;"><i class="fa-solid fa-magnifying-glass" style="font-size:32px;margin-bottom:10px;"></i><p>No courses match your filter.</p></div>';
     return;
   }
 
-  let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">';
+  // Use the same beautiful card from the landing page
+  let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">';
   list.forEach(c => {
-    const cp = c.enrollPrice || c.price || c.examPrice || 0;
-    const isEnrolled = state.enrolledIds.includes(c.id);
-    const enrollment = state.enrolledMap.get(c.id);
-    const pct = enrollment ? (enrollment.progress || 0) : 0;
-
-    h += '<div class="u-course-card" style="min-width:0;max-width:none;" onclick="window.handleEnrollClick(\'' + c.id + '\')">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;">';
-    h += '<div class="u-course-card-icon"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '"></i></div>';
-    if (isEnrolled) h += '<span style="padding:3px 8px;border-radius:999px;background:rgba(16,185,129,0.15);color:#34d399;font-size:10px;font-weight:700;letter-spacing:0.3px;">ENROLLED</span>';
-    h += '</div>';
-    h += '<div class="u-course-card-title">' + escapeHtml(c.name) + '</div>';
-    h += '<div class="u-course-card-cat">' + escapeHtml(c.category || 'Certification') + ' · ' + (c.totalModules || 8) + ' modules</div>';
-    if (isEnrolled) {
-      h += '<div class="u-progress-bar" style="margin-bottom:8px;"><div class="u-progress-fill" style="width:' + pct + '%"></div></div>';
-      h += '<div style="font-size:11px;color:var(--u-muted);margin-bottom:4px;">' + pct + '% complete</div>';
+    if (typeof renderCourseCard === 'function') {
+      h += renderCourseCard(c);
+    } else {
+      h += '<div style="padding:20px;border:1px solid #ccc;">' + c.name + '</div>'; // fallback
     }
-    h += '<div class="u-course-card-price">$' + cp + '</div>';
-    h += '</div>';
   });
   h += '</div>';
+  
   grid.innerHTML = h;
 }
 async function renderExams() {
@@ -8329,7 +8318,8 @@ window.createNewAdminAccount = createNewAdminAccount;
 window.promoteExistingUser = promoteExistingUser;
 
 function showAddCourseModal() {
-  var m = '<div id="addCourseModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-plus-circle mr-2"></i> Add New Course</h2><button onclick="closeModal(\'addCourseModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="space-y-4"><div><label class="block text-sm font-medium mb-1">Course Name *</label><input type="text" id="courseName" placeholder="e.g., DevOps Master" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" autocomplete="off"></div><div><label class="block text-sm font-medium mb-1">Description</label><textarea id="courseDesc" rows="3" placeholder="Course description..." class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></textarea></div><div><label class="block text-sm font-medium mb-1">Course Fee *</label><input type="number" id="coursePrice" placeholder="199" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Icon</label><input type="text" id="courseIcon" placeholder="fa-certificate" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="courseCategory" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option>Networking</option><option>Cybersecurity</option><option>Cloud Computing</option><option>Development</option><option>AI</option><option>Business</option><option>Professional Skills</option></select></div></div><div class="pt-4 flex gap-3"><button onclick="createNewCourse()" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold">➕ Create Course</button><button onclick="closeModal(\'addCourseModal\')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div></div>';
+  var m = '<div id="addCourseModal" class="fixed inset-0 bg-black/90 z-[1200] flex items-center justify-center p-4" style="backdrop-filter: blur(4px);"><div class="glass rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4 flex justify-between items-center rounded-t-3xl"><h2 class="text-xl font-bold"><i class="fa-solid fa-plus-circle mr-2"></i> Add New Course</h2><button onclick="closeModal(\'addCourseModal\')" class="text-white/80 hover:text-white text-2xl">&times;</button></div><div class="p-6"><div class="space-y-4"><div><label class="block text-sm font-medium mb-1">Course Name *</label><input type="text" id="editCourseName" value="' + escapeHtml(c.name) + '" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div>
+<div><label class="block text-sm font-medium mb-1">Thumbnail Image URL</label><input type="text" id="editCourseImage" value="' + escapeHtml(c.bannerImage || '') + '" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition" placeholder="https://images.unsplash.com/..."></div><div><label class="block text-sm font-medium mb-1">Description</label><textarea id="courseDesc" rows="3" placeholder="Course description..." class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></textarea></div><div><label class="block text-sm font-medium mb-1">Course Fee *</label><input type="number" id="coursePrice" placeholder="199" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Icon</label><input type="text" id="courseIcon" placeholder="fa-certificate" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2 focus:border-cyan-400 transition"></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="courseCategory" class="w-full bg-transparent border border-white/20 rounded-xl px-4 py-2"><option>Networking</option><option>Cybersecurity</option><option>Cloud Computing</option><option>Development</option><option>AI</option><option>Business</option><option>Professional Skills</option></select></div></div><div class="pt-4 flex gap-3"><button onclick="createNewCourse()" class="flex-1 bg-gradient-to-r from-purple-600 to-cyan-500 py-3 rounded-xl font-bold">➕ Create Course</button><button onclick="closeModal(\'addCourseModal\')" class="flex-1 glass py-3 rounded-xl font-bold">Cancel</button></div></div></div></div></div>';
   document.body.insertAdjacentHTML('beforeend', m);
 }
 
