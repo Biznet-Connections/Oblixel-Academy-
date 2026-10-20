@@ -2447,7 +2447,7 @@ function renderLandingPage() {
       ${renderCategoryTiles()}
       ${renderWhyUsPanel()}
       <section class="py-6 sm:py-10"><div class="glass rounded-3xl py-3 sm:py-6 marquee"><div class="marquee-content">${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}${marqueePartners.map(p => `<span class="text-sm sm:text-xl font-bold mx-3 sm:mx-6" style="color: ${p.color};display:inline-flex;align-items:center;gap:6px">${__brandSvg__(p.name)}${p.name}</span>`).join('')}</div></div></section>
-      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(renderCourseCard).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button id="seeAllCoursesBtn" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
+      <section class="py-10 sm:py-16" id="certifications"><div class="text-center mb-6 sm:mb-12" data-aos="fade-up"><h2 class="text-3xl sm:text-5xl font-black">Featured <span class="gradient-text">Certifications</span></h2><p class="text-gray-400 text-sm sm:text-base mt-2">Industry-recognized credentials — NCP & CCP now available!</p></div><div class="courses-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">${featuredCourses.length > 0 ? featuredCourses.map(renderCourseCard).join('') : '<div class="col-span-3 text-center py-10"><p class="text-yellow-400">Loading courses...</p></div>'}</div><div class="text-center mt-8 sm:mt-12"><button onclick="window.renderPage('courses')" class="glass px-5 sm:px-8 py-2 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base">🔍 See All ${coursesData.length} Certifications →</button></div></section>
       ${renderTestimonials()}
       ${renderCareerPaths()}
       ${renderFinalCTA()}
@@ -3258,10 +3258,12 @@ async function renderCourses() {
     }
 
     let userEnrollments = [];
-    try {
-      const profileData = await getUserProfile();
-      userEnrollments = profileData.enrollments || [];
-    } catch (e) {}
+    if (currentUser) {
+      try {
+        const profileData = await getUserProfile();
+        userEnrollments = profileData.enrollments || [];
+      } catch (e) { console.warn('Profile fetch failed:', e.message); }
+    }
 
     const enrolledIds = userEnrollments.map(e => e.courseId);
     const enrolledMap = new Map(userEnrollments.map(e => [e.courseId, e]));
@@ -3288,7 +3290,7 @@ async function renderCourses() {
 
     // Header
     h += '<div style="margin-bottom:20px;">';
-    h += '<div class="u-hero-greeting">Courses</div>';
+    h += '<div style="margin-bottom:20px;"><a onclick="window.renderPage(' + String.fromCharCode(39) + 'landing' + String.fromCharCode(39) + ')" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;text-decoration:none;"><i class="fa-solid fa-arrow-left"></i> Back to Home</a></div>';
     h += '<div class="u-hero-stats"><span class="u-hero-stat"><i class="fa-solid fa-book"></i> ' + coursesData.length + ' certifications available</span></div>';
     h += '</div>';
 
@@ -3419,10 +3421,12 @@ async function renderCertificates() {
     const pending = data.pending || [];
 
     let userEnrollments = [];
-    try {
-      const profileData = await getUserProfile();
-      userEnrollments = profileData.enrollments || [];
-    } catch (e) {}
+    if (currentUser) {
+      try {
+        const profileData = await getUserProfile();
+        userEnrollments = profileData.enrollments || [];
+      } catch (e) { console.warn('Profile fetch failed:', e.message); }
+    }
 
     const inProgress = userEnrollments.filter(e => e.status === 'enrolled' || e.status === 'failed');
 
