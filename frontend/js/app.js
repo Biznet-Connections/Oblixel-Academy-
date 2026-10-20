@@ -2852,208 +2852,107 @@ function renderLogin() {
 // ==================== DASHBOARD PAGE ====================
 // ==================== DASHBOARD v15 (Sidebar + Next Step) ====================
 async function renderDashboard() {
-  document.body.classList.remove('landing-mode');
   if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
+  document.body.classList.remove('landing-mode');
+  
   const root = document.getElementById('app-root');
-  root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading dashboard...</p></div>';
+  root.innerHTML = '<div class="text-center py-20"><div class="thinking-dots"><span></span><span></span><span></span></div><p class="mt-4">Loading your dashboard...</p></div>';
 
   try {
     const profileData = await getUserProfile();
     const user = profileData.user;
     const stats = profileData.stats;
     const enrollmentsData = profileData.enrollments || [];
-    userEnrollmentsCache = enrollmentsData;
-
-    if (user.hasProvidedLegalName !== undefined) {
-      currentUser.hasProvidedLegalName = user.hasProvidedLegalName;
-      currentUser.firstName = user.firstName || '';
-      currentUser.lastName = user.lastName || '';
-      currentUser.fullName = user.fullName || '';
-    }
-
-    let earned = [];
-    try {
-      const certificatesData = await getMyCertificates();
-      earned = certificatesData.earned || [];
-    } catch (e) {}
-
-    const streak = user.streak || 0;
-    const xp = user.xp || 0;
-    const level = user.level || 1;
-    const firstName = (user.name || '').split(' ')[0] || 'there';
-
-    // Current hour greeting
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
-    // ================ NEXT STEP LOGIC ================
-    let nextStep = null;
-    if (enrollmentsData.length === 0) {
-      nextStep = {
-        icon: 'fa-rocket',
-        label: 'Your Next Step',
-        title: 'Enroll in your first course',
-        desc: 'Browse 25+ certifications and start earning today.',
-        actionLabel: 'Browse Courses',
-        actionIcon: 'fa-arrow-right',
-        onClick: "window.renderPage('courses')"
-      };
-    } else {
-      // Find most-recently-active enrollment
-      const active = enrollmentsData.find(e => e.status === 'enrolled') || enrollmentsData[0];
-      const pct = active.progress || 0;
-      nextStep = {
-        icon: 'fa-play',
-        label: 'Continue Learning',
-        title: active.courseName,
-        desc: `${active.moduleProgress?.completedModules || active.moduleProgress?.completedCount || 0} of ${active.moduleProgress?.totalModules || 8} modules · ${pct}% complete`,
-        actionLabel: 'Continue',
-        actionIcon: 'fa-arrow-right',
-        onClick: `window.renderCourseDashboard('${active.courseId}')`
-      };
-    }
-
-    // ================ RECOMMENDED ================
+    
+    // Filter out completed courses for "Recommended"
     const enrolledIds = enrollmentsData.map(e => e.courseId);
-    const recommended = (coursesData || []).filter(c => !enrolledIds.includes(c.id)).slice(0, 8);
+    const recommended = (coursesData || []).filter(c => !enrolledIds.includes(c.id)).slice(0, 3);
 
-    // ================ ACHIEVEMENTS ================
-    const achievements = [
-      { id: 'streak7', icon: '🔥', label: '7-day streak', unlocked: streak >= 7 },
-      { id: 'level2', icon: '⭐', label: 'Reach Level 2', unlocked: level >= 2 },
-      { id: 'first_course', icon: '📚', label: 'First Course', unlocked: enrollmentsData.length > 0 },
-      { id: 'first_cert', icon: '🏅', label: 'First Certificate', unlocked: earned.length > 0 },
-      { id: 'verified', icon: '✅', label: 'Verified Name', unlocked: !!currentUser.hasProvidedLegalName },
-      { id: 'five_certs', icon: '🏆', label: '5 Certificates', unlocked: earned.length >= 5 }
-    ];
-
-    // ================ RENDER ================
     let h = '<div class="user-shell">';
+    h += renderUserSidebar('dashboard');
+    h += '<main style="min-width:0"><div class="user-content">';
 
-    // SIDEBAR (desktop)
-    h += renderUserSidebar('home');
-
-    // MAIN CONTENT
-    h += '<main style="min-width:0">';
-    h += '<div class="user-content">';
-
-    // HERO
-    h += '<div class="u-hero">';
-    h += '<div class="u-hero-greeting">' + greeting + ', ' + escapeHtml(firstName) + ' 👋</div>';
-    h += '<div class="u-hero-stats">';
-    h += '<span class="u-hero-stat streak"><i class="fa-solid fa-fire"></i> ' + streak + '-day streak</span>';
-
-
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat level"><i class="fa-solid fa-medal"></i> Level ' + level + '</span>';
+    // --- HERO HEADER ---
+    const firstName = (user.name || 'Learner').split(' ')[0];
+    const streak = user.streak || 0;
+    h += '<div style="margin-bottom:30px;">';
+    h += '<div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:8px;">Good evening, ' + firstName + ' 👋</div>';
+    h += '<div style="display:flex;gap:12px;font-size:13px;color:#94a3b8;font-weight:600;">';
+    h += '<span>🔥 ' + streak + '-day streak</span>';
+    h += '<span>·</span>';
+    h += '<span>🏅 Level ' + (user.level || 1) + '</span>';
     h += '</div>';
     h += '</div>';
 
-    // LEGAL NAME BANNER (kept, but restyled)
-    if (!currentUser.hasProvidedLegalName) {
-      h += '<div style="margin-bottom:16px;padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;font-size:13px;color:#fbbf24;">';
-      h += '<i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>';
-      h += 'Update your legal name for certificates. <a href="#" onclick="window.showLegalNameModal();return false;" style="color:#a78bfa;font-weight:600;text-decoration:underline;">Update Now →</a>';
-      h += '</div>';
-    }
-
-    // NEXT STEP (the hero CTA)
-    if (nextStep) {
-      h += '<div class="u-nextstep">';
-      h += '<div class="u-nextstep-icon"><i class="fa-solid ' + nextStep.icon + '"></i></div>';
-      h += '<div class="u-nextstep-body">';
-      h += '<div class="u-nextstep-label">' + nextStep.label + '</div>';
-      h += '<div class="u-nextstep-title">' + escapeHtml(nextStep.title) + '</div>';
-      h += '<div class="u-nextstep-desc">' + escapeHtml(nextStep.desc) + '</div>';
-      h += '</div>';
-      h += '<div class="u-nextstep-action"><button class="u-btn u-btn-lg" onclick="' + nextStep.onClick + '"><i class="fa-solid ' + nextStep.actionIcon + '"></i> ' + nextStep.actionLabel + '</button></div>';
-      h += '</div>';
-    }
-
-    // 2-COLUMN: Quick Actions + Continue/Stats
-    h += '<div class="u-grid-2">';
-
-    // QUICK ACTIONS
-    h += '<div class="u-panel">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-bolt"></i> Quick Actions</div></div>';
-    h += '<div class="u-quick-grid">';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'courses\')"><i class="fa-solid fa-book-open"></i> Browse Courses</div>';
-    h += '<div class="u-quick-item" onclick="window.openAskAI ? window.openAskAI() : renderPage(\'dashboard\')"><i class="fa-solid fa-comments"></i> Ask AI</div>';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'certificates\')"><i class="fa-solid fa-certificate"></i> Certificates</div>';
-    h += '<div class="u-quick-item" onclick="window.renderPage(\'profile\')"><i class="fa-solid fa-user"></i> Profile</div>';
-    h += '</div>';
-    h += '</div>';
-
-    // CONTINUE LEARNING (or Get Started if empty)
-    h += '<div class="u-panel">';
+    // --- CONTINUE LEARNING (HERO BANNER) ---
     if (enrollmentsData.length > 0) {
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-clock"></i> Continue Learning</div><a class="u-panel-link" onclick="window.renderPage(\'courses\')">View all →</a></div>';
-      enrollmentsData.slice(0, 3).forEach(e => {
-        const pct = e.progress || 0;
-        h += '<div class="u-course-active">';
-        h += '<div class="u-course-icon"><i class="fa-solid ' + (e.courseIcon || 'fa-certificate') + '"></i></div>';
-        h += '<div class="u-course-body">';
-        h += '<div class="u-course-name">' + escapeHtml(e.courseName) + '</div>';
-        h += '<div class="u-course-meta">' + (e.moduleProgress?.completedCount || 0) + '/' + (e.moduleProgress?.totalModules || 8) + ' modules · ' + pct + '%</div>';
-        h += '<div class="u-progress-bar"><div class="u-progress-fill" style="width:' + pct + '%"></div></div>';
-        h += '</div>';
-        h += '<button class="u-btn" onclick="window.renderCourseDashboard(\'' + e.courseId + '\')"><i class="fa-solid fa-play"></i></button>';
-        h += '</div>';
-      });
-    } else {
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-clock"></i> Continue Learning</div></div>';
-      h += '<div class="u-empty"><i class="fa-solid fa-book-open"></i>No active courses yet.<br>Enroll in your first course to begin!</div>';
+      // Get the most recent enrollment
+      const active = enrollmentsData[0]; 
+      const courseInfo = (coursesData || []).find(c => c.id === active.courseId) || {};
+      const pct = active.progress || 0;
+      const img = courseInfo.bannerImage || __courseImageMap__[active.courseId] || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&q=80&fit=crop';
+
+      h += '<div style="margin-bottom:40px;">';
+      h += '<h2 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:16px;">Continue Learning</h2>';
+      
+      // The Banner Card
+      h += '<div onclick="window.renderCourseDashboard(\'' + active.courseId + '\')" style="position:relative;border-radius:24px;overflow:hidden;cursor:pointer;display:flex;align-items:stretch;min-height:220px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;transition:transform 0.2s;" onmouseover="this.style.transform=\'translateY(-4px)\'" onmouseout="this.style.transform=\'translateY(0)\'">';
+      
+      // Left Image
+      h += '<div style="width:40%;background-image:url(' + String.fromCharCode(39) + img + String.fromCharCode(39) + ');background-size:cover;background-position:center;position:relative;">';
+      h += '<div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(15,23,42,1));"></div>';
+      h += '</div>';
+      
+      // Right Content
+      h += '<div style="flex:1;padding:32px;display:flex;flex-direction:column;justify-content:center;">';
+      h += '<div style="font-size:12px;font-weight:700;color:#a855f7;text-transform:uppercase;margin-bottom:8px;">' + (courseInfo.category || 'Course') + '</div>';
+      h += '<div style="font-size:24px;font-weight:900;color:#fff;line-height:1.2;margin-bottom:16px;">' + (active.courseName || courseInfo.name || 'Course') + '</div>';
+      
+      // Progress Bar
+      h += '<div style="display:flex;justify-content:space-between;font-size:13px;color:#cbd5e1;font-weight:600;margin-bottom:8px;">';
+      h += '<span>' + (active.moduleProgress?.completedCount || 0) + ' / ' + (active.moduleProgress?.totalModules || 8) + ' modules complete</span>';
+      h += '<span style="color:#a855f7;">' + pct + '%</span>';
+      h += '</div>';
+      h += '<div style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:24px;">';
+      h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#7c3aed,#06b6d4);border-radius:4px;"></div>';
+      h += '</div>';
+      
+      // Button
+      h += '<div><button style="padding:12px 24px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;">Continue Learning →</button></div>';
+      
+      h += '</div></div></div>';
     }
-    h += '</div>';
 
-    h += '</div>'; // end grid-2
-
-    // RECOMMENDED (horizontal scroll)
+    // --- RECOMMENDED FOR YOU ---
     if (recommended.length > 0) {
-      h += '<div class="u-panel" style="margin-bottom:20px;">';
-      h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-star"></i> Recommended for You</div><a class="u-panel-link" onclick="window.renderPage(\'courses\')">See all →</a></div>';
-      h += '<div class="u-scroll-row">';
+      h += '<div style="margin-bottom:40px;">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+      h += '<h2 style="font-size:20px;font-weight:800;color:#fff;margin:0;">Recommended for You</h2>';
+      h += '<a onclick="window.renderPage(\'courses\')" style="color:#a855f7;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;">See all →</a>';
+      h += '</div>';
+      
+      h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">';
       recommended.forEach(c => {
-        if (typeof renderCourseCard === 'function') {
-          h += renderCourseCard(c);
-        } else {
-          h += '<div class="u-course-card">' + escapeHtml(c.name) + '</div>';
-        }
+        h += renderCourseCard(c);
       });
-      h += '</div>';
-      h += '</div>';
+      h += '</div></div>';
     }
 
-    // ACHIEVEMENTS
+    // --- ACHIEVEMENTS ---
     h += '<div class="u-panel">';
-    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-trophy"></i> Achievements</div><span style="font-size:11px;color:var(--u-muted);">' + achievements.filter(a => a.unlocked).length + '/' + achievements.length + ' unlocked</span></div>';
-    h += '<div class="u-achievements">';
-    achievements.forEach(a => {
-      h += '<div class="u-achievement ' + (a.unlocked ? 'unlocked' : 'locked') + '">';
-      h += '<span class="u-achievement-icon">' + a.icon + '</span>';
-      h += '<div class="u-achievement-label">' + escapeHtml(a.label) + '</div>';
-      h += '</div>';
-    });
-    h += '</div>';
-    h += '</div>';
+    h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-trophy"></i> Achievements</div></div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;">';
+    // Hardcoded achievements for now, can be expanded later
+    h += '<div style="text-align:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;"><div style="font-size:32px;margin-bottom:8px;">🔥</div><div style="font-size:12px;font-weight:700;color:#fff;">7-day streak</div></div>';
+    h += '<div style="text-align:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;"><div style="font-size:32px;margin-bottom:8px;">📚</div><div style="font-size:12px;font-weight:700;color:#fff;">First Course</div></div>';
+    h += '</div></div>';
 
-    h += '</div>'; // end user-content
-    h += '</main>';
-    h += '</div>'; // end user-shell
-
-    // MOBILE BOTTOM TABS
-    h += renderUserMobileTabs('home');
-
+    h += '</div></main></div>';
     root.innerHTML = h;
 
-    // Wire sidebar + mobile tab clicks
-    wireUserNav();
-
-    showAIWidget();
   } catch (error) {
-    console.error('Dashboard error:', error);
-    root.innerHTML = '<div class="u-panel" style="margin:40px auto;max-width:480px;text-align:center;padding:40px;"><p style="color:var(--u-danger);">Failed to load dashboard: ' + error.message + '</p><button class="u-btn" style="margin-top:16px;" onclick="renderPage(\'landing\')">Go Home</button></div>';
+    root.innerHTML = '<div style="padding:40px;text-align:center;"><p style="color:#ef4444;">Failed to load dashboard: ' + error.message + '</p><button onclick="renderPage(\'landing\')" style="margin-top:16px;padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;">Go Home</button></div>';
   }
 }
 
