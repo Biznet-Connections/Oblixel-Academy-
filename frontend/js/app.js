@@ -9937,3 +9937,17 @@ window.filterLibraryBooks = function() {
 
 window.renderLibraryPage = renderLibraryPage;
 window.renderLibraryBooks = renderLibraryBooks;
+// ==================== GLOBAL NAV CLICK DELEGATION ====================
+document.addEventListener('click', function(e) {
+  var target = e.target.closest('[data-nav]');
+  if (!target) return;
+  e.preventDefault();
+  
+  var navTarget = target.getAttribute('data-nav');
+  if (navTarget) {
+    console.log('🔀 Nav clicked:', navTarget);
+    if (typeof window.renderPage === 'function') {
+      window.renderPage(navTarget);
+    }
+  }
+});
