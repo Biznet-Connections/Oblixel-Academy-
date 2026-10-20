@@ -2943,8 +2943,8 @@ async function renderDashboard() {
     h += '<div class="u-hero-greeting">' + greeting + ', ' + escapeHtml(firstName) + ' 👋</div>';
     h += '<div class="u-hero-stats">';
     h += '<span class="u-hero-stat streak"><i class="fa-solid fa-fire"></i> ' + streak + '-day streak</span>';
-    h += '<span style="opacity:.3;">·</span>';
-    h += '<span class="u-hero-stat xp"><i class="fa-solid fa-bolt"></i> ' + xp.toLocaleString() + ' XP</span>';
+
+
     h += '<span style="opacity:.3;">·</span>';
     h += '<span class="u-hero-stat level"><i class="fa-solid fa-medal"></i> Level ' + level + '</span>';
     h += '</div>';
@@ -3015,13 +3015,11 @@ async function renderDashboard() {
       h += '<div class="u-panel-title"><div class="u-panel-title-left"><i class="fa-solid fa-star"></i> Recommended for You</div><a class="u-panel-link" onclick="window.renderPage(\'courses\')">See all →</a></div>';
       h += '<div class="u-scroll-row">';
       recommended.forEach(c => {
-        const cp = c.enrollPrice || c.price || c.examPrice || 0;
-        h += '<div class="u-course-card" onclick="window.handleEnrollClick(\'' + c.id + '\')">';
-        h += '<div class="u-course-card-icon"><i class="fa-solid ' + (c.icon || 'fa-certificate') + '"></i></div>';
-        h += '<div class="u-course-card-title">' + escapeHtml(c.name) + '</div>';
-        h += '<div class="u-course-card-cat">' + escapeHtml(c.category || 'Certification') + '</div>';
-        h += '<div class="u-course-card-price">$' + cp + '</div>';
-        h += '</div>';
+        if (typeof renderCourseCard === 'function') {
+          h += renderCourseCard(c);
+        } else {
+          h += '<div class="u-course-card">' + escapeHtml(c.name) + '</div>';
+        }
       });
       h += '</div>';
       h += '</div>';
