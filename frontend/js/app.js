@@ -2416,6 +2416,7 @@ window.openBookCheckout = function(bookId, priceTag) {
 
 function renderLandingPage() {
   document.body.classList.add('landing-mode');
+  var __nav = document.getElementById('mobileBottomNav'); if (__nav) __nav.remove();
   console.log('🏠 Rendering landing page with', coursesData.length, 'courses');
   const root = document.getElementById('app-root');
   const ncpCourse = coursesData.find(c => c.id === 'ncp');
@@ -2851,7 +2852,47 @@ function renderLogin() {
 }
 // ==================== DASHBOARD PAGE ====================
 // ==================== DASHBOARD v15 (Sidebar + Next Step) ====================
+
+// ==================== MOBILE BOTTOM NAV ====================
+function renderMobileBottomNav(activeTab) {
+  var tabs = [
+    { id: 'dashboard',    icon: 'fa-house', label: 'Home' },
+    { id: 'courses',      icon: 'fa-book',  label: 'Courses' },
+    { id: 'certificates', icon: 'fa-award', label: 'Certs' },
+    { id: 'community',    icon: 'fa-users', label: 'Social' },
+    { id: 'profile',      icon: 'fa-user',  label: 'Me' }
+  ];
+
+  var h = '<nav id="mobileBottomNav" style="display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#0f172a;border-top:1px solid rgba(255,255,255,0.1);z-index:9999;justify-content:space-around;align-items:center;padding:0 8px;">';
+  tabs.forEach(function(t) {
+    var isActive = t.id === activeTab;
+    var color = isActive ? '#a855f7' : '#64748b';
+    h += '<a onclick="window.renderPage(' + String.fromCharCode(39) + t.id + String.fromCharCode(39) + ')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:1;cursor:pointer;text-decoration:none;color:' + color + ';">';
+    h += '<i class="fa-solid ' + t.icon + '" style="font-size:18px;"></i>';
+    h += '<span style="font-size:10px;font-weight:600;">' + t.label + '</span>';
+    h += '</a>';
+  });
+  h += '</nav>';
+
+  var existing = document.getElementById('mobileBottomNav');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', h);
+
+  if (window.innerWidth <= 768) {
+    document.getElementById('mobileBottomNav').style.display = 'flex';
+  }
+}
+window.renderMobileBottomNav = renderMobileBottomNav;
+
+window.addEventListener('resize', function() {
+  var nav = document.getElementById('mobileBottomNav');
+  if (nav) {
+    nav.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  }
+});
+
 async function renderDashboard() {
+  if (typeof renderMobileBottomNav === 'function') renderMobileBottomNav('dashboard');
   if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
   document.body.classList.remove('landing-mode');
@@ -2932,9 +2973,9 @@ async function renderDashboard() {
       h += '<a onclick="window.renderPage(\'courses\')" style="color:#a855f7;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;">See all →</a>';
       h += '</div>';
       
-      h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">';
+      h += '<div style="display:flex;overflow-x:auto;gap:20px;padding-bottom:12px;scrollbar-width:none;-ms-overflow-style:none;">';
       recommended.forEach(c => {
-        h += renderCourseCard(c);
+        h += '<div style="min-width:280px;max-width:280px;flex-shrink:0;scroll-snap-align:start;">' + renderCourseCard(c) + '</div>';
       });
       h += '</div></div>';
     }
@@ -3155,6 +3196,7 @@ window.startExamCheck = async function(courseId) {
 // ==================== COURSES PAGE ====================
 // ==================== COURSES v15 (Shell + Filters) ====================
 async function renderCourses() {
+  if (typeof renderMobileBottomNav === 'function') renderMobileBottomNav('courses');
   document.body.classList.remove('landing-mode');
   // Anonymous browsing allowed — enroll will gate when needed
   hideAIWidget();
@@ -3319,6 +3361,7 @@ async function renderExams() {
 // ==================== CERTIFICATES PAGE ====================
 // ==================== CERTIFICATES v15 (Shell + Status Groups) ====================
 async function renderCertificates() {
+  if (typeof renderMobileBottomNav === 'function') renderMobileBottomNav('certificates');
   if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
   const root = document.getElementById('app-root');
@@ -8984,6 +9027,7 @@ function showResetVouchersModal() {
 window.showResetVouchersModal = showResetVouchersModal;
 // ==================== COMMUNITY TAB v15 ====================
 async function renderCommunity() {
+  if (typeof renderMobileBottomNav === 'function') renderMobileBottomNav('community');
   if (!currentUser) { renderPage('login'); return; }
   hideAIWidget();
   const root = document.getElementById('app-root');
