@@ -9741,6 +9741,21 @@ async function __obliXelBoot__() {
   try {
     console.log('🚀 obliXel Academy v13.0 - Booting...');
     
+    // 0. Check Auth Session
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        const me = await apiRequest('/auth/me');
+        currentUser = me.user;
+        console.log('✅ User session restored:', currentUser.email);
+      }
+    } catch (e) {
+      console.log('ℹ️ No active session or token expired');
+      currentUser = null;
+      localStorage.removeItem('auth_token');
+    }
+    updateAuthUI();
+
     // 1. Load courses from API
     try {
       await loadCourses();
