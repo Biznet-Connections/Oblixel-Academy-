@@ -1683,6 +1683,18 @@ window.renderTrustedBy = renderTrustedBy;
     body.landing-mode .ls-section,
     body.landing-mode section[style*='background:#0a0a1a'] { background:#0a0a1a !important; }
     body.landing-mode #obliXelLibrary { background: #0a0a1a !important; border-top: 1px solid rgba(255,255,255,0.05) !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+        /* Fix Ask AI Button on Landing Page */
+    body.landing-mode #aiToggleBtn,
+    body.landing-mode #aiWidgetButton,
+    body.landing-mode .ai-fab,
+    body.landing-mode [onclick*="toggleAI"],
+    body.landing-mode [onclick*="openAI"] {
+      background: linear-gradient(135deg, #7c3aed, #06b6d4) !important;
+      color: #ffffff !important;
+      border: none !important;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4) !important;
+    }
+    
     body.landing-mode .ls-section-alt {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
