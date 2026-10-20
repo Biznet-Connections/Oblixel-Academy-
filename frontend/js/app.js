@@ -818,8 +818,8 @@ function updateAuthUI() {
     const navbarLogo = document.getElementById('navbarLogo');
     if (navbarLogo) navbarLogo.style.display = 'none';
     if (currentUser.role === 'admin') {
-      if (adminLink) adminLink.classList.remove('hidden');
-      if (adminLinkMobile) adminLinkMobile.classList.remove('hidden');
+      if (adminLink) { adminLink.classList.remove('hidden'); adminLink.classList.add('show-admin'); }
+      if (adminLinkMobile) { adminLinkMobile.classList.remove('hidden'); adminLinkMobile.classList.add('show-admin'); }
     } else {
       if (adminLink) adminLink.classList.add('hidden');
       if (adminLinkMobile) adminLinkMobile.classList.add('hidden');
