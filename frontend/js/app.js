@@ -7794,6 +7794,88 @@ function openAdminUserMenu(btnEl, user) {
   });
 }
 
+
+// ==================== ADMIN: FORCE PASS MODAL ====================
+window.showForcePassModal = async function(user) {
+  var uid = user.id || (user._id ? String(user._id) : '');
+  
+  // Show a loading state while we fetch the user's enrollments
+  var existing = document.getElementById('forcePassModal');
+  if (existing) existing.remove();
+  
+  var h = '<div id="forcePassModal" class="fixed inset-0 bg-black/85 z-[1400] flex items-center justify-center p-4" style="backdrop-filter:blur(6px);">';
+  h += '<div class="admin-panel" style="max-width:520px;width:100%;margin:0;max-height:85vh;overflow-y:auto;">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
+  h += '<div class="admin-panel-title" style="margin:0;"><i class="fa-solid fa-medal"></i> Force Pass Exam</div>';
+  h += '<button class="admin-icon-btn" onclick="document.getElementById(\'forcePassModal\').remove()"><i class="fa-solid fa-xmark"></i></button>';
+  h += '</div>';
+  h += '<p style="font-size:12.5px;color:var(--a-meta);margin-bottom:14px;">This will mark the student as PASSED and generate their certificate immediately. Use this for cash payments, support tickets, or manual overrides.</p>';
+  h += '<div id="forcePassContent" style="font-size:13px;color:var(--a-meta);">Loading enrollments...</div>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+
+  try {
+    var token = localStorage.getItem('auth_token');
+    var res = await fetch('/api/admin/users/' + uid + '/enrollments', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    var data = await res.json();
+    var enrollments = data.enrollments || [];
+    var content = document.getElementById('forcePassContent');
+
+    if (enrollments.length === 0) {
+      content.innerHTML = '<p style="padding:20px;text-align:center;">User has no enrollments.</p>';
+      return;
+    }
+
+    var inner = '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Select course to pass</label><select id="forcePassCourse" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;height:40px;">';
+    enrollments.forEach(function(e) {
+      var status = e.status === 'certified' ? ' (Already Passed)' : '';
+      inner += '<option value="' + e.courseId + '" data-course="' + e.courseId + '">' + (e.courseName || e.courseId) + status + '</option>';
+    });
+    inner += '</select></div>';
+
+    inner += '<div style="margin-bottom:14px;"><label style="font-size:11px;color:var(--a-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Reason (audit log)</label><input id="forcePassReason" class="admin-search" style="padding-left:12px;width:100%;margin-top:6px;height:40px;" placeholder="e.g., Cash payment received" autocomplete="off"></div>';
+
+    inner += '<div style="display:flex;gap:8px;justify-content:flex-end;">';
+    inner += '<button class="admin-btn admin-btn-ghost" onclick="document.getElementById(\'forcePassModal\').remove()">Cancel</button>';
+    inner += '<button class="admin-btn" id="forcePassBtn" style="background:linear-gradient(90deg,#7c3aed,#06b6d4);border:none;"><i class="fa-solid fa-medal"></i> Force Pass</button>';
+    inner += '</div>';
+
+    content.innerHTML = inner;
+
+    document.getElementById('forcePassBtn').addEventListener('click', async function() {
+      var courseId = document.getElementById('forcePassCourse').value;
+      var reason = document.getElementById('forcePassReason').value.trim();
+      var btn = this;
+      var orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+      try {
+        var r = await fetch('/api/admin/users/' + uid + '/force-pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ courseId: courseId, reason: reason })
+        });
+        var result = await r.json();
+        if (!r.ok) throw new Error(result.error || 'Failed');
+        
+        showToast(result.message || 'Student force-passed', 'success');
+        document.getElementById('forcePassModal').remove();
+        renderAdmin();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        showToast('Failed: ' + err.message, 'error');
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    var content = document.getElementById('forcePassContent');
+    if (content) content.innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+  }
+};
 function handleAdminUserAction(action, user) {
   if (!user.id && user._id) user.id = String(user._id);
   switch (action) {
