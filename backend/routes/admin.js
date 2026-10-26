@@ -1528,6 +1528,12 @@ router.post('/users/:userId/force-pass', isMainAdmin, async (req, res) => {
 
     const studentFullName = (user.fullName && user.fullName.trim()) || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.name || 'Student';
 
+    // Sanitize type — Certificate schema only accepts specific enums
+    let certType = enrollment.type || 'learning';
+    if (!['learning', 'exam_only', 'exam_fee', 'full', 'retake'].includes(certType)) {
+      certType = 'learning';
+    }
+
     await Certificate.create({
       userId: user._id,
       courseId: courseId.toLowerCase(),
@@ -1538,7 +1544,7 @@ router.post('/users/:userId/force-pass', isMainAdmin, async (req, res) => {
       studentLastName: user.lastName || '',
       score: enrollment.score || 100,
       status: 'issued',
-      type: enrollment.type,
+      type: certType,
       issueDate: now,
       expiryDate: expiryDate,
       verifyUrl: verifyUrl,

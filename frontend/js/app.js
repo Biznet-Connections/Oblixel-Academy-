@@ -7847,6 +7847,12 @@ window.showForcePassModal = async function(user) {
     document.getElementById('forcePassBtn').addEventListener('click', async function() {
       var courseId = document.getElementById('forcePassCourse').value;
       var reason = document.getElementById('forcePassReason').value.trim();
+      
+      if (!reason) {
+        showToast('Reason is required for audit', 'warning');
+        return;
+      }
+      
       var btn = this;
       var orig = btn.innerHTML;
       btn.disabled = true;
