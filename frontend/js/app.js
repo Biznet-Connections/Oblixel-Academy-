@@ -2892,6 +2892,11 @@ function renderMobileBottomNav(activeTab) {
     { id: 'profile',      icon: 'fa-user',  label: 'Me' }
   ];
 
+  // Add admin tab only if user is admin
+  if (currentUser && (currentUser.role === 'admin' || currentUser.isMainAdmin)) {
+    tabs.push({ id: 'admin', icon: 'fa-crown', label: 'Admin' });
+  }
+
   var h = '<nav id="mobileBottomNav" style="display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#0f172a;border-top:1px solid rgba(255,255,255,0.1);z-index:9999;justify-content:space-around;align-items:center;padding:0 8px;">';
   tabs.forEach(function(t) {
     var isActive = t.id === activeTab;
