@@ -827,8 +827,10 @@ function updateAuthUI() {
       if (adminLinkMobile) adminLinkMobile.classList.add('hidden');
     }
     navLinks.forEach(link => {
-      if (link.classList.contains('nav-link') || link.classList.contains('nav-link-mobile')) {
-        link.style.display = 'flex';
+      if (link.classList.contains('nav-link')) {
+        link.style.display = 'none'; // Force hide top nav links
+      } else if (link.classList.contains('nav-link-mobile')) {
+        link.style.display = 'flex'; // Keep mobile menu links visible
       }
     });
     if (mobileMenu) mobileMenu.classList.add('hidden');
