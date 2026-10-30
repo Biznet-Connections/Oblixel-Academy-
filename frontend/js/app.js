@@ -1,4 +1,53 @@
 ﻿// ==================== obliXel Academy v13.0 - COMPLETE APP.JS PART 1 ====================
+
+// ==================== OFFLINE DETECTION & GLOBAL FETCH GUARD ====================
+(function() {
+  // 1. Show offline banner when internet drops
+  function showOfflineBanner() {
+    if (document.getElementById('offlineBanner')) return;
+    var b = document.createElement('div');
+    b.id = 'offlineBanner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+    b.innerHTML = '<i class="fa-solid fa-wifi" style="margin-right:8px;"></i> No internet connection. Please check your network.';
+    document.body.appendChild(b);
+  }
+
+  function hideOfflineBanner() {
+    var b = document.getElementById('offlineBanner');
+    if (b) b.remove();
+  }
+
+  // 2. Listen to browser online/offline events
+  window.addEventListener('offline', showOfflineBanner);
+  window.addEventListener('online', function() {
+    hideOfflineBanner();
+    if (typeof showToast === 'function') showToast('✅ Back online', 'success');
+  });
+
+  // 3. Intercept fetch errors to make them readable
+  var origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    return origFetch.apply(this, arguments).catch(function(err) {
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        showOfflineBanner();
+        throw new Error('No internet connection. Please check your network.');
+      }
+      throw err;
+    });
+  };
+
+  // 4. Also intercept XHR (for legacy apiRequest)
+  var origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function() {
+    this.addEventListener('error', function() {
+      showOfflineBanner();
+    });
+    return origOpen.apply(this, arguments);
+  };
+
+  // 5. Check on load if already offline
+  if (!navigator.onLine) showOfflineBanner();
+})();
 // v13.0: Two-column Certificate Settings, Position Sliders, Expiry Date, Verify URL,
 //        Custom Text Fields, Live Canvas, Drag-to-Position, Signature Pad, Color Presets,
 //        FULL Font Controls for ALL Elements (Name, Course, Date, Expiry, Cert ID, Verify)
@@ -3027,7 +3076,18 @@ async function renderDashboard() {
     root.innerHTML = h;
 
   } catch (error) {
-    root.innerHTML = '<div style="padding:40px;text-align:center;"><p style="color:#ef4444;">Failed to load dashboard: ' + error.message + '</p><button onclick="renderPage(\'landing\')" style="margin-top:16px;padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;">Go Home</button></div>';
+    var msg = (error.message || '').toLowerCase();
+    var isOffline = msg.includes('failed to fetch') || msg.includes('no internet') || msg.includes('networkerror');
+    
+    var html = '<div style="padding:60px 20px;text-align:center;max-width:400px;margin:40px auto;">';
+    html += '<div style="font-size:64px;margin-bottom:20px;">' + (isOffline ? '📡' : '⚠️') + '</div>';
+    html += '<h2 style="color:#fff;font-size:22px;margin-bottom:12px;">' + (isOffline ? 'No Internet Connection' : 'Something went wrong') + '</h2>';
+    html += '<p style="color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:24px;">' + (isOffline ? 'Please check your network connection and try again.' : 'We could not load your dashboard. Please try again.') + '</p>';
+    html += '<button onclick="location.reload()" style="padding:12px 28px;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;margin-right:8px;">🔄 Retry</button>';
+    html += '<button onclick="renderPage(\'landing\')" style="padding:12px 28px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;">← Home</button>';
+    html += '</div>';
+    
+    root.innerHTML = html;
   }
 }
 
