@@ -2,63 +2,59 @@
 
 // ==================== OFFLINE DETECTION & GLOBAL FETCH GUARD ====================
 (function() {
-  var offlineCheckInterval = null;
+  var pingInterval = null;
+  var bannerEl = null;
 
   function showOfflineBanner() {
-    if (document.getElementById('offlineBanner')) return;
-    var b = document.createElement('div');
-    b.id = 'offlineBanner';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;';
-    b.innerHTML = '<i class="fa-solid fa-wifi" style="margin-right:8px;"></i> No internet connection. Checking...';
-    document.body.appendChild(b);
+    if (bannerEl) return;
+    bannerEl = document.createElement('div');
+    bannerEl.id = 'offlineBanner';
+    bannerEl.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+    bannerEl.innerHTML = '<i class="fa-solid fa-wifi" style="margin-right:8px;"></i> No internet connection. Checking...';
+    document.body.appendChild(bannerEl);
     
-    // Start polling to check if we are back online
-    if (!offlineCheckInterval) {
-      offlineCheckInterval = setInterval(function() {
-        if (navigator.onLine) {
-          hideOfflineBanner();
-        } else {
-          // Try a lightweight fetch to verify actual connection
-          fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' })
-            .then(function() { hideOfflineBanner(); })
-            .catch(function() {});
-        }
-      }, 3000);
+    // Aggressive polling every 2 seconds
+    if (!pingInterval) {
+      pingInterval = setInterval(function() {
+        fetch('/favicon.ico?_=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+          .then(function(res) {
+            if (res.ok || res.status === 200) {
+              hideOfflineBanner();
+            }
+          })
+          .catch(function() {});
+      }, 2000);
     }
   }
 
   function hideOfflineBanner() {
-    var b = document.getElementById('offlineBanner');
-    if (b) {
-      b.style.opacity = '0';
-      setTimeout(function() { b.remove(); }, 300);
+    if (bannerEl) {
+      bannerEl.style.opacity = '0';
+      var el = bannerEl;
+      setTimeout(function() { if(el) el.remove(); }, 300);
+      bannerEl = null;
     }
-    if (offlineCheckInterval) {
-      clearInterval(offlineCheckInterval);
-      offlineCheckInterval = null;
+    if (pingInterval) {
+      clearInterval(pingInterval);
+      pingInterval = null;
     }
     if (typeof showToast === 'function') showToast('✅ Back online', 'success');
   }
 
-  // 1. Listen to native events
   window.addEventListener('offline', showOfflineBanner);
   window.addEventListener('online', hideOfflineBanner);
 
-  // 2. Intercept fetch errors
   var origFetch = window.fetch;
   window.fetch = function(url, opts) {
     return origFetch.apply(this, arguments).catch(function(err) {
       if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
         showOfflineBanner();
-        // We do NOT throw here. Instead, we return a rejected Promise
-        // so the caller can handle it gracefully without breaking the app state.
         return Promise.reject(new Error('No internet connection. Please check your network.'));
       }
       throw err;
     });
   };
 
-  // 3. Check on load
   if (!navigator.onLine) showOfflineBanner();
 })();
 // v13.0: Two-column Certificate Settings, Position Sliders, Expiry Date, Verify URL,
@@ -2924,7 +2920,37 @@ function renderLogin() {
     }
   }
 
-  document.getElementById('doLogin').addEventListener('click', doLoginClick);
+    document.getElementById('doLogin').addEventListener('click', doLoginClick);
+  
+  // Auto-submit on Enter key for email and password
+  var _emailInput = document.getElementById('loginEmail');
+  var _passInput = document.getElementById('loginPass');
+  
+  if (_emailInput) {
+    _emailInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); doLoginClick(); }
+    });
+  }
+  if (_passInput) {
+    _passInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); doLoginClick(); }
+    });
+  }
+  
+  // Auto-submit on Enter key in email or password fields
+  var emailInput = document.getElementById('loginEmail');
+  var passInput = document.getElementById('loginPassword'); // check the exact ID
+  
+  if (emailInput) {
+    emailInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); doLoginClick(); }
+    });
+  }
+  if (passInput) {
+    passInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); doLoginClick(); }
+    });
+  }
 
   document.getElementById('switchToRegister').addEventListener('click', (e) => {
     e.preventDefault(); renderPage('register');
