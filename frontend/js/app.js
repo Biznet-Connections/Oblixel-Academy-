@@ -2,50 +2,63 @@
 
 // ==================== OFFLINE DETECTION & GLOBAL FETCH GUARD ====================
 (function() {
-  // 1. Show offline banner when internet drops
+  var offlineCheckInterval = null;
+
   function showOfflineBanner() {
     if (document.getElementById('offlineBanner')) return;
     var b = document.createElement('div');
     b.id = 'offlineBanner';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-    b.innerHTML = '<i class="fa-solid fa-wifi" style="margin-right:8px;"></i> No internet connection. Please check your network.';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;padding:12px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+    b.innerHTML = '<i class="fa-solid fa-wifi" style="margin-right:8px;"></i> No internet connection. Checking...';
     document.body.appendChild(b);
+    
+    // Start polling to check if we are back online
+    if (!offlineCheckInterval) {
+      offlineCheckInterval = setInterval(function() {
+        if (navigator.onLine) {
+          hideOfflineBanner();
+        } else {
+          // Try a lightweight fetch to verify actual connection
+          fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' })
+            .then(function() { hideOfflineBanner(); })
+            .catch(function() {});
+        }
+      }, 3000);
+    }
   }
 
   function hideOfflineBanner() {
     var b = document.getElementById('offlineBanner');
-    if (b) b.remove();
+    if (b) {
+      b.style.opacity = '0';
+      setTimeout(function() { b.remove(); }, 300);
+    }
+    if (offlineCheckInterval) {
+      clearInterval(offlineCheckInterval);
+      offlineCheckInterval = null;
+    }
+    if (typeof showToast === 'function') showToast('✅ Back online', 'success');
   }
 
-  // 2. Listen to browser online/offline events
+  // 1. Listen to native events
   window.addEventListener('offline', showOfflineBanner);
-  window.addEventListener('online', function() {
-    hideOfflineBanner();
-    if (typeof showToast === 'function') showToast('✅ Back online', 'success');
-  });
+  window.addEventListener('online', hideOfflineBanner);
 
-  // 3. Intercept fetch errors to make them readable
+  // 2. Intercept fetch errors
   var origFetch = window.fetch;
   window.fetch = function(url, opts) {
     return origFetch.apply(this, arguments).catch(function(err) {
       if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
         showOfflineBanner();
-        throw new Error('No internet connection. Please check your network.');
+        // We do NOT throw here. Instead, we return a rejected Promise
+        // so the caller can handle it gracefully without breaking the app state.
+        return Promise.reject(new Error('No internet connection. Please check your network.'));
       }
       throw err;
     });
   };
 
-  // 4. Also intercept XHR (for legacy apiRequest)
-  var origOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function() {
-    this.addEventListener('error', function() {
-      showOfflineBanner();
-    });
-    return origOpen.apply(this, arguments);
-  };
-
-  // 5. Check on load if already offline
+  // 3. Check on load
   if (!navigator.onLine) showOfflineBanner();
 })();
 // v13.0: Two-column Certificate Settings, Position Sliders, Expiry Date, Verify URL,
